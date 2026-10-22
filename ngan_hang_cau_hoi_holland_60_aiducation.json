@@ -1,0 +1,340 @@
+{
+  "source": "https://www.aiducation.edu.vn/huong-nghiep/trac-nghiem-holland",
+  "total_questions": 60,
+  "scales": [
+    {
+      "value": 1,
+      "label": "Rất không thích"
+    },
+    {
+      "value": 2,
+      "label": "Không thích lắm"
+    },
+    {
+      "value": 3,
+      "label": "Bình thường"
+    },
+    {
+      "value": 4,
+      "label": "Khá thích"
+    },
+    {
+      "value": 5,
+      "label": "Rất thích"
+    }
+  ],
+  "modes": {
+    "quick": {
+      "name": "Bản rút gọn",
+      "questions_count": 18,
+      "time": "4–6 phút"
+    },
+    "full": {
+      "name": "Bản đầy đủ",
+      "questions_count": 60,
+      "time": "10–14 phút"
+    }
+  },
+  "questions": [
+    {
+      "id": 1,
+      "type": "R",
+      "question": "Bảo dưỡng hoặc thay linh kiện cho xe máy, máy bơm, máy nổ"
+    },
+    {
+      "id": 2,
+      "type": "R",
+      "question": "Đo đạc, cắt và ghép vật liệu để dựng một thứ gì đó chắc chắn"
+    },
+    {
+      "id": 3,
+      "type": "R",
+      "question": "Làm việc ngoài trời cả buổi, chấp nhận nắng gió và bụi bẩn"
+    },
+    {
+      "id": 4,
+      "type": "I",
+      "question": "Thiết kế một cách kiểm chứng xem điều mình đoán có đúng không"
+    },
+    {
+      "id": 5,
+      "type": "I",
+      "question": "Theo dõi một chủ đề chuyên sâu qua nhiều bài viết và tài liệu"
+    },
+    {
+      "id": 6,
+      "type": "I",
+      "question": "Lần ngược từ kết quả về nguyên nhân khi có gì đó hoạt động sai"
+    },
+    {
+      "id": 7,
+      "type": "A",
+      "question": "Nghĩ ra ý tưởng cho một tiết mục, ấn phẩm hoặc buổi trưng bày"
+    },
+    {
+      "id": 8,
+      "type": "A",
+      "question": "Thử một phong cách mới dù chưa chắc người khác có thích không"
+    },
+    {
+      "id": 9,
+      "type": "A",
+      "question": "Chỉnh đi chỉnh lại một chi tiết cho tới khi thấy nó vừa mắt"
+    },
+    {
+      "id": 10,
+      "type": "S",
+      "question": "Hướng dẫn một người mới cho đến khi họ tự làm được"
+    },
+    {
+      "id": 11,
+      "type": "S",
+      "question": "Ngồi nghe một người đang gặp khó khăn mà không vội đưa lời khuyên"
+    },
+    {
+      "id": 12,
+      "type": "S",
+      "question": "Tổ chức một hoạt động để những người quanh mình đỡ vất vả hơn"
+    },
+    {
+      "id": 13,
+      "type": "E",
+      "question": "Đại diện cho nhóm trình bày và bảo vệ phương án trước người khác"
+    },
+    {
+      "id": 14,
+      "type": "E",
+      "question": "Tìm khách hàng hoặc người tài trợ cho một việc mình đang làm"
+    },
+    {
+      "id": 15,
+      "type": "E",
+      "question": "Phân công việc cho cả nhóm và theo sát cho tới khi xong"
+    },
+    {
+      "id": 16,
+      "type": "C",
+      "question": "Đối chiếu chứng từ, hoá đơn hoặc bảng kê để tìm chỗ chưa khớp"
+    },
+    {
+      "id": 17,
+      "type": "C",
+      "question": "Đặt tên và phân loại tài liệu sao cho sau này tìm lại được ngay"
+    },
+    {
+      "id": 18,
+      "type": "C",
+      "question": "Làm một việc lặp lại hằng ngày mà vẫn giữ đúng chuẩn từng lần"
+    },
+    {
+      "id": 19,
+      "type": "R",
+      "question": "Tháo một món đồ hỏng ra xem bên trong nó hoạt động thế nào"
+    },
+    {
+      "id": 20,
+      "type": "R",
+      "question": "Tự lắp hoặc sửa xe đạp, quạt, ổ điện trong nhà"
+    },
+    {
+      "id": 21,
+      "type": "R",
+      "question": "Dùng thành thạo các dụng cụ như khoan, cưa, mỏ hàn, kìm"
+    },
+    {
+      "id": 22,
+      "type": "R",
+      "question": "Chăm cây, nuôi động vật, hoặc làm vườn đều đặn"
+    },
+    {
+      "id": 23,
+      "type": "R",
+      "question": "Làm mô hình, đồ handmade hoặc lắp ráp bộ kit theo hướng dẫn"
+    },
+    {
+      "id": 24,
+      "type": "R",
+      "question": "Học một nghề có sản phẩm cầm được trên tay khi làm xong"
+    },
+    {
+      "id": 25,
+      "type": "R",
+      "question": "Làm việc cần sức khoẻ và sự khéo tay hơn là ngồi bàn giấy"
+    },
+    {
+      "id": 26,
+      "type": "I",
+      "question": "Tìm hiểu vì sao một hiện tượng xảy ra, dù không ai yêu cầu"
+    },
+    {
+      "id": 27,
+      "type": "I",
+      "question": "So sánh nhiều nguồn thông tin để xem nguồn nào đáng tin hơn"
+    },
+    {
+      "id": 28,
+      "type": "I",
+      "question": "Làm thí nghiệm và ghi lại kết quả một cách có hệ thống"
+    },
+    {
+      "id": 29,
+      "type": "I",
+      "question": "Ngồi lâu với một bài toán khó mà không thấy chán"
+    },
+    {
+      "id": 30,
+      "type": "I",
+      "question": "Đọc về khoa học, lịch sử hoặc công nghệ ngoài chương trình học"
+    },
+    {
+      "id": 31,
+      "type": "I",
+      "question": "Tìm quy luật trong một đống số liệu hoặc dữ kiện lộn xộn"
+    },
+    {
+      "id": 32,
+      "type": "I",
+      "question": "Đặt câu hỏi ngược lại khi nghe một kết luận nghe có vẻ hợp lý"
+    },
+    {
+      "id": 33,
+      "type": "A",
+      "question": "Dựng một video ngắn và tự cắt ghép, chọn nhạc cho nó"
+    },
+    {
+      "id": 34,
+      "type": "A",
+      "question": "Vẽ, phác thảo hoặc nguệch ngoạc trong lúc rảnh"
+    },
+    {
+      "id": 35,
+      "type": "A",
+      "question": "Chơi một nhạc cụ, hát, hoặc tự học một bài mới"
+    },
+    {
+      "id": 36,
+      "type": "A",
+      "question": "Trang trí góc học tập, phòng ở hoặc trang cá nhân theo ý mình"
+    },
+    {
+      "id": 37,
+      "type": "A",
+      "question": "Viết ra suy nghĩ của mình dưới dạng truyện, nhật ký hoặc bài đăng"
+    },
+    {
+      "id": 38,
+      "type": "A",
+      "question": "Làm một bài tập theo cách khác với mẫu thầy cô đưa"
+    },
+    {
+      "id": 39,
+      "type": "A",
+      "question": "Chú ý đến màu sắc, bố cục, phông chữ mà người khác không để ý"
+    },
+    {
+      "id": 40,
+      "type": "S",
+      "question": "Giảng lại bài cho bạn cho đến khi bạn thật sự hiểu"
+    },
+    {
+      "id": 41,
+      "type": "S",
+      "question": "Được bạn bè tìm đến khi họ có chuyện buồn"
+    },
+    {
+      "id": 42,
+      "type": "S",
+      "question": "Tham gia hoạt động thiện nguyện hoặc giúp đỡ trong khu mình ở"
+    },
+    {
+      "id": 43,
+      "type": "S",
+      "question": "Để ý thấy ai đó đang bị bỏ ngoài cuộc trò chuyện và kéo họ vào"
+    },
+    {
+      "id": 44,
+      "type": "S",
+      "question": "Chăm sóc em nhỏ, người lớn tuổi hoặc người đang ốm"
+    },
+    {
+      "id": 45,
+      "type": "S",
+      "question": "Hoà giải khi hai người bạn giận nhau"
+    },
+    {
+      "id": 46,
+      "type": "S",
+      "question": "Làm công việc mà kết quả là ai đó khá lên, dù không ai thấy"
+    },
+    {
+      "id": 47,
+      "type": "E",
+      "question": "Nhận vai trưởng nhóm khi lớp có bài tập nhóm"
+    },
+    {
+      "id": 48,
+      "type": "E",
+      "question": "Thuyết phục người khác đồng ý với ý tưởng của mình"
+    },
+    {
+      "id": 49,
+      "type": "E",
+      "question": "Bán được một món đồ, hoặc rủ được nhiều người tham gia một việc"
+    },
+    {
+      "id": 50,
+      "type": "E",
+      "question": "Đứng nói trước đám đông mà không thấy quá sợ"
+    },
+    {
+      "id": 51,
+      "type": "E",
+      "question": "Nghĩ ra một dự án nhỏ rồi tự đi tìm người làm cùng"
+    },
+    {
+      "id": 52,
+      "type": "E",
+      "question": "Chịu trách nhiệm khi một việc chung có thể thành hoặc hỏng"
+    },
+    {
+      "id": 53,
+      "type": "E",
+      "question": "Thương lượng để cả hai bên cùng chấp nhận được"
+    },
+    {
+      "id": 54,
+      "type": "C",
+      "question": "Sắp xếp tài liệu, ảnh hoặc file theo một hệ thống rõ ràng"
+    },
+    {
+      "id": 55,
+      "type": "C",
+      "question": "Kiểm tra lại số liệu cho đến khi chắc chắn không sai"
+    },
+    {
+      "id": 56,
+      "type": "C",
+      "question": "Ghi chép chi tiêu hoặc lập kế hoạch theo tuần và bám theo nó"
+    },
+    {
+      "id": 57,
+      "type": "C",
+      "question": "Làm theo một quy trình có sẵn và làm đúng từng bước"
+    },
+    {
+      "id": 58,
+      "type": "C",
+      "question": "Phát hiện lỗi nhỏ trong một bảng biểu mà người khác bỏ qua"
+    },
+    {
+      "id": 59,
+      "type": "C",
+      "question": "Dùng bảng tính để theo dõi hoặc tính toán một thứ gì đó"
+    },
+    {
+      "id": 60,
+      "type": "C",
+      "question": "Làm việc có hạn chót rõ ràng và tiêu chuẩn cụ thể"
+    }
+  ]
+}

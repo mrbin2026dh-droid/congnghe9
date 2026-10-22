@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduPath AI — Cố Vấn Hướng Nghiệp & Vườn Cây Đa Tác Tử (Công Nghệ 9)</title>
+  
+  <!-- Google Fonts - Be Vietnam Pro: The Gold Standard for Vietnamese Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+  
+  <!-- GSAP Animation Library for Lifelike Biological Motion -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+</head>
+<body>
+  <div id="app-root">
+    <!-- Top Navigation Bar (Responsive & Compact) -->
+    <header class="top-nav">
+      <div class="brand-wrapper">
+        <div class="brand-badge">EDUPATH AI</div>
+        <div class="brand-text">
+          <h1>CÔNG NGHỆ 9 · HƯỚNG NGHIỆP</h1>
+          <p>Cây Nghề Nghiệp & Cố Vấn AI Phân Luồng</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (5 Modes) -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="tree">🌿 Vườn Cây Nghề Nghiệp</button>
+        <button class="tab-btn" data-tab="quiz">📝 Trắc Nghiệm Holland</button>
+        <button class="tab-btn" data-tab="agents">🤖 Phòng Cố Vấn AI</button>
+        <button class="tab-btn" data-tab="project">📋 Dự Án Bài 5 SGK</button>
+        <button class="tab-btn" data-tab="teacher">👨‍🏫 Bảng Giáo Viên</button>
+      </nav>
+
+      <div class="user-quick-profile">
+        <input type="text" id="student-name-input" title="Tên học sinh" placeholder="Tên học sinh..." style="padding:0.4rem 0.65rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.85rem; font-weight:600; width:130px;">
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
+      </div>
+    </header>
+
+    <!-- Main Stage Container (Height >= 85vh) -->
+    <main class="main-stage-container">
+
+      <!-- ================= TAB 1: VƯỜN CÂY NGHỀ NGHIỆP SINH HỌC ================= -->
+      <section class="stage-view-section" id="view-tree">
+        <div class="stage-split-layout">
+          <!-- Left: SVG Tree Engine (Hình 4.3 SGK) -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <div>
+                <h2 class="card-title">🌱 Mô Hình Cây Nghề Nghiệp Sinh Học (Hình 4.3 SGK)</h2>
+                <p class="card-subtitle">Gốc rễ vững chắc sinh quả ngọt — Cân bằng sinh học giữa nội lực và kỳ vọng</p>
+              </div>
+            </div>
+
+            <div class="tree-svg-wrapper" id="tree-svg-container">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900" role="img" aria-labelledby="tree-title tree-description">
+                <title id="tree-title">Cây nghề nghiệp</title>
+                <desc id="tree-description">Cây nghề nghiệp có thân nâu, dải ruy băng vàng, lá xanh, quả đỏ cam và hệ rễ tím xanh thể hiện sở thích, khả năng, cá tính, giá trị nghề nghiệp.</desc>
+
+                <defs>
+                  <linearGradient id="fruit-gradient" x1="0" y1="0" x2="0.8" y2="1">
+                    <stop offset="0" stop-color="#ffc068"/>
+                    <stop offset="0.45" stop-color="#f78a42"/>
+                    <stop offset="1" stop-color="#e95b39"/>
+                  </linearGradient>
+                  <linearGradient id="ribbon-gradient" x1="0" y1="0" x2="0.8" y2="1">
+                    <stop offset="0" stop-color="#f5e58a"/>
+                    <stop offset="0.5" stop-color="#e2c453"/>
+                    <stop offset="1" stop-color="#b79b3e"/>
+                  </linearGradient>
+                  <linearGradient id="root-gradient" x1="0" y1="0" x2="0.8" y2="1">
+                    <stop offset="0" stop-color="#9486a6"/>
+                    <stop offset="1" stop-color="#9c94c0"/>
+                  </linearGradient>
+                  <radialGradient id="soil-gradient" cx="50%" cy="10%" r="85%">
+                    <stop offset="0" stop-color="#bce8eb"/>
+                    <stop offset="0.7" stop-color="#afe0e8"/>
+                    <stop offset="1" stop-color="#f5fcfc"/>
+                  </radialGradient>
+                  <clipPath id="soil-clip">
+                    <path d="M72 588H730C730 756 629 837 402 838C179 838 72 755 72 588Z"/>
+                  </clipPath>
+                  <marker id="nutrient-arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                    <path d="M0 0L10 5L0 10Z" fill="#e6e6ed"/>
+                  </marker>
+
+                  <g id="leaf-template">
+                    <path d="M0 0C-8-15-5-34 0-44C12-32 16-12 0 0Z" fill="#78b747"/>
+                    <path d="M0-2Q3-20 0-39" fill="none" stroke="#9acb62" stroke-width="1.1"/>
+                  </g>
+
+                  <g id="fruit-template">
+                    <path class="fruit-stem" d="M0-15Q-4-27 3-32" fill="none" stroke="#70533d" stroke-width="3" stroke-linecap="round"/>
+                    <path class="fruit-body" d="M0-16C-12-22-25-15-25-2C-25 12-13 23 0 23C14 23 26 10 25-3C24-16 11-22 0-16Z" fill="url(#fruit-gradient)"/>
+                    <path d="M-16-8Q-13-15-6-13" fill="none" stroke="#ffd48b" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+                    <path class="leaf fruit-leaf" d="M0-19C1-34 16-34 24-29C20-17 10-13 0-19Z" fill="#70b749"/>
+                    <g fill="#ffd28a" opacity="0.65">
+                      <circle cx="-10" cy="4" r="1.1"/>
+                      <circle cx="10" cy="8" r="1"/>
+                      <circle cx="3" cy="15" r="0.9"/>
+                    </g>
+                  </g>
+                </defs>
+
+                <rect width="800" height="900" fill="#fff"/>
+
+                <g id="background-watermark" fill="#f2f2f2">
+                  <path d="M120 326C207 315 287 350 348 426L348 579H249C153 577 112 531 120 457C143 479 174 487 218 484V471C143 476 111 425 120 326Z"/>
+                  <path d="M386 576V457C440 366 548 316 646 325C674 434 661 518 591 560C551 584 469 581 386 576Z"/>
+                </g>
+
+                <g id="soil">
+                  <path d="M72 588H730C730 756 629 837 402 838C179 838 72 755 72 588Z" fill="url(#soil-gradient)"/>
+                  <path d="M82 588H721" fill="none" stroke="#d3eff0" stroke-width="2"/>
+                </g>
+
+                <g id="root-system" clip-path="url(#soil-clip)" fill="url(#root-gradient)">
+                  <path id="root-crown" d="M371 567C369 599 360 618 342 628C328 637 310 642 284 645C326 649 353 638 376 621C380 649 375 675 362 699C383 687 394 659 395 633C407 660 423 678 452 687C434 666 421 646 416 625C437 638 460 643 487 643C448 629 421 617 415 588L407 567Z"/>
+                  <g id="root-interest" class="root-item" data-label="Sở thích">
+                    <path d="M382 605C359 626 345 634 316 627C287 620 262 620 239 628C216 637 194 641 176 648C158 655 145 662 125 663C147 650 166 643 188 637C212 631 232 617 258 615C289 612 307 623 331 621C350 619 364 610 374 597Z"/>
+                    <path d="M310 636C298 644 280 648 264 654C279 642 293 634 306 630Z"/>
+                  </g>
+                  <g id="root-ability" class="root-item" data-label="Khả năng">
+                    <path d="M390 612C399 653 391 692 368 719C349 740 322 749 303 760C284 770 271 781 260 795C266 773 281 757 300 744C326 727 346 711 356 690C369 666 376 640 377 618Z"/>
+                    <path d="M352 727C329 733 315 744 302 758C309 740 327 726 349 719Z"/>
+                  </g>
+                  <g id="root-personality" class="root-item" data-label="Cá tính">
+                    <path d="M400 615C411 649 429 661 451 672C477 686 497 704 517 725C536 745 550 761 555 779C536 756 518 742 495 728C477 716 452 706 433 693C407 676 394 654 391 627Z"/>
+                    <path d="M480 705C504 710 527 724 541 739C518 728 496 720 480 714Z"/>
+                  </g>
+                  <g id="root-values" class="root-item" data-label="Giá trị nghề nghiệp">
+                    <path d="M408 599C420 619 441 627 469 630C498 633 522 630 549 633C576 635 604 642 635 641C610 650 581 646 554 645C524 643 500 650 474 646C442 642 420 630 405 616Z"/>
+                    <path d="M476 637C500 646 522 648 544 647C527 654 498 653 479 646Z"/>
+                  </g>
+                </g>
+
+                <g id="tree-trunk" fill="#705244" stroke="#705244" stroke-linecap="round" stroke-linejoin="round">
+                  <path id="main-trunk" d="M367 593C380 559 375 515 375 478C375 447 363 426 343 406C321 386 307 356 294 331C280 305 264 284 242 267C272 278 295 300 314 328L351 367C340 337 329 314 324 289C317 258 302 238 283 221C312 235 328 254 337 281C350 310 357 328 367 344C373 314 382 284 390 255C399 224 411 203 425 184C414 215 406 246 401 276C412 265 426 248 434 228C432 254 417 280 395 301C390 320 384 344 381 366L397 386C414 355 429 318 440 279C446 258 451 246 457 237C460 269 446 311 436 339C424 375 413 409 407 441C436 417 453 389 469 357C453 401 435 438 412 468C402 499 402 550 420 593Z" stroke="none"/>
+                  <g id="branch-left-lower" class="branch">
+                    <path d="M369 407C333 382 304 371 275 360C244 348 214 337 179 337L126 342" fill="none" stroke-width="12"/>
+                    <path d="M278 361C263 341 252 324 244 306M227 345C203 331 181 323 163 307M182 337L147 318M232 345C200 351 172 359 143 367" fill="none" stroke-width="5"/>
+                  </g>
+                  <g id="branch-left-upper" class="branch">
+                    <path d="M332 309C307 285 280 267 251 255C221 243 199 241 173 228" fill="none" stroke-width="10"/>
+                    <path d="M274 264C249 266 225 263 199 255L172 242M253 254C240 233 232 210 229 186M229 222L207 203M302 285C294 256 282 240 266 227" fill="none" stroke-width="4"/>
+                  </g>
+                  <g id="branch-top" class="branch">
+                    <path d="M339 288C347 253 350 215 345 186C343 163 332 144 323 130M350 239C372 218 387 193 397 167C404 150 415 136 429 124" fill="none" stroke-width="9"/>
+                    <path d="M345 197C327 183 314 169 306 152M345 181L361 154M395 175C418 177 439 169 454 151M414 151L416 125M367 219C386 220 402 215 418 205" fill="none" stroke-width="4"/>
+                  </g>
+                  <g id="branch-right-upper" class="branch">
+                    <path d="M402 301C446 278 482 254 516 230C537 215 554 199 568 181" fill="none" stroke-width="9"/>
+                    <path d="M481 254C482 229 490 210 502 193M499 242L525 203M529 221C555 224 577 216 598 205M547 204L548 187" fill="none" stroke-width="4"/>
+                  </g>
+                  <g id="branch-right-lower" class="branch">
+                    <path d="M420 407C461 385 503 372 548 359C583 349 612 333 637 312" fill="none" stroke-width="16"/>
+                    <path d="M458 387C469 363 483 345 501 331M491 376C511 351 526 334 549 320M543 360C579 361 611 355 644 347M579 345C598 320 615 300 631 276M601 319C622 322 637 319 654 311M517 367C545 375 573 385 598 400" fill="none" stroke-width="5"/>
+                  </g>
+                </g>
+
+                <g id="tree-leaves">
+                  <use class="leaf" href="#leaf-template" transform="translate(143 363) rotate(-137)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(157 318) rotate(-75)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(185 310) rotate(-55)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(224 325) rotate(13)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(249 306) rotate(-19)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(285 337) rotate(-22)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(304 363) rotate(-33)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(286 376) rotate(-83)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(177 252) rotate(-106)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(204 202) rotate(-75)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(228 210) rotate(-14)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(244 187) rotate(-23)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(272 172) rotate(-49)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(291 177) rotate(7)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(316 153) rotate(-12)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(336 184) rotate(28)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(359 154) rotate(-54)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(378 148) rotate(5)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(348 215) rotate(76)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(316 289) rotate(6)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(351 310) rotate(67)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(389 236) rotate(92)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(419 151) rotate(12)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(433 155) rotate(67)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(455 167) rotate(103)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(555 208) rotate(26)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(579 218) rotate(87)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(497 331) rotate(62)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(463 347) rotate(19)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(543 319) rotate(60)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(617 300) rotate(23)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(636 312) rotate(88)"/>
+                  <use class="leaf" href="#leaf-template" transform="translate(608 392) rotate(-32)"/>
+                </g>
+
+                <g id="tree-fruits">
+                  <g id="fruit-high-salary" class="fruit" data-label="Lương cao" transform="translate(224 351)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-job-opportunities" class="fruit" data-label="Cơ hội việc làm" transform="translate(462 329) scale(.9)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-good-workplace" class="fruit" data-label="Môi trường làm việc tốt" transform="translate(598 262) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-respect" class="fruit" data-label="Được nhiều người tôn trọng" transform="translate(206 235) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-stable-job" class="fruit" data-label="Công việc ổn định" transform="translate(411 187) scale(.88)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-06" class="fruit" transform="translate(150 389) scale(.9)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-07" class="fruit" transform="translate(302 245) scale(.9)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-08" class="fruit" transform="translate(278 214) scale(.62)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-09" class="fruit" transform="translate(339 194) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-10" class="fruit" transform="translate(451 217) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-11" class="fruit" transform="translate(562 269) scale(.76)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-12" class="fruit" transform="translate(544 335) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-13" class="fruit" transform="translate(622 342) scale(.82)">
+                    <use href="#fruit-template"/>
+                  </g>
+                  <g id="fruit-14" class="fruit" transform="translate(658 404) scale(.85)">
+                    <use href="#fruit-template"/>
+                  </g>
+                </g>
+
+                <g id="golden-ribbon" class="golden-ribbon" stroke-linecap="round" stroke-linejoin="round">
+                  <path id="ribbon-back" d="M414 454C432 461 425 471 385 478C358 483 358 490 386 495C427 501 432 511 396 521" fill="none" stroke="#aa903b" stroke-width="12"/>
+                  <path id="ribbon-front" d="M414 453C413 462 386 465 370 472M421 478C416 486 387 489 369 494M424 504C416 513 384 518 367 526" fill="none" stroke="url(#ribbon-gradient)" stroke-width="13"/>
+                  <path id="ribbon-tail" d="M371 517L356 527L369 528L367 542L387 523Z" fill="url(#ribbon-gradient)" stroke="none"/>
+                </g>
+
+                <g id="nutrient-flow" class="nutrient-flow" fill="none" stroke="#e6e6ed" stroke-width="4" stroke-linecap="round" marker-end="url(#nutrient-arrowhead)">
+                  <path id="nutrient-arrow-left" class="nutrient-arrow" d="M374 612Q386 591 388 548"/>
+                  <path id="nutrient-arrow-right" class="nutrient-arrow" d="M419 612Q404 590 402 552"/>
+                </g>
+
+                <g id="fruit-labels" class="labels" fill="#30302e" font-family="'Be Vietnam Pro', Arial, sans-serif" font-size="24" text-anchor="middle">
+                  <text id="label-stable-job" class="fruit-label" x="382" y="80">
+                    <tspan x="382">Công việc</tspan>
+                    <tspan x="382" dy="32">ổn định</tspan>
+                  </text>
+                  <text id="label-good-workplace" class="fruit-label" x="661" y="153">
+                    <tspan x="661">Môi trường</tspan>
+                    <tspan x="661" dy="32">làm việc tốt</tspan>
+                  </text>
+                  <text id="label-respect" class="fruit-label" x="91" y="199">
+                    <tspan x="91">Được</tspan>
+                    <tspan x="91" dy="32">nhiều người</tspan>
+                    <tspan x="91" dy="32">tôn trọng</tspan>
+                  </text>
+                  <text id="label-high-salary" class="fruit-label" x="250" y="435">Lương cao</text>
+                  <text id="label-job-opportunities" class="fruit-label" x="524" y="435">
+                    <tspan x="524">Cơ hội</tspan>
+                    <tspan x="524" dy="32">việc làm</tspan>
+                  </text>
+                </g>
+
+                <g id="root-labels" class="labels" fill="#384146" font-family="'Be Vietnam Pro', Arial, sans-serif" font-size="24" text-anchor="middle">
+                  <text id="label-interest" class="root-label" x="226" y="688">Sở thích</text>
+                  <text id="label-ability" class="root-label" x="282" y="819">Khả năng</text>
+                  <text id="label-personality" class="root-label" x="548" y="813">Cá tính</text>
+                  <text id="label-values" class="root-label" x="634" y="650">
+                    <tspan x="634">Giá trị</tspan>
+                    <tspan x="634" dy="32">nghề nghiệp</tspan>
+                  </text>
+                </g>
+
+                <text id="figure-caption" x="400" y="879" fill="#252525" font-family="'Be Vietnam Pro', Arial, sans-serif" font-size="20" font-style="italic" text-anchor="middle">Hình 4.3. Mô hình lí thuyết cây nghề nghiệp</text>
+              </svg>
+            </div>
+
+            <div id="tree-stability-alert" class="stability-alert-box stable">
+              <strong>✨ CÂY NGHỀ NGHIỆP VỮNG VÀNG:</strong> Gốc rễ nội lực bám chắc mặt đất thực tiễn!
+            </div>
+          </div>
+
+          <!-- Right: Sliders & Controls for Roots -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <div>
+                <h2 class="card-title">⚖️ Điều Khiển Tầng Gốc Rễ & Quả Ngọt</h2>
+                <p class="card-subtitle">Thay đổi chỉ số để quan sát sự cân bằng cơ học của Cây nghề nghiệp</p>
+              </div>
+            </div>
+
+            <div class="root-controls-grid">
+              <div class="control-item">
+                <div class="control-item-header">
+                  <span>🔵 Rễ Sở thích (Holland RIASEC)</span>
+                  <span id="slider-interest-val" style="color:var(--accent-tech);">80%</span>
+                </div>
+                <input type="range" class="control-slider" id="slider-interest" min="10" max="100" value="80">
+              </div>
+
+              <div class="control-item">
+                <div class="control-item-header">
+                  <span>🟢 Rễ Khả năng (Năng lực học tập & Thực hành)</span>
+                  <span id="slider-ability-val" style="color:var(--brand);">75%</span>
+                </div>
+                <input type="range" class="control-slider" id="slider-ability" min="10" max="100" value="75">
+              </div>
+
+              <div class="control-item">
+                <div class="control-item-header">
+                  <span>🟠 Rễ Cá tính (5 Phẩm chất kĩ thuật)</span>
+                  <span id="slider-personality-val" style="color:var(--accent-enterprise);">85%</span>
+                </div>
+                <input type="range" class="control-slider" id="slider-personality" min="10" max="100" value="85">
+              </div>
+
+              <div class="control-item">
+                <div class="control-item-header">
+                  <span>🟣 Rễ Giá trị Nghề nghiệp & Gia đình</span>
+                  <span id="slider-values-val" style="color:#8b5cf6;">70%</span>
+                </div>
+                <input type="range" class="control-slider" id="slider-values" min="10" max="100" value="70">
+              </div>
+
+              <hr style="border:none; border-top:1px solid var(--border); margin:0.5rem 0;">
+
+              <div class="control-item">
+                <div class="control-item-header">
+                  <span style="font-weight:700; color:var(--danger);">🍎 Độ Nặng Quả Ngọt (Kỳ vọng lương cao & danh tiếng)</span>
+                  <span id="slider-expectation-val" style="color:var(--danger);">80%</span>
+                </div>
+                <input type="range" class="control-slider" id="slider-expectation" min="30" max="100" value="80" style="accent-color:var(--danger);">
+              </div>
+            </div>
+
+            <!-- Pedagogical Feedback Card (Hình 4.3 SGK Metaphor) -->
+            <div id="tree-pedagogy-feedback-panel" class="tree-feedback-container state-stable">
+              <div class="feedback-header">
+                <div class="feedback-badge stable" id="feedback-state-badge">
+                  🌳 TRẠNG THÁI 3: VỮNG VÀNG — TRĨU QUẢ
+                </div>
+                <div class="feedback-ratio-wrapper">
+                  <span class="ratio-label">Chỉ số cân bằng:</span>
+                  <span class="ratio-value" id="feedback-ratio-val">1.02</span>
+                </div>
+              </div>
+
+              <div class="feedback-body" id="feedback-main-content">
+                <!-- Dynamically populated via JS -->
+              </div>
+
+              <div id="rescue-action-container" style="display:none; margin-top:0.4rem;">
+                <button id="btn-rescue-tree" class="btn-rescue" onclick="window.app.triggerRescueTree()">
+                  🌱 Cứu cây nghề nghiệp (Xem hướng dẫn cân bằng)
+                </button>
+              </div>
+
+              <div id="rescue-guidance-box" class="rescue-guidance-box" style="display:none;">
+                <div class="rescue-guidance-header">
+                  <h4>💡 Hướng dẫn cứu cây nghề nghiệp</h4>
+                  <button class="close-guide-btn" onclick="window.app.toggleRescueGuidance(false)">✕</button>
+                </div>
+                <p class="feedback-text" style="font-size:0.825rem; margin-bottom:0.4rem;">
+                  Cây bị nghiêng vì <strong>Quả ngọt đang nặng hơn Gốc rễ</strong>. Em hãy tự tay cân bằng lại:
+                </p>
+                <div class="rescue-steps-list">
+                  <div class="rescue-step">
+                    <span class="step-num">1</span>
+                    <span>Kéo tăng <strong>Rễ Khả năng (Năng lực)</strong> và <strong>Sở thích</strong> lên &ge; 80% để rễ bám sâu vào lòng đất.</span>
+                  </div>
+                  <div class="rescue-step">
+                    <span class="step-num">2</span>
+                    <span>Hoặc kéo giảm <strong>Độ Nặng Quả Ngọt</strong> về mức hợp lý (50% - 70%) để cành không bị gãy.</span>
+                  </div>
+                  <div class="rescue-step">
+                    <span class="step-num">3</span>
+                    <span>Nhấn nút bên dưới để làm bài trắc nghiệm Holland 18 câu chuẩn hóa 4 bộ rễ của chính mình!</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pedagogical-footnote">
+                📌 <em>Ý nghĩa sư phạm: Đây là mô hình ẩn dụ giúp học sinh nhận thức bản thân, không phải công thức phán xét. Mong muốn lương cao là chính đáng, nhưng cần kế hoạch phát triển năng lực tương xứng!</em>
+              </div>
+            </div>
+
+            <div style="margin-top:auto; padding-top:1rem; border-top:1px solid var(--border);">
+              <button class="btn-primary" style="width:100%;" onclick="window.app.switchTab('quiz')">
+                Bắt Đầu Làm Trắc Nghiệm Đo Gốc Rễ Chuẩn Xác ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 2: TRẮC NGHIỆM HOLLAND RIASEC ================= -->
+      <section class="stage-view-section" id="view-quiz" style="display:none;">
+        <div class="quiz-flow-container">
+          <!-- Quiz Active Card -->
+          <div class="card-panel" id="quiz-active-card">
+            <div class="card-panel-header">
+              <div>
+                <h2 class="card-title">📝 Trắc Nghiệm Sở Thích Nghề Nghiệp Holland (RIASEC)</h2>
+                <p class="card-subtitle">Bộ công cụ tâm lý học đo đạc năng khiếu chuẩn quốc tế</p>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button class="btn-secondary" id="quiz-mode-quick" style="padding:0.4rem 0.75rem; font-size:0.8rem;">Bản Rút Gọn (18 câu)</button>
+                <button class="btn-primary" id="quiz-mode-full" style="padding:0.4rem 0.75rem; font-size:0.8rem;">Bản Đầy Đủ (60 câu)</button>
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="margin-bottom:1.5rem;">
+              <div class="quiz-progress-bar-bg">
+                <div class="quiz-progress-bar-fill" id="quiz-progress-fill" style="width:5%;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:0.35rem; font-size:0.8rem; color:var(--text-muted);">
+                <span id="quiz-progress-text">Câu hỏi 1 / 60</span>
+                <span>Thang đo 5 mức Likert</span>
+              </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="question-card">
+              <span class="question-tag" id="quiz-question-type-tag">Nhóm Kỹ thuật (R)</span>
+              <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.5rem;">Bạn thích làm việc này đến mức nào?</p>
+              <h3 class="question-prompt" id="quiz-question-text">Bảo dưỡng hoặc thay linh kiện cho xe máy, máy bơm, máy nổ</h3>
+
+              <!-- Likert 1 to 5 buttons -->
+              <div class="likert-buttons-grid" id="quiz-likert-container"></div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+              <button class="btn-secondary" id="quiz-prev-btn" disabled>⮌ Câu trước</button>
+              <button class="btn-primary" id="quiz-next-btn">Câu tiếp theo ➔</button>
+            </div>
+          </div>
+
+          <!-- Quiz Result Card (Hidden by default) -->
+          <div class="card-panel" id="quiz-result-card" style="display:none;">
+            <div class="card-panel-header">
+              <div>
+                <h2 class="card-title">🎉 Kết Quả Trắc Nghiệm Holland Của Bạn</h2>
+                <p class="card-subtitle">Giải mã 3 chữ cái đại diện cho phong cách nghề nghiệp vượt trội</p>
+              </div>
+            </div>
+
+            <div style="text-align:center; padding:1.5rem 0;">
+              <p style="font-size:0.85rem; font-weight:700; color:var(--brand); text-transform:uppercase; letter-spacing:0.1em;">MÃ HOLLAND CHÍNH</p>
+              <h1 id="result-holland-code" style="font-size:4rem; font-weight:900; letter-spacing:0.1em; color:var(--text-primary); margin:0.25rem 0;">RIE</h1>
+              <p style="font-size:0.95rem; color:var(--text-secondary); max-width:600px; margin:0 auto;">
+                Ba nhóm bạn có điểm số cao nhất. Chữ đầu tiên đóng vai trò chi phối, hai chữ tiếp theo là kênh bổ trợ và xúc tác môi trường.
+              </p>
+            </div>
+
+            <h3 style="font-size:1.15rem; font-weight:700; margin:1.5rem 0 1rem 0;">🎯 Top Ngành Học & Nghề Nghiệp Khớp Nhất:</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;" id="quiz-matched-majors-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: PHÒNG CỐ VẤN AI ĐA TÁC TỬ ================= -->
+      <section class="stage-view-section" id="view-agents" style="display:none;">
+        <div class="card-panel" style="min-height:560px;">
+          <div class="card-panel-header">
+            <div>
+              <h2 class="card-title">🤖 Phòng Cố Vấn Hướng Nghiệp AI Đa Tác Tử (Multi-Agent Room)</h2>
+              <p class="card-subtitle">Đối thoại chuyên sâu với 4 Persona AI đại diện cho 4 góc nhìn hướng nghiệp</p>
+            </div>
+          </div>
+
+          <!-- Agent Selector Pills -->
+          <div class="ai-agent-selector" id="ai-agent-selector-container"></div>
+
+          <!-- Chat Scroll Container -->
+          <div class="chat-messages-scroll" id="chat-messages-scroll"></div>
+
+          <!-- Quick Suggested Prompts -->
+          <div class="quick-prompts-row" id="quick-prompts-row"></div>
+
+          <!-- Chat Input -->
+          <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+            <input type="text" id="chat-input-text" placeholder="Nhập câu hỏi hoặc băn khoăn của bạn vào đây..." style="flex:1; padding:0.75rem 1rem; border:1px solid var(--border); border-radius:var(--radius-md); font-size:0.95rem;">
+            <button class="btn-primary" id="chat-send-btn">Gửi Câu Hỏi ➔</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: BÁO CÁO DỰ ÁN BÀI 5 SGK ================= -->
+      <section class="stage-view-section" id="view-project" style="display:none;">
+        <div class="card-panel">
+          <div class="card-panel-header">
+            <div>
+              <h2 class="card-title">📋 Dự Án Học Tập Bài 5 (SGK Công Nghệ 9)</h2>
+              <p class="card-subtitle">Tự đánh giá mức độ phù hợp của bản thân với ngành nghề kĩ thuật, công nghệ</p>
+            </div>
+            <button class="btn-primary" id="print-project-report-btn">
+              🖨️ Xuất Báo Cáo / In PDF Nộp Thầy Cô
+            </button>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-elevated); padding:1rem 1.25rem; border-radius:var(--radius-md); margin-bottom:1.25rem;">
+            <div>
+              <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Ngành Nghề Dự Định Đánh Giá:</span>
+              <h3 id="assessment-target-major-name" style="font-size:1.2rem; font-weight:800; color:var(--text-primary); margin-top:0.15rem;">Kỹ thuật Cơ điện tử & Robot (RIE)</h3>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Tổng Điểm Trùng Khớp:</span>
+              <h2 id="assessment-score-value" style="font-size:1.6rem; font-weight:900; color:var(--brand); margin-top:0.15rem;">9 / 10</h2>
+            </div>
+          </div>
+
+          <!-- 10 Criteria Matrix Table -->
+          <div class="matrix-table-wrapper">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th style="width:5%; text-align:center;">STT</th>
+                  <th style="width:40%;">Đặc điểm của bản thân (1)</th>
+                  <th style="width:45%;">Đặc điểm và yêu cầu của nghề (2)</th>
+                  <th style="width:10%; text-align:center;">Trùng Khớp</th>
+                </tr>
+              </thead>
+              <tbody id="assessment-matrix-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Result & Recommendation -->
+          <div style="margin-top:1.5rem; padding:1.25rem; background:var(--surface-elevated); border-radius:var(--radius-md); border:1px solid var(--border);">
+            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+              <span style="font-weight:700;">Kết luận Mức độ Phù hợp:</span>
+              <span class="question-tag" id="assessment-classification-badge">Phù hợp hoàn toàn</span>
+            </div>
+            <p id="assessment-recommendation-text" style="font-size:0.95rem; color:var(--text-secondary); line-height:1.5;"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: BẢNG ĐIỀU KHIỂN GIÁO VIÊN ================= -->
+      <section class="stage-view-section" id="view-teacher" style="display:none;">
+        <div class="card-panel">
+          <div class="card-panel-header">
+            <div>
+              <h2 class="card-title">👨‍🏫 Bảng Điều Khiển Quản Lý Lớp Học & Phân Luồng (Teacher Dashboard)</h2>
+              <p class="card-subtitle">Bức tranh toàn cảnh về phân bố tính cách RIASEC và định hướng sau THCS</p>
+            </div>
+            <button class="btn-primary" id="export-class-csv-btn">
+              📥 Xuất Danh Sách Điểm (CSV / Excel)
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:1.5rem; margin-bottom:1.5rem;">
+            <!-- Class Heatmap Canvas -->
+            <div class="card-panel" style="padding:1rem;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.75rem;">📊 Bản Đồ Nhiệt RIASEC Cả Lớp (Lớp 9A1)</h3>
+              <canvas id="teacher-heatmap-canvas" style="width:100%; height:260px;"></canvas>
+            </div>
+
+            <!-- Streaming Statistics -->
+            <div class="card-panel" style="padding:1rem; justify-content:center;">
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:1rem;">🎯 Tỷ Lệ Đề Xuất Phân Luồng Sau THCS</h3>
+              <div style="display:flex; flex-direction:column; gap:1rem;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
+                    <span>Học tiếp THPT (Định hướng ĐH Kỹ thuật):</span>
+                    <span style="color:var(--brand); font-weight:800;">70% (24 học sinh)</span>
+                  </div>
+                  <div style="width:100%; height:12px; background:var(--surface-inset); border-radius:6px; overflow:hidden;">
+                    <div style="width:70%; height:100%; background:var(--brand);"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
+                    <span>Phân luồng sớm sang Mô hình Đào tạo Nghề 9+:</span>
+                    <span style="color:var(--accent-enterprise); font-weight:800;">30% (11 học sinh)</span>
+                  </div>
+                  <div style="width:100%; height:12px; background:var(--surface-inset); border-radius:6px; overflow:hidden;">
+                    <div style="width:30%; height:100%; background:var(--accent-enterprise);"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:1.5rem; padding:0.75rem 1rem; background:var(--surface-elevated); border-radius:var(--radius-md); font-size:0.825rem; color:var(--text-muted); border-left:4px solid var(--brand);">
+                💡 <strong>Khuyến nghị Sư phạm:</strong> 30% học sinh thiên mạnh về nhóm Kỹ thuật thực tế (R) có thể sớm phát triển vượt bậc nếu theo học các chương trình Cao đẳng nghề 9+ vừa học văn hóa vừa rèn tay nghề cơ khí, điện tử.
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Roster Table -->
+          <div class="matrix-table-wrapper">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th style="width:5%;">STT</th>
+                  <th style="width:25%;">Họ và tên học sinh</th>
+                  <th style="width:12%;">Mã Holland</th>
+                  <th style="width:25%;">Ngành nghề phù hợp</th>
+                  <th style="width:13%;">Điểm Bài 5</th>
+                  <th style="width:20%;">Định hướng phân luồng</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-student-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Script Modules Loaded in Strict Order -->
+  <script src="js/data.js"></script>
+  <script src="js/holland-engine.js"></script>
+  <script src="js/tree-svg-animator.js"></script>
+  <script src="js/ai-agents.js"></script>
+  <script src="js/project-assessment.js"></script>
+  <script src="js/teacher-analytics.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
