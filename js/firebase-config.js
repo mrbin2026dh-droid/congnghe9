@@ -79,9 +79,27 @@ window.EduPathFirebase = (() => {
     return seed;
   }
 
-  function saveLocalRoster(roster) {
+  // Real-time broadcast channel for offline multi-window synchronization
+  let broadcastChannel = null;
+  try {
+    if (typeof window !== 'undefined' && typeof window.BroadcastChannel !== 'undefined') {
+      broadcastChannel = new BroadcastChannel('edupath_realtime_sync');
+      broadcastChannel.onmessage = (event) => {
+        if (event && event.data && event.data.type === 'ROSTER_UPDATED') {
+          notifyLocalListeners(event.data.classId);
+        }
+      };
+    }
+  } catch (e) {
+    console.debug('BroadcastChannel not available:', e);
+  }
+
+  function saveLocalRoster(roster, classId) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(roster));
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'ROSTER_UPDATED', classId });
+      }
     } catch (e) {
       console.warn('Lỗi ghi local roster:', e);
     }
@@ -98,6 +116,15 @@ window.EduPathFirebase = (() => {
         listener(filtered);
       } catch (err) {
         console.error('Lỗi khi kích hoạt listener địa phương:', err);
+      }
+    });
+  }
+
+  // Cross-context real-time sync via storage event when in local fallback mode
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY) {
+        notifyLocalListeners();
       }
     });
   }

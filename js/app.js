@@ -133,8 +133,40 @@ class EduPathApp {
       }
       localStorage.setItem('edupath_student_profile', JSON.stringify(this.studentProfile));
       localStorage.setItem('edupath_assessment_matches', JSON.stringify(this.assessmentMatches));
+      this.syncProgressToFirebase();
     } catch (e) {
       console.warn('Lỗi khi lưu hồ sơ vào localStorage:', e);
+    }
+  }
+
+  syncProgressToFirebase() {
+    if (!this.currentUser || this.currentUser.role !== 'student') return;
+    const studentCode = this.currentUser.code || this.studentProfile.studentCode || '9A1-01';
+
+    let targetMajorName = this.studentProfile.targetMajorName;
+    if (!targetMajorName && window.EduPathData && window.EduPathData.majors) {
+      const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId) || window.EduPathData.majors[0];
+      targetMajorName = targetMajor ? targetMajor.name : 'Kỹ thuật Cơ điện tử';
+    }
+    const result = window.ProjectAssessment ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : { totalScore: 8, classification: 'Phù hợp hoàn toàn' };
+    const isVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R'));
+    const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
+
+    const payload = {
+      name: this.studentProfile.name || 'Học sinh',
+      school: this.studentProfile.school || 'THCS Chu Văn An',
+      grade: this.studentProfile.grade || '9A1',
+      code: this.studentProfile.code || 'RIE',
+      major: targetMajorName || 'Kỹ thuật Cơ điện tử',
+      projectScore: result.totalScore,
+      classification: result.classification,
+      stream: stream,
+      hollandScores: this.studentProfile.scores,
+      hollandPercentages: this.studentProfile.percentages
+    };
+
+    if (window.EduPathFirebase) {
+      window.EduPathFirebase.saveStudentProgress(studentCode, payload);
     }
   }
 
@@ -1354,6 +1386,19 @@ class EduPathApp {
       crudForm.addEventListener('submit', (e) => {
         e.preventDefault();
         this.saveCrudStudent();
+      });
+    }
+
+    // Realtime Sync Listener for Teacher Dashboard
+    if (window.EduPathFirebase) {
+      const currentClass = (this.currentUser && this.currentUser.classId) || '9A1';
+      window.EduPathFirebase.onClassStudentsChange(currentClass, (students) => {
+        if (students && students.length > 0) {
+          TeacherAnalytics.currentClassData = students;
+          if (this.currentTab === 'teacher') {
+            this.renderTeacherHeatmap();
+          }
+        }
       });
     }
   }
