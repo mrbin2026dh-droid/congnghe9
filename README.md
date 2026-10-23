@@ -1,4 +1,4 @@
-# 🌿 EduPath AI — Ứng Dụng Hướng Nghiệp & Vườn Cây Đa Tác Tử (Công Nghệ 9)
+# 🌿 TeenVoca AI — Ứng Dụng Hướng Nghiệp & Vườn Cây Đa Tác Tử (Công Nghệ 9)
 
 > **Sản phẩm dự thi Cuộc thi Giáo viên Sáng tạo AI 2026**  
 > **Chương trình Giáo dục Phổ thông 2018 — SGK Công nghệ 9 (Định hướng nghề nghiệp, Bộ Kết nối tri thức với cuộc sống)**  
@@ -8,7 +8,7 @@
 
 ## 📖 I. Giới Thiệu Tổng Quan
 
-**EduPath AI** là nền tảng số hóa giáo dục tương tác cao dành riêng cho học sinh lớp 9 trong giai đoạn quan trọng: **Định hướng nghề nghiệp và Phân luồng sau tốt nghiệp THCS**. 
+**TeenVoca AI** là nền tảng số hóa giáo dục tương tác cao dành riêng cho học sinh lớp 9 trong giai đoạn quan trọng: **Định hướng nghề nghiệp và Phân luồng sau tốt nghiệp THCS**. 
 
 Ứng dụng kết hợp giữa **Lý thuyết Cây nghề nghiệp (Hình 4.3 SGK)**, **Mô hình Trắc nghiệm Mật mã Holland (RIASEC)** và **Hệ thống Cố vấn Trí tuệ Nhân tạo Đa Tác tử (Multi-Agent Roleplay)** để mang lại cho học sinh một hành trình khám phá bản thân khoa học, sâu sắc và sinh động.
 
@@ -93,7 +93,7 @@ Học sinh được nhập vai trò chuyện trực tiếp với 4 góc nhìn đ
 
 ## 👥 V. Thông Tin Tác Giả & Bản Quyền
 
-- **Dự án**: EduPath AI — Sáng kiến Hướng nghiệp Công nghệ 9
+- **Dự án**: TeenVoca AI — Sáng kiến Hướng nghiệp Công nghệ 9
 - **Tác giả**: Thầy giáo dự thi Cuộc thi Giáo viên Sáng tạo AI 2026
 - **Kho lưu trữ GitHub**: [https://github.com/mrbin2026dh-droid/congnghe9](https://github.com/mrbin2026dh-droid/congnghe9)
 - **Bản quyền**: Phát hành theo giấy phép mã nguồn mở MIT License phục vụ mục đích giáo dục phi thương mại.

@@ -1,5 +1,5 @@
 /**
- * EduPath AI - Main Application Coordinator & UI Controller
+ * TeenVoca AI - Main Application Coordinator & UI Controller
  * Zero-guesswork, Real-data binding, Smooth SPA Tab Navigation
  * Integrated with SVG Living Career Tree Animator (Hình 4.3 SGK)
  */
@@ -9,7 +9,7 @@ if (typeof window.sanitize === 'undefined') {
   window.sanitize = (html) => html;
 }
 
-class EduPathApp {
+class TeenVocaApp {
   constructor() {
     this.currentTab = 'tree';
     this.quizMode = 'full';
@@ -129,7 +129,7 @@ class EduPathApp {
 
   loadProfileFromStorage() {
     try {
-      const rawUser = localStorage.getItem('edupath_current_user');
+      const rawUser = localStorage.getItem('teenvoca_current_user') || localStorage.getItem('edupath_current_user');
       if (rawUser) {
         this.currentUser = JSON.parse(rawUser);
         this.userRole = this.currentUser ? this.currentUser.role : null;
@@ -137,14 +137,14 @@ class EduPathApp {
         this.currentUser = null;
         this.userRole = null;
       }
-      const raw = localStorage.getItem('edupath_student_profile');
+      const raw = localStorage.getItem('teenvoca_student_profile') || localStorage.getItem('edupath_student_profile');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           this.studentProfile = { ...this.studentProfile, ...parsed };
         }
       }
-      const rawMatches = localStorage.getItem('edupath_assessment_matches');
+      const rawMatches = localStorage.getItem('teenvoca_assessment_matches') || localStorage.getItem('edupath_assessment_matches');
       if (rawMatches) {
         const parsedMatches = JSON.parse(rawMatches);
         if (Array.isArray(parsedMatches) && parsedMatches.length === 10) {
@@ -159,9 +159,12 @@ class EduPathApp {
   saveProfileToStorage() {
     try {
       if (this.currentUser) {
+        localStorage.setItem('teenvoca_current_user', JSON.stringify(this.currentUser));
         localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
       }
+      localStorage.setItem('teenvoca_student_profile', JSON.stringify(this.studentProfile));
       localStorage.setItem('edupath_student_profile', JSON.stringify(this.studentProfile));
+      localStorage.setItem('teenvoca_assessment_matches', JSON.stringify(this.assessmentMatches));
       localStorage.setItem('edupath_assessment_matches', JSON.stringify(this.assessmentMatches));
       this.syncProgressToFirebase();
     } catch (e) {
@@ -287,7 +290,7 @@ class EduPathApp {
           }
           this.playBeep(880, 'triangle', 0.2);
         } else {
-          console.warn('Tệp JSON không đúng định dạng hồ sơ EduPath AI.');
+          console.warn('Tệp JSON không đúng định dạng hồ sơ TeenVoca AI.');
         }
       } catch (err) {
         console.error('Lỗi phân tích file hồ sơ:', err);
@@ -583,6 +586,7 @@ class EduPathApp {
     };
     this.userRole = 'student';
 
+    localStorage.setItem('teenvoca_current_user', JSON.stringify(this.currentUser));
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.saveProfileToStorage();
     this.syncAuthUI();
@@ -603,10 +607,11 @@ class EduPathApp {
     }
 
     let activePin = '2026';
-    if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
-      activePin = await window.EduPathFirebase.getTeacherPin();
+    const fb = window.TeenVocaFirebase || window.EduPathFirebase;
+    if (fb && fb.getTeacherPin) {
+      activePin = await fb.getTeacherPin();
     } else {
-      activePin = localStorage.getItem('edupath_teacher_pin') || '2026';
+      activePin = localStorage.getItem('teenvoca_teacher_pin') || localStorage.getItem('edupath_teacher_pin') || '2026';
     }
 
     if (pin.trim() !== String(activePin).trim()) {
@@ -627,6 +632,7 @@ class EduPathApp {
     };
     this.userRole = 'teacher';
 
+    localStorage.setItem('teenvoca_current_user', JSON.stringify(this.currentUser));
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.syncAuthUI();
 
@@ -656,6 +662,9 @@ class EduPathApp {
   handleLogout() {
     this.currentUser = null;
     this.userRole = null;
+    localStorage.removeItem('teenvoca_current_user');
+    localStorage.removeItem('teenvoca_student_profile');
+    localStorage.removeItem('teenvoca_assessment_matches');
     localStorage.removeItem('edupath_current_user');
     localStorage.removeItem('edupath_student_profile');
     localStorage.removeItem('edupath_assessment_matches');
@@ -2199,7 +2208,7 @@ class EduPathApp {
       await this.typewriterAnimate(contentEl, cursorEl, res.text, agentDiv, chatBox);
       this.playBeep(720, 'sine', 0.1);
     } catch (err) {
-      console.error('[EduPath Chat] Lỗi khi gửi tin nhắn:', err);
+      console.error('[TeenVoca Chat] Lỗi khi gửi tin nhắn:', err);
       const typingEl = document.getElementById('agent-typing-bubble');
       if (typingEl && typingEl.parentNode) {
         typingEl.parentNode.removeChild(typingEl);
@@ -3052,10 +3061,11 @@ class EduPathApp {
     }
 
     let activePin = '2026';
-    if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
-      activePin = await window.EduPathFirebase.getTeacherPin();
+    const fb = window.TeenVocaFirebase || window.EduPathFirebase;
+    if (fb && fb.getTeacherPin) {
+      activePin = await fb.getTeacherPin();
     } else {
-      activePin = localStorage.getItem('edupath_teacher_pin') || '2026';
+      activePin = localStorage.getItem('teenvoca_teacher_pin') || localStorage.getItem('edupath_teacher_pin') || '2026';
     }
 
     if (currentPin !== String(activePin).trim()) {
@@ -3082,9 +3092,10 @@ class EduPathApp {
       return;
     }
 
-    if (window.EduPathFirebase && window.EduPathFirebase.setTeacherPin) {
-      await window.EduPathFirebase.setTeacherPin(newPin);
+    if (fb && fb.setTeacherPin) {
+      await fb.setTeacherPin(newPin);
     } else {
+      localStorage.setItem('teenvoca_teacher_pin', newPin);
       localStorage.setItem('edupath_teacher_pin', newPin);
     }
 
@@ -3275,10 +3286,11 @@ class EduPathApp {
   }
 
   showToastNotification(msg, type = 'success') {
-    let container = document.getElementById('edupath-toast-container');
+    let container = document.getElementById('teenvoca-toast-container') || document.getElementById('edupath-toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'edupath-toast-container';
+      container.className = 'teenvoca-toast-container';
       container.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none;';
       document.body.appendChild(container);
     }
@@ -3973,8 +3985,13 @@ class EduPathApp {
   }
 }
 
+const EduPathApp = TeenVocaApp;
+window.TeenVocaApp = TeenVocaApp;
+window.EduPathApp = TeenVocaApp;
+
 // Bootstrap
 window.addEventListener('DOMContentLoaded', () => {
-  window.app = new EduPathApp();
+  window.app = new TeenVocaApp();
+  window.TeenVoca = window.app;
   window.EduPath = window.app;
 });

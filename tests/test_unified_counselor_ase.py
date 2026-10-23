@@ -51,7 +51,7 @@ def test_unified_advisor():
         assert card.count() == 1, "Unified advisor card must exist"
         advisor_name = card.locator('.advisor-name').text_content()
         print(f"Unified Advisor Active: {advisor_name}")
-        assert "TS. Hướng Nghiệp EduPath" in advisor_name
+        assert "TS. Hướng Nghiệp TeenVoca" in advisor_name or "TS. Hướng Nghiệp EduPath" in advisor_name
 
         # Verify 4 pillar tags exist
         pillars = card.locator('.pillar-tag').all_text_contents()

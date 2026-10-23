@@ -1,6 +1,6 @@
 # HƯỚNG DẪN TẠO VÀ LẤY CẤU HÌNH FIREBASE REALTIME DATABASE MIỄN PHÍ
 
-> **Dành cho Giáo viên & Quản trị viên EduPath AI**  
+> **Dành cho Giáo viên & Quản trị viên TeenVoca AI**  
 > Hệ thống Firebase Realtime Database của Google cung cấp gói **Spark Plan (Miễn phí 100% vĩnh viễn)** với dung lượng 1 GB lưu trữ và 10 GB băng thông/tháng — hoàn toàn đáp ứng cho hàng trăm lớp học và hàng ngàn học sinh làm bài cùng lúc.
 
 ---
@@ -19,7 +19,7 @@
    🔗 **[https://console.firebase.google.com/](https://console.firebase.google.com/)**
 2. Đăng nhập bằng tài khoản Gmail của Thầy/Cô.
 3. Bấm vào nút **"Add project"** (hoặc **"Thêm dự án"**).
-4. Nhập tên dự án: ví dụ `EduPath-AI-HuongNghiep` $\rightarrow$ bấm **Continue**.
+4. Nhập tên dự án: ví dụ `TeenVoca-AI-HuongNghiep` $\rightarrow$ bấm **Continue**.
 5. Ở bước *Google Analytics*: Thầy/Cô có thể gạt tắt (Disable) để tạo nhanh $\rightarrow$ bấm **Create project**.
 6. Đợi 10 giây để Google khởi tạo hệ thống $\rightarrow$ bấm **Continue** để vào Bảng điều khiển.
 
@@ -43,7 +43,7 @@
 
 1. Bấm vào biểu tượng **Bánh răng cài đặt (Project settings)** ở góc trên bên trái (cạnh dòng *Project Overview*).
 2. Cuộn xuống phần **Your apps** (Ứng dụng của bạn) $\rightarrow$ bấm vào biểu tượng Web `</>`.
-3. Nhập tên hiển thị: `EduPath Web` $\rightarrow$ bấm **Register app**.
+3. Nhập tên hiển thị: `TeenVoca Web` $\rightarrow$ bấm **Register app**.
 4. Màn hình sẽ hiển thị đoạn mã `const firebaseConfig = { ... }`. Thầy/Cô sao chép (Copy) toàn bộ đối tượng này:
 
 ```javascript
@@ -63,13 +63,13 @@ const firebaseConfig = {
 
 ---
 
-### Bước 4: Dán vào dự án EduPath AI
+### Bước 4: Dán vào dự án TeenVoca AI
 
 1. Mở tệp `js/firebase-config.js` trong thư mục dự án.
 2. Tìm dòng `window.EduPathFirebaseConfig = { ... }` ở ngay đầu tệp:
 
 ```javascript
-window.EduPathFirebaseConfig = window.EduPathFirebaseConfig || {
+window.TeenVocaFirebaseConfig = window.TeenVocaFirebaseConfig || window.EduPathFirebaseConfig || {
   apiKey: "AIzaSy...", // Dán apiKey của Thầy/Cô vào đây
   authDomain: "edupath-ai-xxxx.firebaseapp.com",
   databaseURL: "https://edupath-ai-xxxx-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -88,6 +88,6 @@ window.EduPathFirebaseConfig = window.EduPathFirebaseConfig || {
 ## CƠ CHẾ DỰ PHÒNG THÔNG MINH (OFFLINE FALLBACK)
 
 - Nếu Thầy/Cô chưa kịp tạo Firebase hoặc phòng máy bị mất mạng Internet:  
-  Ứng dụng **EduPath AI** được tích hợp sẵn động cơ tự động nhận diện và lưu trữ cục bộ (LocalStorage).
+  Ứng dụng **TeenVoca AI** được tích hợp sẵn động cơ tự động nhận diện và lưu trữ cục bộ (LocalStorage).
 - Mọi chức năng: Trắc nghiệm Holland, Cây nghề nghiệp, Đánh giá Bài 5 SGK, Quản lý tài khoản học sinh, Xuất báo cáo điểm CSV đều vận hành bình thường 100% mà không bị lỗi hay gián đoạn.
 - Khi dán cấu hình Firebase, dữ liệu sẽ tự động chuyển tiếp lên đám mây.

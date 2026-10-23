@@ -21,7 +21,7 @@ const AIAgentsManager = (() => {
 
   const MASTER_COUNSELOR = {
     id: 'counselor',
-    name: 'TS. Hướng Nghiệp EduPath',
+    name: 'TS. Hướng Nghiệp TeenVoca',
     title: 'Chuyên Gia Cố Vấn Hướng Nghiệp Toàn Diện',
     avatar: '🎓',
     tag: 'Cố Vấn Toàn Diện (Tâm lý - Kỹ thuật - Phân luồng - Thị trường)',
@@ -40,7 +40,7 @@ const AIAgentsManager = (() => {
    * System Prompt Chuẩn mực Quốc gia - Master Unified Prompt
    * Tích hợp toàn diện 4 trụ cột SGK Công nghệ 9 & Mô hình Holland RIASEC
    */
-  const MASTER_SYSTEM_PROMPT = `Bạn là TS. Hướng Nghiệp EduPath - Chuyên Gia Cố Vấn Hướng Nghiệp Toàn Diện cho học sinh THCS (lớp 9 chuẩn bị phân luồng), bám sát 100% Chương trình GDPT 2018, SGK Công nghệ 9 (Định hướng nghề nghiệp - Bộ GD&ĐT) và Mô hình Holland RIASEC chuẩn quốc tế.
+  const MASTER_SYSTEM_PROMPT = `Bạn là TS. Hướng Nghiệp TeenVoca - Chuyên Gia Cố Vấn Hướng Nghiệp Toàn Diện cho học sinh THCS (lớp 9 chuẩn bị phân luồng), bám sát 100% Chương trình GDPT 2018, SGK Công nghệ 9 (Định hướng nghề nghiệp - Bộ GD&ĐT) và Mô hình Holland RIASEC chuẩn quốc tế.
 
 NĂNG LỰC CỐ VẤN TÍCH HỢP TOÀN DIỆN (4 TRỤ CỘT CỐT LÕI):
 1. TÂM LÝ & BẢN THÂN (Bài 4 SGK):
@@ -106,7 +106,7 @@ QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
       }
       return { apiKey, model };
     } catch (err) {
-      console.warn('[EduPath Gemini] Không thể đọc localStorage:', err);
+      console.warn('[TeenVoca Gemini] Không thể đọc localStorage:', err);
       return { apiKey: '', model: DEFAULT_MODEL };
     }
   }
@@ -128,7 +128,7 @@ QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
       }
       return true;
     } catch (err) {
-      console.error('[EduPath Gemini] Lỗi khi lưu cấu hình:', err);
+      console.error('[TeenVoca Gemini] Lỗi khi lưu cấu hình:', err);
       return false;
     }
   }
@@ -145,7 +145,7 @@ QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
       }
       return true;
     } catch (err) {
-      console.error('[EduPath Gemini] Lỗi khi xóa cấu hình:', err);
+      console.error('[TeenVoca Gemini] Lỗi khi xóa cấu hình:', err);
       return false;
     }
   }
@@ -166,7 +166,7 @@ QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
         }
       }
     } catch (err) {
-      console.warn('[EduPath Gemini] Không thể đồng bộ cấu hình từ Cloud:', err);
+      console.warn('[TeenVoca Gemini] Không thể đồng bộ cấu hình từ Cloud:', err);
     }
     return null;
   }
@@ -217,7 +217,7 @@ QUY TẮC BẮT BUỘC (Trường hợp 7 SGK): Học sinh chưa làm khảo sá
           proposedCareersText = matched.map((m, idx) => `  ${idx + 1}. ${m.name} (Tổ hợp: ${m.code || '---'}, ${m.stageLabel || ''})`).join('\n');
         }
       } catch (err) {
-        console.warn('[EduPath Gemini] Không thể trích xuất top ngành nghề:', err);
+        console.warn('[TeenVoca Gemini] Không thể trích xuất top ngành nghề:', err);
       }
     }
 
@@ -386,7 +386,7 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
                               msg.includes('demand') ||
                               msg.includes('supported methods');
         if (isRecoverable) {
-          console.warn(`[EduPath Gemini] Model '${m}' gặp sự cố (${err.message}). Tự động thử model tiếp theo...`);
+          console.warn(`[TeenVoca Gemini] Model '${m}' gặp sự cố (${err.message}). Tự động thử model tiếp theo...`);
           continue;
         } else {
           return { ok: false, error: `Lỗi kết nối: ${err.message}` };
@@ -477,7 +477,7 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
                               msg.includes('demand') ||
                               msg.includes('supported methods');
         if (isRecoverable) {
-          console.warn(`[EduPath Gemini] Model '${modelCandidate}' không khả dụng (${err.message}), tự động chuyển model dự phòng...`);
+          console.warn(`[TeenVoca Gemini] Model '${modelCandidate}' không khả dụng (${err.message}), tự động chuyển model dự phòng...`);
           continue;
         } else {
           throw err;
@@ -495,7 +495,7 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
       localStorage.setItem(STORAGE_KEY_MODEL, successfulModel);
       const modelSelect = document.getElementById('gemini-model-select');
       if (modelSelect) modelSelect.value = successfulModel;
-      console.log(`[EduPath Gemini] Đã tự động kích hoạt model hoạt động ổn định: ${successfulModel}`);
+      console.log(`[TeenVoca Gemini] Đã tự động kích hoạt model hoạt động ổn định: ${successfulModel}`);
     }
 
     return {
@@ -518,7 +518,7 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
           model: geminiRes.model || config.model
         };
       } catch (err) {
-        console.warn(`[EduPath Gemini] Lỗi gọi Gemini (${err.message}). Tự động kích hoạt Cố vấn SGK nội bộ:`, err);
+        console.warn(`[TeenVoca Gemini] Lỗi gọi Gemini (${err.message}). Tự động kích hoạt Cố vấn SGK nội bộ:`, err);
         const localReply = generateAgentResponse(agentId, userMessage, studentProfile);
         return {
           text: localReply,

@@ -28,11 +28,14 @@ const TeacherAnalytics = (() => {
     const existingIdx = list.findIndex(s => s.studentCode === newStudent.studentCode);
     if (existingIdx >= 0) {
       const existing = list[existingIdx] || {};
+      const validName = (newStudent.name && newStudent.name.trim() !== '' && newStudent.name.toUpperCase() !== newStudent.studentCode)
+        ? newStudent.name
+        : (existing.name && existing.name.toUpperCase() !== newStudent.studentCode ? existing.name : (newStudent.name || ''));
       list[existingIdx] = {
         ...existing,
         ...newStudent,
         id: existing.id || nextId,
-        name: newStudent.name || existing.name || '',
+        name: validName,
         grade: newStudent.grade || existing.grade || '',
         school: newStudent.school || existing.school || '',
         code: (newStudent.code && newStudent.code.trim().length > 0) ? newStudent.code : (existing.code || ''),
@@ -83,7 +86,7 @@ const TeacherAnalytics = (() => {
     const link = document.createElement('a');
     link.href = url;
     const fileSuffix = className ? className.replace(/\s+/g, '_') : 'Toan_Truong';
-    link.download = `Bao_Cao_Huong_Nghiep_${fileSuffix}_EduPath.csv`;
+    link.download = `Bao_Cao_Huong_Nghiep_${fileSuffix}_TeenVoca.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -115,7 +118,7 @@ const TeacherAnalytics = (() => {
       ];
       const wb = window.XLSX.utils.book_new();
       window.XLSX.utils.book_append_sheet(wb, ws, 'DanhSachHocSinh');
-      window.XLSX.writeFile(wb, 'Mau_Danh_Sach_Hoc_Sinh_EduPath.xlsx');
+      window.XLSX.writeFile(wb, 'Mau_Danh_Sach_Hoc_Sinh_TeenVoca.xlsx');
     } else {
       let csv = '\uFEFF' + headers.join(',') + '\n';
       sampleRows.forEach(row => {
@@ -125,7 +128,7 @@ const TeacherAnalytics = (() => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'Mau_Danh_Sach_Hoc_Sinh_EduPath.csv';
+      link.download = 'Mau_Danh_Sach_Hoc_Sinh_TeenVoca.csv';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -143,7 +146,7 @@ const TeacherAnalytics = (() => {
     }
 
     let headerIdx = -1;
-    let colMap = { code: -1, name: -1, grade: -1, school: -1 };
+    let colMap = { code: -1, name: -1, ho: -1, ten: -1, grade: -1, school: -1 };
 
     function normalizeHeader(str) {
       return String(str || '')
@@ -156,13 +159,20 @@ const TeacherAnalytics = (() => {
     for (let r = 0; r < Math.min(rows.length, 10); r++) {
       const row = rows[r].map(normalizeHeader);
       const codeIdx = row.findIndex(c => c !== 'stt' && (c.includes('ma hoc sinh') || c.includes('ma hs') || c.includes('mahs') || c.includes('code') || c === 'id' || (c.includes('ma') && !c.includes('ten'))));
-      const nameIdx = row.findIndex((c, idx) => idx !== codeIdx && (c.includes('ten') || c.includes('ho va ten') || c.includes('ho ten') || c.startsWith('ho ') || c === 'ho' || c.includes('name') || c.includes('fullname')));
-      const gradeIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && (c.includes('lop') || c.includes('grade') || c.includes('class')));
-      const schoolIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== gradeIdx && (c.includes('truong') || c.includes('school')));
+      
+      // Nhận diện tách 2 cột Họ và đệm / Tên (chuẩn xuất Excel trường học VnEdu, SMAS, CSDL Ngành)
+      const hoIdx = row.findIndex((c, idx) => idx !== codeIdx && (c.includes('ho dem') || c.includes('ho va dem') || c.includes('ho lot') || c.includes('ho va ten dem') || c === 'ho'));
+      const tenIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== hoIdx && (c === 'ten' || c.includes('ten goi') || c === 'ten hs' || c === 'ten hoc sinh'));
+      
+      // Nhận diện cột Họ và tên gộp
+      const nameIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== hoIdx && idx !== tenIdx && (c.includes('ho va ten') || c.includes('ho ten') || c.includes('fullname') || (c.includes('ten') && !c.includes('ma'))));
+      
+      const gradeIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== hoIdx && idx !== tenIdx && (c.includes('lop') || c.includes('grade') || c.includes('class')));
+      const schoolIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== hoIdx && idx !== tenIdx && idx !== gradeIdx && (c.includes('truong') || c.includes('school')));
 
-      if (codeIdx !== -1 && nameIdx !== -1) {
+      if (codeIdx !== -1 && (nameIdx !== -1 || (hoIdx !== -1 && tenIdx !== -1))) {
         headerIdx = r;
-        colMap = { code: codeIdx, name: nameIdx, grade: gradeIdx, school: schoolIdx };
+        colMap = { code: codeIdx, name: nameIdx, ho: hoIdx, ten: tenIdx, grade: gradeIdx, school: schoolIdx };
         break;
       }
     }
@@ -170,7 +180,7 @@ const TeacherAnalytics = (() => {
     if (headerIdx === -1) {
       // Giả định thứ tự mặc định nếu không khớp từ khóa
       headerIdx = 0;
-      colMap = { code: 1, name: 2, grade: 3, school: 4 };
+      colMap = { code: 1, name: 2, ho: -1, ten: -1, grade: 3, school: 4 };
     }
 
     const students = [];
@@ -182,7 +192,15 @@ const TeacherAnalytics = (() => {
       if (!row || row.length === 0) continue;
 
       let studentCode = colMap.code >= 0 && row[colMap.code] !== undefined ? String(row[colMap.code]).trim() : '';
-      let name = colMap.name >= 0 && row[colMap.name] !== undefined ? String(row[colMap.name]).trim() : '';
+      let name = '';
+      if (colMap.ho >= 0 && colMap.ten >= 0 && (row[colMap.ho] !== undefined || row[colMap.ten] !== undefined)) {
+        const hoPart = row[colMap.ho] !== undefined ? String(row[colMap.ho]).trim() : '';
+        const tenPart = row[colMap.ten] !== undefined ? String(row[colMap.ten]).trim() : '';
+        name = `${hoPart} ${tenPart}`.trim();
+      } else if (colMap.name >= 0 && row[colMap.name] !== undefined) {
+        name = String(row[colMap.name]).trim();
+      }
+
       let grade = colMap.grade >= 0 && row[colMap.grade] !== undefined ? String(row[colMap.grade]).trim() : '';
       let school = colMap.school >= 0 && row[colMap.school] !== undefined ? String(row[colMap.school]).trim() : '';
 
@@ -205,6 +223,15 @@ const TeacherAnalytics = (() => {
       studentCode = studentCode.toUpperCase().replace(/\s+/g, '-');
       if (forbiddenChars.test(studentCode)) {
         studentCode = studentCode.replace(/[.#$[\]/]/g, '-');
+      }
+
+      // Bảo vệ họ tên học sinh: nếu name rỗng hoặc trùng mã học sinh (như 9C-09), tra cứu từ danh sách hiện tại
+      if (!name || name.toUpperCase() === studentCode) {
+        const existingList = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData || [];
+        const found = existingList.find(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+        if (found && found.name && found.name.toUpperCase() !== studentCode) {
+          name = found.name;
+        }
       }
 
       students.push({
@@ -500,6 +527,20 @@ const TeacherAnalytics = (() => {
         scoredStudents += 1;
       }
 
+      let resolvedMajor = st.major;
+      const dataObj = window.TeenVocaData || window.EduPathData;
+      if ((!resolvedMajor || resolvedMajor === 'Chưa chọn' || resolvedMajor === 'Chưa khảo sát') && hasSurvey) {
+        if (window.HollandEngine && dataObj && dataObj.majors) {
+          const rec = window.HollandEngine.matchMajors(code, st.hollandPercentages || {});
+          if (rec && rec.length > 0) {
+            resolvedMajor = rec[0].name;
+          }
+        }
+      }
+      if (!resolvedMajor) {
+        resolvedMajor = hasSurvey ? 'Đang cập nhật' : 'Chưa khảo sát';
+      }
+
       return {
         stt: idx + 1,
         studentCode: st.studentCode || (st.id ? `${st.grade || 'HS'}-${String(st.id).padStart(2, '0')}` : `HS-${idx + 1}`),
@@ -509,7 +550,7 @@ const TeacherAnalytics = (() => {
         code: code || '---',
         hasSurvey,
         statusText: hasSurvey ? 'Đã hoàn thành' : 'Chưa khảo sát',
-        major: st.major || (hasSurvey ? 'Đang cập nhật' : 'Chưa khảo sát'),
+        major: resolvedMajor,
         projectScore: typeof st.projectScore === 'number' ? st.projectScore : null,
         classification: st.classification || (hasSurvey ? 'Phù hợp' : '---'),
         stream: normalizedStream
@@ -653,7 +694,7 @@ const TeacherAnalytics = (() => {
       const wb = window.XLSX.utils.book_new();
       window.XLSX.utils.book_append_sheet(wb, ws, 'BaoCaoThongKe');
       const cleanClass = targetClass.replace(/\s+/g, '_');
-      window.XLSX.writeFile(wb, `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_EduPath.xlsx`);
+      window.XLSX.writeFile(wb, `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_TeenVoca.xlsx`);
     } else {
       let csv = '\uFEFF';
       csv += `"BÁO CÁO THỐNG KÊ KẾT QUẢ KHẢO SÁT HƯỚNG NGHIỆP & PHÂN LUỒNG HỌC SINH"\n`;
@@ -676,7 +717,7 @@ const TeacherAnalytics = (() => {
       const link = document.createElement('a');
       link.href = url;
       const cleanClass = targetClass.replace(/\s+/g, '_');
-      link.download = `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_EduPath.csv`;
+      link.download = `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_TeenVoca.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -719,8 +760,8 @@ const TeacherAnalytics = (() => {
   <title>Báo Cáo Thống Kê Khảo Sát Hướng Nghiệp & Phân Luồng - ${targetClass}</title>
   <style>
     @page {
-      size: A4 portrait;
-      margin: 14mm 12mm 14mm 12mm;
+      size: A4 landscape;
+      margin: 10mm 12mm 10mm 12mm;
     }
     * { box-sizing: border-box; }
     body {
@@ -942,14 +983,15 @@ const TeacherAnalytics = (() => {
   <table class="report-table">
     <thead>
       <tr>
-        <th style="width: 5%;">STT</th>
-        <th style="width: 11%;">Mã HS</th>
-        <th style="width: 22%;">Họ và tên</th>
-        <th style="width: 7%;">Lớp</th>
-        <th style="width: 14%;">Trạng thái</th>
-        <th style="width: 10%;">Mã nghề</th>
-        <th style="width: 16%;">Ngành đề xuất</th>
-        <th style="width: 15%;">Phân luồng</th>
+        <th style="width: 4%;">STT</th>
+        <th style="width: 8%;">Mã HS</th>
+        <th style="width: 19%;">Họ và tên</th>
+        <th style="width: 5%;">Lớp</th>
+        <th style="width: 11%;">Trạng thái</th>
+        <th style="width: 8%;">Mã nghề</th>
+        <th style="width: 26%;">Ngành đề xuất</th>
+        <th style="width: 6%;">Điểm Bài 5</th>
+        <th style="width: 13%;">Phân luồng</th>
       </tr>
     </thead>
     <tbody>
@@ -979,6 +1021,7 @@ const TeacherAnalytics = (() => {
       </td>
     </tr>
   </table>
+  <div style="font-size: 8pt; color: #666; text-align: right; margin-top: 15px; font-style: italic;">Hệ thống Hướng nghiệp Thông minh TeenVoca AI &mdash; Môn Công nghệ 9 (Bộ Kết nối tri thức với cuộc sống)</div>
 </body>
 </html>`;
   }
@@ -995,7 +1038,7 @@ const TeacherAnalytics = (() => {
     iframe.style.width = '0';
     iframe.style.height = '0';
     iframe.style.border = '0';
-    iframe.setAttribute('title', 'EduPath Print Report Frame');
+    iframe.setAttribute('title', 'TeenVoca Print Report Frame');
     document.body.appendChild(iframe);
 
     iframe.onload = () => {

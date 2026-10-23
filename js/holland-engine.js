@@ -189,7 +189,8 @@ const HollandEngine = (() => {
    * @param {Object} [options] - Tùy chọn (vd: { isUndifferentiated: boolean })
    */
   function matchMajors(userCode, percentages, options = {}) {
-    const majors = (window.EduPathData && window.EduPathData.majors) ? window.EduPathData.majors : [];
+    const dataObj = window.TeenVocaData || window.EduPathData;
+    const majors = (dataObj && dataObj.majors) ? dataObj.majors : [];
 
     // Trường hợp 7: Dữ liệu chưa có hoặc chưa làm khảo sát -> Không tự sinh RIA mặc định
     if (!userCode || typeof userCode !== 'string' || userCode.trim().length === 0) {
@@ -288,8 +289,9 @@ const HollandEngine = (() => {
    * @param {Object} [options] - Tùy chọn ({ filterLetter?: 'all'|'c1'|'c2'|'c3', isUndifferentiated?: boolean })
    */
   function matchHollandOrderCareers(userCode, options = {}) {
-    const aiduMajors = (window.EduPathData && Array.isArray(window.EduPathData.aiducationMajors))
-      ? window.EduPathData.aiducationMajors
+    const dataObj = window.TeenVocaData || window.EduPathData;
+    const aiduMajors = (dataObj && Array.isArray(dataObj.aiducationMajors))
+      ? dataObj.aiducationMajors
       : [];
 
     if (!userCode || typeof userCode !== 'string' || userCode.trim().length === 0 || userCode === '---' || options.isUndifferentiated) {

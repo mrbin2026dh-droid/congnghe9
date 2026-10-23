@@ -49,7 +49,8 @@ window.EduPathFirebase = (() => {
   }
 
   // Fallback Local Storage Storage Key
-  const STORAGE_KEY = 'edupath_synced_roster';
+  const STORAGE_KEY = 'teenvoca_synced_roster';
+  const FALLBACK_KEY = 'edupath_synced_roster';
 
   function normalizeClassId(classId) {
     if (!classId) return '';
@@ -76,7 +77,8 @@ window.EduPathFirebase = (() => {
 
   function getLocalRoster() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) raw = localStorage.getItem(FALLBACK_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed;
@@ -218,10 +220,13 @@ window.EduPathFirebase = (() => {
           const snap = await dbInstance.ref(`students/${cleanCode}`).once('value');
           if (snap.exists()) {
             const existing = snap.val() || {};
+            const validName = (student.name && student.name.trim() !== '' && student.name.toUpperCase() !== cleanCode)
+              ? student.name
+              : (existing.name && existing.name.toUpperCase() !== cleanCode ? existing.name : (student.name || ''));
             payload = {
               ...existing,
               ...payload,
-              name: student.name || existing.name || '',
+              name: validName,
               grade: student.grade || existing.grade || '',
               school: student.school || existing.school || '',
               code: (student.code && student.code.trim().length > 0) ? student.code : (existing.code || ''),
@@ -423,11 +428,12 @@ window.EduPathFirebase = (() => {
           console.warn('Lỗi đọc teacherPin từ Firebase:', e);
         }
       }
-      return localStorage.getItem('edupath_teacher_pin') || '2026';
+      return localStorage.getItem('teenvoca_teacher_pin') || localStorage.getItem('edupath_teacher_pin') || '2026';
     },
 
     setTeacherPin: async (newPin) => {
       const cleanPin = String(newPin).trim();
+      localStorage.setItem('teenvoca_teacher_pin', cleanPin);
       localStorage.setItem('edupath_teacher_pin', cleanPin);
       if (isFirebaseReady && dbInstance) {
         try {
@@ -484,5 +490,7 @@ window.EduPathFirebase = (() => {
 
 // Auto-run init
 if (typeof window !== 'undefined') {
+  window.TeenVocaFirebase = window.EduPathFirebase;
+  window.TeenVocaFirebaseConfig = window.EduPathFirebaseConfig;
   window.EduPathFirebase.init();
 }

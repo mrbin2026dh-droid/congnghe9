@@ -1779,9 +1779,80 @@ const AIDUCATION_MAJORS = [
   }
 ];
 
-window.EduPathData = {
+// Danh mục Toàn diện 70+ Ngành học & Nghề nghiệp Phù hợp Holland RIASEC
+// Kết hợp SGK Công nghệ 9 & 59 Ngành Aiducation, đảm bảo đầy đủ 6 nhóm (R, I, A, S, E, C)
+const COMPREHENSIVE_MAJORS = [
+  ...AIDUCATION_MAJORS.map(m => {
+    const existing = MAJORS_DATABASE.find(db => 
+      db.name.toLowerCase() === m.name.toLowerCase() || 
+      (m.slug && db.id && db.id.includes(m.slug)) || 
+      (db.code === m.code && db.name.includes(m.name))
+    );
+    return {
+      id: m.id || m.slug || ('major-' + m.code.toLowerCase()),
+      slug: m.slug || m.id,
+      name: m.name,
+      code: m.code,
+      primaryType: m.primaryType || m.code[0],
+      secondaryType: m.secondaryType || m.code[1],
+      tertiaryType: m.tertiaryType || m.code[2],
+      level: (existing && existing.level) || 'Đại học / Cao đẳng',
+      demandGrowth: (existing && existing.demandGrowth) || '+15.0%',
+      avgSalary: (existing && existing.avgSalary) || '10 - 22 triệu/tháng',
+      description: m.description || (existing && existing.description) || '',
+      suitability: (existing && existing.suitability) || ('Học sinh có thiên hướng tư duy và năng lực thuộc nhóm ' + m.code + '.'),
+      careers: (m.careers && m.careers.length > 0) ? m.careers : ((existing && [existing.name]) || [])
+    };
+  }),
+  ...MAJORS_DATABASE.filter(db => 
+    !AIDUCATION_MAJORS.some(a => a.name.toLowerCase() === db.name.toLowerCase())
+  ),
+  {
+    id: 'aidu-khoa-hoc-tinh-toan-da-phuong-tien',
+    slug: 'khoa-hoc-tinh-toan-da-phuong-tien',
+    name: 'Khoa học Tính toán & Thiết kế Đa phương tiện',
+    code: 'IAR',
+    primaryType: 'I',
+    secondaryType: 'A',
+    tertiaryType: 'R',
+    level: 'Đại học / Cao đẳng',
+    demandGrowth: '+19.2%',
+    avgSalary: '14 - 28 triệu/tháng',
+    description: 'Nghiên cứu thuật toán đồ họa máy tính, mô phỏng không gian số, kỹ thuật tương tác thị giác và công nghệ sáng tạo.',
+    suitability: 'Đam mê nghiên cứu khoa học, có óc thẩm mỹ và thích thao tác công cụ kỹ thuật thực hành.',
+    careers: [
+      'Kỹ sư thuật toán đồ họa & Game engine',
+      'Chuyên viên mô phỏng thị giác khoa học',
+      'Chuyên viên R&D công nghệ truyền thông số'
+    ]
+  },
+  {
+    id: 'aidu-khao-co-bao-ton-di-san',
+    slug: 'khao-co-bao-ton-di-san',
+    name: 'Khảo cổ học & Bảo tồn Di sản Văn hóa',
+    code: 'IAR',
+    primaryType: 'I',
+    secondaryType: 'A',
+    tertiaryType: 'R',
+    level: 'Đại học / Viện nghiên cứu',
+    demandGrowth: '+10.5%',
+    avgSalary: '9 - 18 triệu/tháng',
+    description: 'Nghiên cứu thực địa, khai quật hiện vật, phục dựng thẩm mỹ các công trình và cổ vật lịch sử.',
+    suitability: 'Thích nghiên cứu khoa học lịch sử, có khiếu thẩm mỹ phục dựng và chịu được công tác thực địa.',
+    careers: [
+      'Chuyên viên khảo sát & khai quật di sản',
+      'Chuyên viên phục dựng cổ vật mỹ thuật',
+      'Nghiên cứu viên viện bảo tàng & di tích'
+    ]
+  }
+];
+
+window.TeenVocaData = {
   holland: HOLLAND_DATA,
   sgk: SGK_DATA,
-  majors: MAJORS_DATABASE,
+  majors: COMPREHENSIVE_MAJORS,
   aiducationMajors: AIDUCATION_MAJORS
 };
+
+// Backward-compatible alias for existing tests and scripts
+window.EduPathData = window.TeenVocaData;
