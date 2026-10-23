@@ -43,6 +43,7 @@ class EduPathApp {
     this.treeAnimator = null;
     this.audioCtx = null;
     this.currentUser = null;
+    this.selectedTeacherStudentCode = null;
     this.userRole = null;
 
     this.loadProfileFromStorage();
@@ -1917,6 +1918,7 @@ class EduPathApp {
     if (classFilter) {
       classFilter.addEventListener('change', (e) => {
         const val = e.target.value;
+        this.selectedTeacherStudentCode = null;
         if (window.EduPathFirebase) {
           if (this.teacherListenerUnsub) this.teacherListenerUnsub();
           this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(val, (students) => {
@@ -1926,6 +1928,26 @@ class EduPathApp {
             }
           });
         }
+      });
+    }
+
+    // Nút quay lại biểu đồ toàn lớp
+    const wholeClassBtn = document.getElementById('btn-view-whole-class-chart');
+    if (wholeClassBtn) {
+      wholeClassBtn.addEventListener('click', () => {
+        this.selectedTeacherStudentCode = null;
+        this.renderTeacherHeatmap();
+        this.playBeep(640, 'sine', 0.1);
+      });
+    }
+
+    // Dropdown chọn học sinh để xem biểu đồ cá nhân
+    const studentChartSelect = document.getElementById('teacher-student-chart-select');
+    if (studentChartSelect) {
+      studentChartSelect.addEventListener('change', (e) => {
+        this.selectedTeacherStudentCode = e.target.value ? e.target.value : null;
+        this.renderTeacherHeatmap();
+        this.playBeep(680, 'sine', 0.1);
       });
     }
 
@@ -2313,10 +2335,32 @@ class EduPathApp {
     const sanitize = window.sanitize;
 
     const classData = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
-    const dist = TeacherAnalytics.computeDistribution(classData);
-    TeacherAnalytics.renderClassHeatmap(canvas, dist);
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const currentFilter = (filterSelect && filterSelect.value) || '';
+    const totalStudents = classData.length;
+    const assessedStudents = classData.filter(s => Boolean(s.code && s.code.trim().length > 0));
 
-    // Dynamic Streaming Calculations from REAL classData
+    // Cập nhật danh sách trong dropdown chọn học sinh xem biểu đồ
+    const studentChartSelect = document.getElementById('teacher-student-chart-select');
+    if (studentChartSelect) {
+      const prevVal = this.selectedTeacherStudentCode || '';
+      studentChartSelect.textContent = '';
+      const defOpt = document.createElement('option');
+      defOpt.value = '';
+      defOpt.textContent = currentFilter ? `👥 Cả lớp ${currentFilter}` : '👥 Cả lớp / Toàn bộ';
+      studentChartSelect.appendChild(defOpt);
+
+      classData.forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st.studentCode;
+        const codeSuffix = st.code ? ` (${st.code})` : ' (Chưa làm)';
+        opt.textContent = `👤 ${st.studentCode} - ${st.name || 'Học sinh'}${codeSuffix}`;
+        studentChartSelect.appendChild(opt);
+      });
+      studentChartSelect.value = prevVal;
+    }
+
+    const wholeClassBtn = document.getElementById('btn-view-whole-class-chart');
     const thptPercentEl = document.getElementById('teacher-stream-thpt-percent');
     const thptBarEl = document.getElementById('teacher-stream-thpt-bar');
     const vocPercentEl = document.getElementById('teacher-stream-vocational-percent');
@@ -2324,12 +2368,76 @@ class EduPathApp {
     const recEl = document.getElementById('teacher-pedagogy-recommendation');
     const heatmapTitleEl = document.getElementById('teacher-heatmap-title');
 
-    const totalStudents = classData.length;
-    const filterSelect = document.getElementById('teacher-class-filter-select');
-    const currentFilter = (filterSelect && filterSelect.value) || '';
+    // Kiểm tra xem có đang chọn 1 học sinh cụ thể để xem biểu đồ không
+    const selectedStudent = this.selectedTeacherStudentCode
+      ? classData.find(s => s.studentCode && s.studentCode.toUpperCase() === this.selectedTeacherStudentCode.toUpperCase())
+      : null;
 
-    // Count students who have actually completed Holland survey
-    const assessedStudents = classData.filter(s => Boolean(s.code && s.code.trim().length > 0));
+    if (selectedStudent) {
+      // ===== CHẾ ĐỘ XEM BIỂU ĐỒ RIASEC CÁ NHÂN TỪNG HỌC SINH =====
+      if (wholeClassBtn) wholeClassBtn.style.display = 'inline-flex';
+
+      const hasSurvey = Boolean(selectedStudent.code && selectedStudent.code.trim().length > 0 && selectedStudent.code !== '---');
+      let studentPercentages = selectedStudent.hollandPercentages;
+      if (!studentPercentages && selectedStudent.hollandScores) {
+        const scores = selectedStudent.hollandScores;
+        const maxScore = Math.max(15, ...Object.values(scores));
+        studentPercentages = {};
+        ['R', 'I', 'A', 'S', 'E', 'C'].forEach(k => {
+          studentPercentages[k] = Math.round(((scores[k] || 0) / maxScore) * 100);
+        });
+      }
+      if (!studentPercentages) {
+        studentPercentages = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+      }
+
+      TeacherAnalytics.renderClassHeatmap(canvas, { percentages: studentPercentages }, {
+        isIndividual: true,
+        hasSurvey,
+        student: selectedStudent
+      });
+
+      if (heatmapTitleEl) {
+        if (hasSurvey) {
+          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${selectedStudent.name || 'Học sinh'}</span> (${selectedStudent.studentCode} · Mã: <strong style="color:var(--brand);">${selectedStudent.code}</strong>)`);
+        } else {
+          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${selectedStudent.name || 'Học sinh'}</span> (${selectedStudent.studentCode} · Chưa làm bài)`);
+        }
+      }
+
+      if (hasSurvey) {
+        const streamStr = (selectedStudent.stream || '').toLowerCase();
+        const isVoc = streamStr.includes('nghề') || streamStr.includes('cao đẳng') || streamStr.includes('trung cấp') || streamStr.includes('9+');
+        const thptVal = isVoc ? 0 : 100;
+        const vocVal = isVoc ? 100 : 0;
+
+        if (thptPercentEl) thptPercentEl.textContent = `${thptVal}% (${selectedStudent.name})`;
+        if (thptBarEl) thptBarEl.style.width = `${thptVal}%`;
+        if (vocPercentEl) vocPercentEl.textContent = `${vocVal}% (${selectedStudent.name})`;
+        if (vocBarEl) vocBarEl.style.width = `${vocVal}%`;
+
+        if (recEl) {
+          const stMajor = selectedStudent.major || (window.HollandEngine && window.EduPathData ? window.HollandEngine.matchMajors(selectedStudent.code, studentPercentages)[0].name : '');
+          const m0 = (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[selectedStudent.code[0]]) ? window.HollandEngine.GROUP_METADATA[selectedStudent.code[0]].shortName : selectedStudent.code[0];
+          const m1 = (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[selectedStudent.code[1]]) ? window.HollandEngine.GROUP_METADATA[selectedStudent.code[1]].shortName : selectedStudent.code[1];
+          recEl.innerHTML = sanitize(`💡 <strong>Hồ sơ Hướng nghiệp Cá nhân (${selectedStudent.name || 'Học sinh'} - ${selectedStudent.studentCode}):</strong><br>• Mã Holland: <strong>${selectedStudent.code}</strong> · Ngành đề xuất: <strong>${stMajor}</strong><br>• Đề xuất phân luồng: <strong>${selectedStudent.stream || 'Học tiếp THPT & Đại học'}</strong>.<br>• Phân tích: Học sinh có điểm nổi bật ở nhóm <strong>${m0} (${studentPercentages[selectedStudent.code[0]] || 0}%)</strong> và <strong>${m1} (${studentPercentages[selectedStudent.code[1]] || 0}%)</strong>. Giáo viên nên định hướng em tập trung vào tổ hợp môn phù hợp với thế mạnh này.`);
+        }
+      } else {
+        if (thptPercentEl) thptPercentEl.textContent = '0%';
+        if (thptBarEl) thptBarEl.style.width = '0%';
+        if (vocPercentEl) vocPercentEl.textContent = '0%';
+        if (vocBarEl) vocBarEl.style.width = '0%';
+
+        if (recEl) {
+          recEl.innerHTML = sanitize(`💡 <strong>Chưa có dữ liệu khảo sát:</strong> Học sinh <strong>${selectedStudent.name || 'Học sinh'}</strong> (${selectedStudent.studentCode}) chưa hoàn thành bài trắc nghiệm Holland RIASEC. Giáo viên vui lòng hướng dẫn học sinh đăng nhập vào hệ thống để làm bài.`);
+        }
+      }
+    } else {
+      // ===== CHẾ ĐỘ XEM BIỂU ĐỒ RIASEC CẢ LỚP (TỔNG QUAN) =====
+      if (wholeClassBtn) wholeClassBtn.style.display = 'none';
+
+      const dist = TeacherAnalytics.computeDistribution(classData);
+      TeacherAnalytics.renderClassHeatmap(canvas, dist);
 
     if (heatmapTitleEl) {
       if (assessedStudents.length > 0) {
@@ -2412,6 +2520,7 @@ class EduPathApp {
         }
       }
     }
+    }
 
     const tbody = document.getElementById('teacher-student-table-body');
     if (tbody) {
@@ -2452,7 +2561,14 @@ class EduPathApp {
         const scoreText = typeof st.projectScore === 'number' ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
         const streamText = st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`;
 
+        const isSelected = this.selectedTeacherStudentCode && (this.selectedTeacherStudentCode.toUpperCase() === studentCode.toUpperCase());
         const tr = document.createElement('tr');
+        if (isSelected) {
+          tr.className = 'selected-student-row';
+        }
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click để xem biểu đồ RIASEC của riêng học sinh này';
+
         tr.innerHTML = sanitize(`
           <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
           <td style="text-align:center;"><code style="font-weight:700; color:var(--brand); background:var(--surface-elevated); padding:0.15rem 0.35rem; border-radius:4px; font-size:0.75rem;">${studentCode}</code></td>
@@ -2464,16 +2580,37 @@ class EduPathApp {
           <td style="text-align:center;">${scoreText}</td>
           <td>${streamText}</td>
           <td style="text-align:center; white-space:nowrap;">
+            <button type="button" class="btn-table-action btn-table-chart" data-code="${studentCode}" title="Xem biểu đồ của riêng học sinh này">📊 Biểu đồ</button>
             <button type="button" class="btn-table-action btn-table-edit" data-code="${studentCode}">Sửa</button>
             <button type="button" class="btn-table-action btn-table-delete" data-code="${studentCode}">Xóa</button>
           </td>
         `);
         tbody.appendChild(tr);
+
+        // Click cả hàng để xem biểu đồ học sinh
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return; // Bỏ qua nếu bấm nút con
+          this.selectedTeacherStudentCode = (this.selectedTeacherStudentCode === studentCode) ? null : studentCode;
+          this.renderTeacherHeatmap();
+          this.playBeep(650, 'sine', 0.08);
+        });
+      });
+
+      // Bind button xem biểu đồ
+      tbody.querySelectorAll('.btn-table-chart').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const code = e.currentTarget.getAttribute('data-code');
+          this.selectedTeacherStudentCode = (this.selectedTeacherStudentCode === code) ? null : code;
+          this.renderTeacherHeatmap();
+          this.playBeep(720, 'triangle', 0.12);
+        });
       });
 
       // Bind edit & delete buttons
       tbody.querySelectorAll('.btn-table-edit').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           const code = e.currentTarget.getAttribute('data-code');
           this.openEditStudentModal(code);
         });
@@ -2481,6 +2618,7 @@ class EduPathApp {
 
       tbody.querySelectorAll('.btn-table-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           const code = e.currentTarget.getAttribute('data-code');
           this.confirmDeleteStudent(code);
         });

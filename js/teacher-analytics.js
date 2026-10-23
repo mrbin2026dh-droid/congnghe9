@@ -99,13 +99,17 @@ const TeacherAnalytics = (() => {
   }
 
   /**
-   * Vẽ biểu đồ thanh phân bố RIASEC cả lớp lên Canvas
+   * Vẽ biểu đồ thanh phân bố RIASEC cả lớp hoặc chi tiết từng học sinh lên Canvas
+   * @param {HTMLCanvasElement} canvas
+   * @param {Object} distribution - { percentages: { R, I, A, S, E, C } }
+   * @param {Object} [options] - { isIndividual: boolean, hasSurvey: boolean, student: Object }
    */
-  function renderClassHeatmap(canvas, distribution) {
+  function renderClassHeatmap(canvas, distribution, options = {}) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const w = canvas.parentElement.clientWidth;
+    const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+    const w = parentW > 50 ? parentW : 420;
     const h = 260;
 
     canvas.width = w * dpr;
@@ -113,6 +117,21 @@ const TeacherAnalytics = (() => {
     ctx.scale(dpr, dpr);
 
     ctx.clearRect(0, 0, w, h);
+
+    const isIndividual = Boolean(options && options.isIndividual);
+    const hasSurvey = (options && options.hasSurvey !== undefined) ? options.hasSurvey : true;
+
+    // Trường hợp học sinh chưa làm bài khảo sát
+    if (isIndividual && !hasSurvey) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Học sinh này chưa hoàn thành bài khảo sát Holland RIASEC', w * 0.5, h * 0.45);
+      ctx.font = '12px sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('Vui lòng hướng dẫn em đăng nhập tài khoản để thực hiện bài trắc nghiệm.', w * 0.5, h * 0.45 + 24);
+      return;
+    }
 
     const keys = ['R', 'I', 'A', 'S', 'E', 'C'];
     const colors = {
@@ -134,10 +153,12 @@ const TeacherAnalytics = (() => {
 
     const barWidth = Math.min(50, (w - 80) / 6);
     const spacing = (w - 60 - barWidth * 6) / 5;
-    const maxBarHeight = 160;
+    const maxBarHeight = 150;
+
+    const studentCodeStr = (options && options.student && options.student.code) ? options.student.code.toUpperCase() : '';
 
     keys.forEach((key, idx) => {
-      const pct = distribution.percentages[key] || 0;
+      const pct = (distribution.percentages && typeof distribution.percentages[key] === 'number') ? distribution.percentages[key] : 0;
       const barH = Math.max(8, (pct / 100) * maxBarHeight);
       const x = 30 + idx * (barWidth + spacing);
       const y = h - 50 - barH;
@@ -147,6 +168,22 @@ const TeacherAnalytics = (() => {
       ctx.beginPath();
       ctx.roundRect(x, y, barWidth, barH, [6, 6, 0, 0]);
       ctx.fill();
+
+      // Nếu đang xem cá nhân học sinh, đánh dấu Top 1, Top 2, Top 3
+      if (isIndividual && studentCodeStr.includes(key)) {
+        const rankIdx = studentCodeStr.indexOf(key);
+        if (rankIdx >= 0 && rankIdx < 3) {
+          ctx.strokeStyle = colors[key];
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          // Huy hiệu Top thứ bậc
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillStyle = colors[key];
+          ctx.textAlign = 'center';
+          ctx.fillText('Top ' + (rankIdx + 1), x + barWidth * 0.5, y - 24);
+        }
+      }
 
       // Percentage label on top of bar
       ctx.font = 'bold 12px sans-serif';

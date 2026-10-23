@@ -578,6 +578,29 @@ html, body {
   border-color: var(--accent-practical);
 }
 
+.btn-table-chart {
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.08);
+  font-weight: 700;
+  margin-right: 0.25rem;
+}
+
+.btn-table-chart:hover {
+  background-color: rgba(37, 99, 235, 0.18);
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.selected-student-row {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  box-shadow: inset 4px 0 0 #2563eb;
+}
+
+.selected-student-row td {
+  font-weight: 600;
+}
+
 .theme-toggle-btn {
   min-width: 44px;
   min-height: 44px;
