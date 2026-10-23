@@ -30,12 +30,12 @@ def test_realtime_sync_dual_context():
         # Login as teacher
         if page_teacher.locator('#btn-logout').is_visible():
             page_teacher.locator('#btn-logout').click()
-        elif page_teacher.locator('#btn-open-login').is_visible():
+            page_teacher.wait_for_timeout(200)
+        elif (not page_teacher.locator('#auth-modal').is_visible()) and page_teacher.locator('#btn-open-login').is_visible():
             page_teacher.locator('#btn-open-login').click()
-        page_teacher.wait_for_timeout(200)
+            page_teacher.wait_for_timeout(200)
 
         page_teacher.locator('#auth-tab-teacher').click()
-        page_teacher.locator('#login-teacher-class').fill('9A1')
         page_teacher.locator('#login-teacher-pin').fill('123456')
         page_teacher.locator('#btn-submit-teacher-login').click()
         page_teacher.wait_for_timeout(300)

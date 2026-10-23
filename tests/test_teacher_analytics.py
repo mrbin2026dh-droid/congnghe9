@@ -27,18 +27,17 @@ def test_teacher_analytics():
         # Switch to teacher mode via auth modal
         if page.locator('#btn-logout').is_visible():
             page.locator('#btn-logout').click()
-        elif page.locator('#btn-open-login').is_visible():
+            page.wait_for_timeout(200)
+        elif (not page.locator('#auth-modal').is_visible()) and page.locator('#btn-open-login').is_visible():
             page.locator('#btn-open-login').click()
+            page.wait_for_timeout(200)
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-class').fill('9A1')
         page.locator('#login-teacher-pin').fill('123456')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 
         # Navigate to Teacher Tab
-        teacher_tab_btn = page.locator('.tab-btn[data-tab="teacher"]')
-        teacher_tab_btn.click()
-        page.wait_for_timeout(300)
+        assert page.locator('#view-teacher').is_visible(), 'Teacher view must be visible directly after login'
 
         # Check export CSV button exists
         export_csv_btn = page.locator('#export-class-csv-btn')

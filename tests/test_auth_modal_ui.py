@@ -28,6 +28,10 @@ def test_auth_modal_and_clean_topbar():
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
 
+        # 0. Initial load must show Auth Modal first (Login Gate)
+        assert page.locator('#auth-modal').is_visible(), "Auth modal must be displayed on first page load"
+
+
         # 1. Topbar check: No cramped inputs
         assert page.locator('#student-school-input').count() == 0, "Old school input must be removed from topbar"
         assert page.locator('#student-grade-input').count() == 0, "Old grade input must be removed from topbar"
@@ -76,8 +80,17 @@ def test_auth_modal_and_clean_topbar():
         logout_btn.click()
         page.wait_for_timeout(200)
 
-        # Auth modal should appear again or login button shown
-        assert page.locator('#btn-open-login').is_visible() or auth_modal.is_visible(), "Login button or modal should appear after logout"
+        # Auth modal should appear again
+        assert auth_modal.is_visible(), "Auth modal must appear after logout"
+
+        # 6. Test Teacher Login (PIN only)
+        page.locator('#auth-tab-teacher').click()
+        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#btn-submit-teacher-login').click()
+        page.wait_for_timeout(300)
+
+        assert page.locator('#view-teacher').is_visible(), "Teacher view must be visible after teacher login"
+        assert not page.locator('.tab-nav').is_visible(), "Tab-nav must be hidden in teacher mode (H3)"
 
         browser.close()
         print("AUTH MODAL & CLEAN TOPBAR TESTS PASSED!")

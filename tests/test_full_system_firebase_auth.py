@@ -51,9 +51,10 @@ def test_full_system_firebase_auth():
         # If already logged in, log out first to verify fresh login
         if page.locator('#btn-logout').is_visible():
             page.locator('#btn-logout').click()
-        elif page.locator('#btn-open-login').is_visible():
+            page.wait_for_timeout(200)
+        elif (not page.locator('#auth-modal').is_visible()) and page.locator('#btn-open-login').is_visible():
             page.locator('#btn-open-login').click()
-        page.wait_for_timeout(200)
+            page.wait_for_timeout(200)
 
         # Fill student login
         page.locator('#login-student-code').fill('9A1-02') # Trần Thị Bích
@@ -92,12 +93,14 @@ def test_full_system_firebase_auth():
         page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-class').fill('9A1')
         page.locator('#login-teacher-pin').fill('123456')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 
         assert page.locator('#view-teacher').is_visible(), "Teacher view must be visible after login"
+        # Check tab-nav is hidden in teacher view (H3)
+        tab_nav = page.locator('.tab-nav')
+        assert not tab_nav.is_visible(), "Tab navigation must be hidden in teacher mode (H3)"
 
         # Add Student Account
         page.locator('#btn-open-add-student-modal').click()

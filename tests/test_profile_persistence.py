@@ -25,12 +25,13 @@ def test_student_profile_persistence():
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
 
-        # Open login modal
+        # Open login modal if not already open
         if page.locator('#btn-logout').is_visible():
             page.locator('#btn-logout').click()
-        elif page.locator('#btn-open-login').is_visible():
+            page.wait_for_timeout(200)
+        elif (not page.locator('#auth-modal').is_visible()) and page.locator('#btn-open-login').is_visible():
             page.locator('#btn-open-login').click()
-        page.wait_for_timeout(200)
+            page.wait_for_timeout(200)
 
         # Step 2: Fill in student code 9A2-04 (Phạm Đức Dũng)
         student_code_in = page.locator('#login-student-code')

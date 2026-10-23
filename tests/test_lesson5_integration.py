@@ -24,6 +24,11 @@ def test_lesson5_integration():
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
 
+        # Student login to enter learning view
+        page.locator('#login-student-code').fill('9A1-01')
+        page.locator('#btn-submit-student-login').click()
+        page.wait_for_timeout(300)
+
         # Navigate to Project 5 Tab
         project_tab_btn = page.locator('.tab-btn[data-tab="project"]')
         project_tab_btn.click()

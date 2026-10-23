@@ -627,6 +627,13 @@
               <p class="card-subtitle">Bức tranh toàn cảnh về phân bố tính cách RIASEC và định hướng sau THCS</p>
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <select id="teacher-class-filter-select" class="form-select" style="padding:0.4rem 0.65rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.8rem; font-weight:700; background:var(--surface-card); color:var(--text-primary); cursor:pointer;">
+                <option value="">Tất cả các lớp</option>
+                <option value="9A1">Lớp 9A1</option>
+                <option value="9A2">Lớp 9A2</option>
+                <option value="9B1">Lớp 9B1</option>
+                <option value="9C">Lớp 9C</option>
+              </select>
               <button class="btn-primary" id="btn-open-add-student-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Học Sinh
               </button>
@@ -704,9 +711,8 @@
   </div>
 
   <!-- ================= AUTHENTICATION MODAL ================= -->
-  <div class="auth-modal-overlay" id="auth-modal" style="display: none;">
+  <div class="auth-modal-overlay" id="auth-modal" style="display: flex;">
     <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <button type="button" class="auth-modal-close" id="btn-close-auth-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
       <div class="auth-modal-header">
         <div class="auth-brand-badge">EDUPATH AI</div>
         <h2 id="auth-modal-title" class="auth-modal-title">Cổng Đăng Nhập Hướng Nghiệp</h2>
@@ -723,25 +729,21 @@
         <div class="form-group">
           <label for="login-student-code">Mã học sinh</label>
           <input type="text" id="login-student-code" class="auth-input" placeholder="Ví dụ: 9A1-01" autocomplete="off" required>
-          <span class="form-hint">Nhập mã học sinh do giáo viên bộ môn cấp</span>
+          <span class="form-hint">Nhập mã học sinh do giáo viên bộ môn cấp (Ví dụ: 9A1-01 đến 9A1-10)</span>
         </div>
         <div class="auth-error-msg" id="student-login-error" style="display: none;"></div>
-        <button type="submit" class="btn-auth-submit" id="btn-submit-student-login">Vào học ngay</button>
+        <button type="submit" class="btn-auth-submit" id="btn-submit-student-login">Đăng Nhập Học Sinh</button>
       </form>
 
       <!-- Teacher Login Form -->
       <form class="auth-form" id="teacher-login-form" style="display: none;">
         <div class="form-group">
-          <label for="login-teacher-class">Mã lớp phụ trách</label>
-          <input type="text" id="login-teacher-class" class="auth-input" placeholder="Ví dụ: 9A1" autocomplete="off" required>
-        </div>
-        <div class="form-group">
           <label for="login-teacher-pin">Mã bảo mật Giáo viên</label>
-          <input type="password" id="login-teacher-pin" class="auth-input" placeholder="Nhập mã PIN giáo viên" autocomplete="off" required>
-          <span class="form-hint">Mã mặc định quản lý lớp: 123456</span>
+          <input type="password" id="login-teacher-pin" class="auth-input" placeholder="Nhập mã PIN giáo viên (123456)" autocomplete="off" required>
+          <span class="form-hint">Mã mặc định hệ thống: 123456</span>
         </div>
         <div class="auth-error-msg" id="teacher-login-error" style="display: none;"></div>
-        <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Vào trang quản lý</button>
+        <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Đăng Nhập Giáo Viên</button>
       </form>
     </div>
   </div>

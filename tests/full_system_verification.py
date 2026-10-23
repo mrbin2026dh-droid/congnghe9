@@ -86,9 +86,10 @@ def run_system_verification():
         # Step A: Student Code Login & Profile Persistence
         if page.locator('#btn-logout').is_visible():
             page.locator('#btn-logout').click()
-        elif page.locator('#btn-open-login').is_visible():
+            page.wait_for_timeout(200)
+        elif (not page.locator('#auth-modal').is_visible()) and page.locator('#btn-open-login').is_visible():
             page.locator('#btn-open-login').click()
-        page.wait_for_timeout(200)
+            page.wait_for_timeout(200)
 
         test_code = "9A2-04"
         test_name = "Phạm Đức Dũng"
@@ -195,17 +196,18 @@ def run_system_verification():
         page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-class').fill('9A2')
         page.locator('#login-teacher-pin').fill('123456')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 
         assert page.locator('#view-teacher').is_visible(), "Teacher view must be visible after login"
 
+        import time
+        unique_code = f'9A2-{int(time.time() * 1000) % 900 + 100}'
         initial_count = page.locator('#teacher-student-table-body tr').count()
         page.locator('#btn-open-add-student-modal').click()
         page.wait_for_timeout(200)
-        page.locator('#crud-student-code').fill('9A2-88')
+        page.locator('#crud-student-code').fill(unique_code)
         page.locator('#crud-student-name').fill('Học sinh Mới 88')
         page.locator('#crud-student-grade').fill('9A2')
         page.locator('#crud-student-school').fill(test_school)

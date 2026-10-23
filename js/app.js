@@ -57,7 +57,11 @@ class EduPathApp {
     this.initProjectAssessment();
     this.initTeacherDashboard();
     this.bindEvents();
-    this.switchTab('tree');
+    if (this.currentUser && this.currentUser.role === 'teacher') {
+      this.switchTab('teacher');
+    } else {
+      this.switchTab('tree');
+    }
   }
 
   initAudio() {
@@ -96,6 +100,9 @@ class EduPathApp {
       if (rawUser) {
         this.currentUser = JSON.parse(rawUser);
         this.userRole = this.currentUser ? this.currentUser.role : null;
+      } else {
+        this.currentUser = null;
+        this.userRole = null;
       }
       const raw = localStorage.getItem('edupath_student_profile');
       if (raw) {
@@ -103,16 +110,6 @@ class EduPathApp {
         if (parsed && typeof parsed === 'object') {
           this.studentProfile = { ...this.studentProfile, ...parsed };
         }
-      }
-      if (!this.currentUser) {
-        this.currentUser = {
-          role: 'student',
-          code: '9A1-01',
-          name: this.studentProfile.name || 'Nguyễn Văn An',
-          grade: this.studentProfile.grade || '9A1',
-          school: this.studentProfile.school || 'THCS Chu Văn An'
-        };
-        this.userRole = 'student';
       }
       const rawMatches = localStorage.getItem('edupath_assessment_matches');
       if (rawMatches) {
@@ -255,16 +252,17 @@ class EduPathApp {
     const formStudent = document.getElementById('student-login-form');
     const formTeacher = document.getElementById('teacher-login-form');
     const studentCodeInput = document.getElementById('login-student-code');
-    const teacherClassInput = document.getElementById('login-teacher-class');
     const teacherPinInput = document.getElementById('login-teacher-pin');
 
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => this.hideAuthModal());
+      closeBtn.addEventListener('click', () => {
+        if (this.currentUser) this.hideAuthModal();
+      });
     }
 
     if (authModal) {
       authModal.addEventListener('click', (e) => {
-        if (e.target === authModal) this.hideAuthModal();
+        if (e.target === authModal && this.currentUser) this.hideAuthModal();
       });
     }
 
@@ -296,10 +294,8 @@ class EduPathApp {
     if (formTeacher) {
       formTeacher.addEventListener('submit', (e) => {
         e.preventDefault();
-        const classId = teacherClassInput ? teacherClassInput.value.trim().toUpperCase() : '';
         const pin = teacherPinInput ? teacherPinInput.value.trim() : '';
-        if (!classId) return;
-        this.handleTeacherLogin(classId, pin);
+        this.handleTeacherLogin(pin);
       });
     }
 
@@ -320,6 +316,7 @@ class EduPathApp {
   }
 
   hideAuthModal() {
+    if (!this.currentUser) return;
     const authModal = document.getElementById('auth-modal');
     if (authModal) authModal.style.display = 'none';
   }
@@ -329,6 +326,7 @@ class EduPathApp {
     const roleTag = document.getElementById('user-role-tag');
     const infoText = document.getElementById('user-info-text');
     const openLoginBtn = document.getElementById('btn-open-login');
+    const tabNav = document.querySelector('.tab-nav');
     const teacherNavBtn = document.querySelector('.tab-btn[data-tab="teacher"]');
 
     if (this.currentUser) {
@@ -342,19 +340,27 @@ class EduPathApp {
           roleTag.classList.add('teacher');
         }
         if (infoText) {
-          infoText.textContent = `Lớp ${this.currentUser.classId || '9A1'}`;
+          infoText.textContent = 'Quản trị Hệ thống';
         }
-        if (teacherNavBtn) {
-          teacherNavBtn.style.display = 'inline-flex';
+        // H3 requirement: Delete/Hide the tab navigation bar completely for Teacher!
+        if (tabNav) {
+          tabNav.style.display = 'none';
+        }
+        if (this.currentTab !== 'teacher') {
+          this.switchTab('teacher');
         }
       } else {
-        // Student
+        // Student role
         if (roleTag) {
           roleTag.textContent = 'Học sinh';
           roleTag.classList.remove('teacher');
         }
         if (infoText) {
           infoText.textContent = `${this.currentUser.code || '9A1-01'} · ${this.studentProfile.name}`;
+        }
+        // H4 requirement: Show student tabs, hide teacher tab
+        if (tabNav) {
+          tabNav.style.display = 'flex';
         }
         if (teacherNavBtn) {
           teacherNavBtn.style.display = 'none';
@@ -366,7 +372,9 @@ class EduPathApp {
     } else {
       if (userBadge) userBadge.style.display = 'none';
       if (openLoginBtn) openLoginBtn.style.display = 'inline-flex';
-      if (teacherNavBtn) teacherNavBtn.style.display = 'inline-flex';
+      if (tabNav) {
+        tabNav.style.display = 'none';
+      }
       this.showAuthModal();
     }
   }
@@ -374,6 +382,14 @@ class EduPathApp {
   async handleStudentLogin(code) {
     const studentErr = document.getElementById('student-login-error');
     if (studentErr) studentErr.style.display = 'none';
+
+    if (!code) {
+      if (studentErr) {
+        studentErr.textContent = 'Vui lòng nhập mã học sinh.';
+        studentErr.style.display = 'block';
+      }
+      return;
+    }
 
     // Look up student from EduPathFirebase or default roster across all classes
     let matched = null;
@@ -412,11 +428,12 @@ class EduPathApp {
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.saveProfileToStorage();
     this.syncAuthUI();
+    this.switchTab('tree');
     this.renderAssessmentView();
     this.playBeep(660, 'sine', 0.15);
   }
 
-  handleTeacherLogin(classId, pin) {
+  handleTeacherLogin(pin) {
     const teacherErr = document.getElementById('teacher-login-error');
     if (pin !== '123456') {
       if (teacherErr) {
@@ -431,20 +448,20 @@ class EduPathApp {
 
     this.currentUser = {
       role: 'teacher',
-      classId: classId,
-      name: `Giáo viên ${classId}`
+      classId: 'Tất cả các lớp',
+      name: 'Giáo viên Quản trị'
     };
     this.userRole = 'teacher';
 
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.syncAuthUI();
 
-    // Re-attach live Firebase listener for the teacher's class
+    // Re-attach live Firebase listener to fetch all students
     if (window.EduPathFirebase) {
       if (this.teacherListenerUnsub) {
         this.teacherListenerUnsub();
       }
-      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(classId, (students) => {
+      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange('', (students) => {
         if (students && students.length > 0) {
           TeacherAnalytics.currentClassData = students;
           if (this.currentTab === 'teacher') {
@@ -1411,6 +1428,22 @@ class EduPathApp {
       });
     }
 
+    const classFilter = document.getElementById('teacher-class-filter-select');
+    if (classFilter) {
+      classFilter.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (window.EduPathFirebase) {
+          if (this.teacherListenerUnsub) this.teacherListenerUnsub();
+          this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(val, (students) => {
+            TeacherAnalytics.currentClassData = students || [];
+            if (this.currentTab === 'teacher') {
+              this.renderTeacherHeatmap();
+            }
+          });
+        }
+      });
+    }
+
     // Realtime Sync Listener for Teacher Dashboard
     if (window.EduPathFirebase) {
       const currentClass = (this.currentUser && this.currentUser.classId) || '9A1';
@@ -1564,11 +1597,20 @@ class EduPathApp {
     const isVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R')) || targetMajor.level.includes('9+');
     const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
 
+    const currentRoster = TeacherAnalytics.currentClassData || TeacherAnalytics.DEFAULT_CLASS_DATA;
+    const grade = this.studentProfile.grade || '9A1';
+    let nextNum = currentRoster.length + 1;
+    let newCode = `${grade}-${String(nextNum).padStart(2, '0')}`;
+    while (currentRoster.some(s => s.studentCode === newCode)) {
+      nextNum++;
+      newCode = `${grade}-${String(nextNum).padStart(2, '0')}`;
+    }
+
     TeacherAnalytics.addStudentToRoster({
-      studentCode: this.studentProfile.studentCode || '9A1-01',
+      studentCode: newCode,
       school: this.studentProfile.school || 'THCS Chu Văn An',
-      grade: this.studentProfile.grade || '9A1',
-      name: this.studentProfile.name || 'Học sinh mới',
+      grade: grade,
+      name: `${this.studentProfile.name || 'Học sinh mới'} (${newCode})`,
       code: this.studentProfile.code || 'RIE',
       major: targetMajor.name,
       projectScore: result.totalScore,

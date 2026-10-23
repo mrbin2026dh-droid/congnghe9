@@ -31,12 +31,12 @@ def test_teacher_student_management():
 
         if page.locator('#btn-logout').is_visible():
             page.locator('#btn-logout').click()
-        elif page.locator('#btn-open-login').is_visible():
+            page.wait_for_timeout(200)
+        elif (not page.locator('#auth-modal').is_visible()) and page.locator('#btn-open-login').is_visible():
             page.locator('#btn-open-login').click()
-        page.wait_for_timeout(200)
+            page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-class').fill('9A1')
         page.locator('#login-teacher-pin').fill('123456')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
