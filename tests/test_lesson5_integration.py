@@ -25,7 +25,7 @@ def test_lesson5_integration():
         page.wait_for_load_state('domcontentloaded')
 
         # Student login to enter learning view
-        page.locator('#login-student-code').fill('9A1-01')
+        page.locator('#login-student-code').fill('NH-9A1')
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(300)
 

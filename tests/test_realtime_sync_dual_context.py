@@ -54,7 +54,7 @@ def test_realtime_sync_dual_context():
             page_student.locator('#btn-open-login').click()
         page_student.wait_for_timeout(200)
 
-        page_student.locator('#login-student-code').fill('9A1-01')
+        page_student.locator('#login-student-code').fill('NH-9A1')
         page_student.locator('#btn-submit-student-login').click()
         page_student.wait_for_timeout(300)
 
@@ -68,7 +68,7 @@ def test_realtime_sync_dual_context():
         page_student.wait_for_timeout(500)
 
         # Check Teacher Window (Context A) receives the update in real-time on student 9A1-01 row
-        row_student_1 = page_teacher.locator('tr:has-text("9A1-01")')
+        row_student_1 = page_teacher.locator('tr:has-text("NH-9A1")')
         row_text = row_student_1.text_content()
         assert 'XYZ' in row_text or 'Kỹ sư Vũ trụ & Robot AI' in row_text, f"Teacher dashboard did not receive student update in real-time. Row content: {row_text}"
 

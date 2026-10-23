@@ -21,6 +21,7 @@
 
   --brand: #059669;
   --brand-hover: #047857;
+  --brand-dark: #047857;
   --brand-soft: rgba(5, 150, 105, 0.12);
 
   --accent-tech: #2563eb;
@@ -479,27 +480,31 @@ html, body {
 
 .btn-auth-submit {
   width: 100%;
-  min-height: 46px;
-  padding: 0.7rem 1.25rem;
-  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-  color: #ffffff;
-  border: none;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  background: #059669 linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border: 1px solid #047857 !important;
   border-radius: var(--radius-md);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-  margin-top: 0.25rem;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  margin-top: 0.5rem;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+  letter-spacing: 0.02em;
 }
 
 .btn-auth-submit:hover {
+  background-color: #047857 !important;
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.45);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
 }
 
 .btn-auth-submit:active {

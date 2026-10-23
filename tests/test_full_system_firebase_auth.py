@@ -57,12 +57,12 @@ def test_full_system_firebase_auth():
             page.wait_for_timeout(200)
 
         # Fill student login
-        page.locator('#login-student-code').fill('9A1-02') # Trần Thị Bích
+        page.locator('#login-student-code').fill('NH-9A2') # Trần Thị Bích
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(300)
 
         badge_text = page.locator('#user-info-text').text_content()
-        assert '9A1-02' in badge_text or 'Trần Thị Bích' in badge_text, f"Student badge incorrect: '{badge_text}'"
+        assert 'NH-9A2' in badge_text or 'Nguyễn Văn A' in badge_text, f"Student badge incorrect: '{badge_text}'"
 
         # Teacher tab must be hidden for student
         teacher_tab = page.locator('.tab-btn[data-tab="teacher"]')

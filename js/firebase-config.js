@@ -38,31 +38,13 @@ window.EduPathFirebase = (() => {
         dbInstance = window.firebase.database();
         isFirebaseReady = true;
         console.info('EduPath AI: Kết nối thành công Firebase Realtime Database.');
-        ensureFirebaseSeeded();
+        // Live Firebase: 100% cloud sync, zero fake auto-seed
       } catch (err) {
         console.warn('EduPath AI: Khởi tạo Firebase thất bại, chuyển sang chế độ dự phòng:', err);
         isFirebaseReady = false;
       }
     } else {
       isFirebaseReady = false;
-    }
-  }
-
-  async function ensureFirebaseSeeded() {
-    if (!isFirebaseReady || !dbInstance) return;
-    try {
-      const snap = await dbInstance.ref('students').once('value');
-      if (!snap.exists() || !snap.val()) {
-        const seedRoster = getLocalRoster();
-        const obj = {};
-        seedRoster.forEach(s => {
-          obj[s.studentCode] = s;
-        });
-        await dbInstance.ref('students').set(obj);
-        console.info('EduPath AI: Khởi tạo danh sách học sinh ban đầu trên Firebase Cloud.');
-      }
-    } catch (e) {
-      console.warn('EduPath AI: Kiểm tra/khởi tạo seed Firebase thất bại:', e);
     }
   }
 
@@ -79,21 +61,7 @@ window.EduPathFirebase = (() => {
     } catch (e) {
       console.warn('Lỗi đọc local roster:', e);
     }
-    // Default initial seed roster
-    const seed = [
-      { id: 1, studentCode: '9A1-01', school: 'THCS Chu Văn An', grade: '9A1', name: 'Nguyễn Văn An', code: 'RIE', major: 'Kỹ thuật Cơ điện tử', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kỹ thuật' },
-      { id: 2, studentCode: '9A1-02', school: 'THCS Chu Văn An', grade: '9A1', name: 'Trần Thị Bích', code: 'AIR', major: 'Thiết kế Đồ họa & UI/UX', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & ĐH Mỹ thuật' },
-      { id: 3, studentCode: '9A1-03', school: 'THCS Chu Văn An', grade: '9A1', name: 'Lê Hoàng Cường', code: 'RCI', major: 'Cơ khí Chế tạo máy (9+)', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
-      { id: 4, studentCode: '9A2-04', school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Phạm Đức Dũng', code: 'IRC', major: 'Công nghệ thông tin', projectScore: 10, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học CNTT' },
-      { id: 5, studentCode: '9A2-05', school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Vũ Ngọc Hân', code: 'SEC', major: 'Sư phạm Kỹ thuật', projectScore: 7, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Sư phạm' },
-      { id: 6, studentCode: '9B1-06', school: 'THCS Nguyễn Du', grade: '9B1', name: 'Đặng Minh Khôi', code: 'RCS', major: 'Điện dân dụng (9+)', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Trung cấp Nghề 9+' },
-      { id: 7, studentCode: '9B1-07', school: 'THCS Nguyễn Du', grade: '9B1', name: 'Bùi Phương Linh', code: 'EIR', major: 'Quản lý Sản phẩm Tech', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kinh tế Tech' },
-      { id: 8, studentCode: '9C-08', school: 'THCS Trưng Vương', grade: '9C', name: 'Hoàng Anh Tuấn', code: 'REC', major: 'Công nghệ Ô tô & Xe điện', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
-      { id: 9, studentCode: '9C-09', school: 'THCS Trưng Vương', grade: '9C', name: 'Đỗ Thanh Tùng', code: 'ICR', major: 'An toàn thông tin', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Bách Khoa' },
-      { id: 10, studentCode: '9A1-10', school: 'THCS Chu Văn An', grade: '9A1', name: 'Ngô Bảo Yến', code: 'RAI', major: 'Kiến trúc & Xây dựng', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kiến trúc' }
-    ];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    return seed;
+    return [];
   }
 
   // Real-time broadcast channel for offline multi-window synchronization

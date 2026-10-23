@@ -91,10 +91,10 @@ def run_system_verification():
             page.locator('#btn-open-login').click()
             page.wait_for_timeout(200)
 
-        test_code = "9A2-04"
-        test_name = "Phạm Đức Dũng"
-        test_school = "THCS Lê Quý Đôn"
-        test_grade = "9A2"
+        test_code = "NH-9A1"
+        test_name = "Nguyễn Văn A"
+        test_school = "THCS Nguyễn Huệ"
+        test_grade = "9A1"
 
         page.locator('#login-student-code').fill(test_code)
         page.locator('#btn-submit-student-login').click()

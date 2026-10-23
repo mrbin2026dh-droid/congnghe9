@@ -6,20 +6,8 @@
 
 const TeacherAnalytics = (() => {
   // Sample realistic class roster for demo classroom 9A1
-  const DEFAULT_CLASS_DATA = [
-    { id: 1, studentCode: '9A1-01', school: 'THCS Chu Văn An', grade: '9A1', name: 'Nguyễn Văn An', code: 'RIE', major: 'Kỹ thuật Cơ điện tử', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kỹ thuật' },
-    { id: 2, studentCode: '9A1-02', school: 'THCS Chu Văn An', grade: '9A1', name: 'Trần Thị Bích', code: 'AIR', major: 'Thiết kế Đồ họa & UI/UX', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & ĐH Mỹ thuật' },
-    { id: 3, studentCode: '9A1-03', school: 'THCS Chu Văn An', grade: '9A1', name: 'Lê Hoàng Cường', code: 'RCI', major: 'Cơ khí Chế tạo máy (9+)', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
-    { id: 4, studentCode: '9A2-04', school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Phạm Đức Dũng', code: 'IRC', major: 'Công nghệ thông tin', projectScore: 10, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học CNTT' },
-    { id: 5, studentCode: '9A2-05', school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Vũ Ngọc Hân', code: 'SEC', major: 'Sư phạm Kỹ thuật', projectScore: 7, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Sư phạm' },
-    { id: 6, studentCode: '9B1-06', school: 'THCS Nguyễn Du', grade: '9B1', name: 'Đặng Minh Khôi', code: 'RCS', major: 'Điện dân dụng (9+)', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Trung cấp Nghề 9+' },
-    { id: 7, studentCode: '9B1-07', school: 'THCS Nguyễn Du', grade: '9B1', name: 'Bùi Phương Linh', code: 'EIR', major: 'Quản lý Sản phẩm Tech', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kinh tế Tech' },
-    { id: 8, studentCode: '9C-08', school: 'THCS Trưng Vương', grade: '9C', name: 'Hoàng Anh Tuấn', code: 'REC', major: 'Công nghệ Ô tô & Xe điện', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
-    { id: 9, studentCode: '9C-09', school: 'THCS Trưng Vương', grade: '9C', name: 'Đỗ Thanh Tùng', code: 'ICR', major: 'An toàn thông tin', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Bách Khoa' },
-    { id: 10, studentCode: '9A1-10', school: 'THCS Chu Văn An', grade: '9A1', name: 'Ngô Bảo Yến', code: 'RAI', major: 'Kiến trúc & Xây dựng', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kiến trúc' }
-  ];
-
-  const currentClassData = [...DEFAULT_CLASS_DATA];
+  const DEFAULT_CLASS_DATA = [];
+  const currentClassData = [];
 
   function addStudentToRoster(studentObj) {
     const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
@@ -87,18 +75,20 @@ const TeacherAnalytics = (() => {
   }
   function computeDistribution(classList) {
     const counts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-    const total = classList.length || 1;
+    const total = classList ? classList.length : 0;
 
-    classList.forEach(student => {
-      const primary = (student.code && student.code[0]) || 'R';
-      if (counts[primary] !== undefined) {
-        counts[primary] += 1;
-      }
-    });
+    if (total > 0) {
+      classList.forEach(student => {
+        const primary = (student.code && student.code[0]) ? student.code[0].toUpperCase() : 'R';
+        if (counts[primary] !== undefined) {
+          counts[primary] += 1;
+        }
+      });
+    }
 
     const percentages = {};
     for (const key in counts) {
-      percentages[key] = Math.round((counts[key] / total) * 100);
+      percentages[key] = total > 0 ? Math.round((counts[key] / total) * 100) : 0;
     }
 
     return { counts, percentages, total };

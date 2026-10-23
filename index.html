@@ -40,7 +40,7 @@
       <div class="user-session-bar" id="user-session-bar">
         <div class="user-badge" id="logged-in-user-badge" style="display: none;">
           <span class="user-role-tag" id="user-role-tag">Học sinh</span>
-          <span class="user-info-text" id="user-info-text">9A1-01 · Nguyễn Văn An</span>
+          <span class="user-info-text" id="user-info-text">Chưa đăng nhập</span>
           <button class="btn-session-action btn-logout" id="btn-logout" title="Đăng xuất khỏi hệ thống">Đăng xuất</button>
         </div>
         <button class="btn-session-action btn-login-open" id="btn-open-login">Đăng nhập</button>
@@ -649,7 +649,7 @@
           <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:1.5rem; margin-bottom:1.5rem;">
             <!-- Class Heatmap Canvas -->
             <div class="card-panel" style="padding:1rem;">
-              <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.75rem;">📊 Bản Đồ Nhiệt RIASEC Cả Lớp (Lớp 9A1)</h3>
+              <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.75rem;" id="teacher-heatmap-title">📊 Bản Đồ Nhiệt RIASEC Cả Lớp</h3>
               <canvas id="teacher-heatmap-canvas" style="width:100%; height:260px;"></canvas>
             </div>
 
@@ -659,27 +659,27 @@
               <div style="display:flex; flex-direction:column; gap:1rem;">
                 <div>
                   <div style="display:flex; justify-content:space-between; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
-                    <span>Học tiếp THPT (Định hướng ĐH Kỹ thuật):</span>
-                    <span style="color:var(--brand); font-weight:800;">70% (24 học sinh)</span>
+                    <span id="teacher-stream-thpt-label">Học tiếp THPT (Định hướng ĐH Kỹ thuật):</span>
+                    <span style="color:var(--brand); font-weight:800;" id="teacher-stream-thpt-percent">--</span>
                   </div>
                   <div style="width:100%; height:12px; background:var(--surface-inset); border-radius:6px; overflow:hidden;">
-                    <div style="width:70%; height:100%; background:var(--brand);"></div>
+                    <div id="teacher-stream-thpt-bar" style="width:0%; height:100%; background:var(--brand); transition: width 0.4s ease;"></div>
                   </div>
                 </div>
 
                 <div>
                   <div style="display:flex; justify-content:space-between; font-size:0.875rem; font-weight:600; margin-bottom:0.35rem;">
-                    <span>Phân luồng sớm sang Mô hình Đào tạo Nghề 9+:</span>
-                    <span style="color:var(--accent-enterprise); font-weight:800;">30% (11 học sinh)</span>
+                    <span id="teacher-stream-vocational-label">Phân luồng sớm sang Mô hình Đào tạo Nghề 9+:</span>
+                    <span style="color:var(--accent-enterprise); font-weight:800;" id="teacher-stream-vocational-percent">--</span>
                   </div>
                   <div style="width:100%; height:12px; background:var(--surface-inset); border-radius:6px; overflow:hidden;">
-                    <div style="width:30%; height:100%; background:var(--accent-enterprise);"></div>
+                    <div id="teacher-stream-vocational-bar" style="width:0%; height:100%; background:var(--accent-enterprise); transition: width 0.4s ease;"></div>
                   </div>
                 </div>
               </div>
 
-              <div style="margin-top:1.5rem; padding:0.75rem 1rem; background:var(--surface-elevated); border-radius:var(--radius-md); font-size:0.825rem; color:var(--text-muted); border-left:4px solid var(--brand);">
-                💡 <strong>Khuyến nghị Sư phạm:</strong> 30% học sinh thiên mạnh về nhóm Kỹ thuật thực tế (R) có thể sớm phát triển vượt bậc nếu theo học các chương trình Cao đẳng nghề 9+ vừa học văn hóa vừa rèn tay nghề cơ khí, điện tử.
+              <div id="teacher-pedagogy-recommendation" style="margin-top:1.5rem; padding:0.75rem 1rem; background:var(--surface-elevated); border-radius:var(--radius-md); font-size:0.825rem; color:var(--text-muted); border-left:4px solid var(--brand);">
+                💡 <strong>Khuyến nghị Sư phạm:</strong> Đang đồng bộ dữ liệu thời gian thực từ Firebase...
               </div>
             </div>
           </div>
@@ -728,8 +728,8 @@
       <form class="auth-form" id="student-login-form">
         <div class="form-group">
           <label for="login-student-code">Mã học sinh</label>
-          <input type="text" id="login-student-code" class="auth-input" placeholder="Ví dụ: 9A1-01" autocomplete="off" required>
-          <span class="form-hint">Nhập mã học sinh do giáo viên bộ môn cấp (Ví dụ: 9A1-01 đến 9A1-10)</span>
+          <input type="text" id="login-student-code" class="auth-input" placeholder="Ví dụ: NH-9A1" autocomplete="off" required>
+          <span class="form-hint">Nhập mã định danh học sinh đã được cấp trên Firebase (Ví dụ: NH-9A1)</span>
         </div>
         <div class="auth-error-msg" id="student-login-error" style="display: none;"></div>
         <button type="submit" class="btn-auth-submit" id="btn-submit-student-login">Đăng Nhập Học Sinh</button>

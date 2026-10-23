@@ -35,31 +35,31 @@ def test_student_profile_persistence():
 
         # Step 2: Fill in student code 9A2-04 (Phạm Đức Dũng)
         student_code_in = page.locator('#login-student-code')
-        student_code_in.fill('9A2-04')
+        student_code_in.fill('NH-9A1')
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(300)
 
         # Check badge updates with student code and name
         user_info = page.locator('#user-info-text').text_content()
-        assert '9A2-04' in user_info or 'Phạm Đức Dũng' in user_info, f"Badge does not match: {user_info}"
+        assert 'NH-9A1' in user_info or 'Nguyễn Văn A' in user_info, f"Badge does not match: {user_info}"
 
         # Check that localStorage contains the saved profile
         saved_user_raw = page.evaluate("() => localStorage.getItem('edupath_current_user')")
         assert saved_user_raw is not None, "User session must be saved in localStorage"
         saved_user = json.loads(saved_user_raw)
-        assert saved_user.get('code') == '9A2-04'
+        assert saved_user.get('code') == 'NH-9A1'
 
         saved_profile_raw = page.evaluate("() => localStorage.getItem('edupath_student_profile')")
         assert saved_profile_raw is not None, "Profile must be saved in localStorage"
         saved_profile = json.loads(saved_profile_raw)
-        assert 'Phạm Đức Dũng' in saved_profile.get('name', '')
+        assert 'Nguyễn Văn A' in saved_profile.get('name', '')
 
         # Step 3: Reload page and verify data persists
         page.reload()
         page.wait_for_load_state('domcontentloaded')
 
         reloaded_info = page.locator('#user-info-text').text_content()
-        assert '9A2-04' in reloaded_info or 'Phạm Đức Dũng' in reloaded_info, f"Reloaded badge mismatch: {reloaded_info}"
+        assert 'NH-9A1' in reloaded_info or 'Nguyễn Văn A' in reloaded_info, f"Reloaded badge mismatch: {reloaded_info}"
 
         # Step 4: Logout check
         page.locator('#btn-logout').click()
