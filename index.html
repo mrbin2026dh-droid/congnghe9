@@ -549,14 +549,17 @@
             </button>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-elevated); padding:1rem 1.25rem; border-radius:var(--radius-md); margin-bottom:1.25rem;">
-            <div>
-              <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Ngành Nghề Dự Định Đánh Giá:</span>
-              <h3 id="assessment-target-major-name" style="font-size:1.2rem; font-weight:800; color:var(--text-primary); margin-top:0.15rem;">Kỹ thuật Cơ điện tử & Robot (RIE)</h3>
+          <div class="project-header-bar" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-elevated); padding:1rem 1.25rem; border-radius:var(--radius-md); margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
+            <div style="flex:1; min-width:260px;">
+              <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Chọn Ngành Nghề Dự Định Đánh Giá:</span>
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <select id="assessment-major-select" class="form-select" style="padding:0.5rem 0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.95rem; font-weight:700; background:var(--surface-card); color:var(--text-primary); flex:1; max-width:420px;"></select>
+              </div>
+              <h3 id="assessment-target-major-name" style="font-size:1.15rem; font-weight:800; color:var(--brand); margin-top:0.4rem;">Kỹ thuật Cơ điện tử & Robot (RIE)</h3>
             </div>
             <div style="text-align:right;">
               <span style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Tổng Điểm Trùng Khớp:</span>
-              <h2 id="assessment-score-value" style="font-size:1.6rem; font-weight:900; color:var(--brand); margin-top:0.15rem;">9 / 10</h2>
+              <h2 id="assessment-score-value" style="font-size:1.8rem; font-weight:900; color:var(--brand); margin-top:0.15rem;">9 / 10</h2>
             </div>
           </div>
 
@@ -582,6 +585,39 @@
               <span class="question-tag" id="assessment-classification-badge">Phù hợp hoàn toàn</span>
             </div>
             <p id="assessment-recommendation-text" style="font-size:0.95rem; color:var(--text-secondary); line-height:1.5;"></p>
+          </div>
+
+          <!-- 3 Guiding Questions (SGK Công Nghệ 9, Bài 5 tr. 35) -->
+          <div class="three-questions-panel" style="margin-top:1.5rem; padding:1.25rem; background:var(--surface-card); border-radius:var(--radius-md); border:1px solid var(--border);">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-primary); margin-bottom:0.5rem;">
+              🧭 Bộ Ba Câu Hỏi Định Hướng Cuộc Đời (Bài 5 SGK, Trang 35)
+            </h3>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+              Đây là 3 câu hỏi cốt lõi giúp em xâu chuỗi giữa sở thích bản thân, yêu cầu nghề nghiệp và kế hoạch hành động cụ thể sau khi tốt nghiệp lớp 9.
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:1rem;">
+              <div class="sgk-question-item">
+                <label for="sgk-q1-understand-self" style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem;">
+                  1. "Hiểu mình": Bản thân em có sở thích, năng lực và nét tính cách nào nổi bật phù hợp với nghề này?
+                </label>
+                <textarea id="sgk-q1-understand-self" class="sgk-textarea" rows="2" placeholder="Ví dụ: Em có sở thích thao tác máy móc (R), tư duy logic phân tích tốt (I), tính cẩn thận và kiên nhẫn khi làm việc..."></textarea>
+              </div>
+
+              <div class="sgk-question-item">
+                <label for="sgk-q2-understand-career" style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem;">
+                  2. "Hiểu nghề": Ngành nghề kĩ thuật, công nghệ đó thực tế làm những công việc gì, đòi hỏi gì và thị trường lao động có nhu cầu không?
+                </label>
+                <textarea id="sgk-q2-understand-career" class="sgk-textarea" rows="2" placeholder="Ví dụ: Nghề này thiết kế, chế tạo và vận hành dây chuyền tự động; đòi hỏi kỷ luật an toàn; thị trường đang rất cần nhân lực chất lượng cao..."></textarea>
+              </div>
+
+              <div class="sgk-question-item">
+                <label for="sgk-q3-career-path" style="display:block; font-size:0.875rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem;">
+                  3. "Học nghề và rèn nghề": Em dự kiến chọn hướng đi nào sau lớp 9 (Vào THPT hay Học nghề 9+)? Và cần rèn luyện những gì ngay từ bây giờ?
+                </label>
+                <textarea id="sgk-q3-career-path" class="sgk-textarea" rows="2" placeholder="Ví dụ: Em dự định thi vào lớp 10 THPT rồi học tiếp Đại học Kỹ thuật. Ngay từ bây giờ em sẽ chú trọng học tốt môn Tin học, Tiếng Anh và rèn luyện thể lực..."></textarea>
+              </div>
+            </div>
           </div>
         </div>
       </section>

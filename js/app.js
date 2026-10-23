@@ -929,6 +929,50 @@ class EduPathApp {
         this.printOfficialReport();
       });
     }
+
+    // Populate Major Selector Dropdown
+    const majorSelect = document.getElementById('assessment-major-select');
+    if (majorSelect && window.EduPathData.majors) {
+      majorSelect.textContent = '';
+      window.EduPathData.majors.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name} (${m.code}) — ${m.level}`;
+        majorSelect.appendChild(opt);
+      });
+      majorSelect.value = this.studentProfile.targetMajorId || window.EduPathData.majors[0].id;
+      majorSelect.addEventListener('change', (e) => {
+        this.studentProfile.targetMajorId = e.target.value;
+        this.saveProfileToStorage();
+        this.renderAssessmentView();
+        this.playBeep(640);
+      });
+    }
+
+    // Bind 3 SGK Guiding Questions
+    const q1 = document.getElementById('sgk-q1-understand-self');
+    const q2 = document.getElementById('sgk-q2-understand-career');
+    const q3 = document.getElementById('sgk-q3-career-path');
+
+    if (!this.studentProfile.threeQuestions) {
+      this.studentProfile.threeQuestions = { understandSelf: '', understandCareer: '', careerPathPlan: '' };
+    }
+
+    const bindQ = (el, key) => {
+      if (!el) return;
+      el.addEventListener('input', (e) => {
+        this.studentProfile.threeQuestions[key] = e.target.value;
+        this.saveProfileToStorage();
+      });
+      el.addEventListener('change', (e) => {
+        this.studentProfile.threeQuestions[key] = e.target.value;
+        this.saveProfileToStorage();
+      });
+    };
+
+    bindQ(q1, 'understandSelf');
+    bindQ(q2, 'understandCareer');
+    bindQ(q3, 'careerPathPlan');
   }
 
   renderAssessmentView() {
@@ -942,18 +986,44 @@ class EduPathApp {
       targetMajorTitle.textContent = `${targetMajor.name} (Mã Holland: ${targetMajor.code})`;
     }
 
+    const majorSelect = document.getElementById('assessment-major-select');
+    if (majorSelect && majorSelect.value !== targetMajor.id) {
+      majorSelect.value = targetMajor.id;
+    }
+
+    // Populate 3 questions
+    if (!this.studentProfile.threeQuestions) {
+      this.studentProfile.threeQuestions = { understandSelf: '', understandCareer: '', careerPathPlan: '' };
+    }
+    const q1 = document.getElementById('sgk-q1-understand-self');
+    const q2 = document.getElementById('sgk-q2-understand-career');
+    const q3 = document.getElementById('sgk-q3-career-path');
+    if (q1 && q1.value !== (this.studentProfile.threeQuestions.understandSelf || '')) {
+      q1.value = this.studentProfile.threeQuestions.understandSelf || '';
+    }
+    if (q2 && q2.value !== (this.studentProfile.threeQuestions.understandCareer || '')) {
+      q2.value = this.studentProfile.threeQuestions.understandCareer || '';
+    }
+    if (q3 && q3.value !== (this.studentProfile.threeQuestions.careerPathPlan || '')) {
+      q3.value = this.studentProfile.threeQuestions.careerPathPlan || '';
+    }
+
     tableBody.textContent = '';
     ProjectAssessment.CRITERIA_DEFINITIONS.forEach((c, idx) => {
       const isMatched = this.assessmentMatches[idx];
+      const currentTrait = (this.studentProfile.selfTraits && this.studentProfile.selfTraits[idx])
+        ? this.studentProfile.selfTraits[idx]
+        : c.selfTraitDefault;
+
       const tr = document.createElement('tr');
       tr.innerHTML = sanitize(`
         <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
         <td>
           <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--brand);">${c.category}</span><br>
-          <strong>${c.title}</strong><br>
-          <span style="font-size:0.8rem; color:var(--text-muted);">${c.selfTraitDefault}</span>
+          <strong style="display:block; margin-bottom:0.25rem;">${c.title}</strong>
+          <textarea class="criteria-self-trait-input" id="self-trait-input-${idx}" rows="2" placeholder="Ghi nhận đặc điểm bản thân...">${currentTrait}</textarea>
         </td>
-        <td style="font-size:0.85rem; color:var(--text-secondary);">${c.requirement}</td>
+        <td style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45;">${c.requirement}</td>
         <td style="text-align:center;">
           <button type="button" class="match-toggle-btn ${isMatched ? 'matched' : ''}" onclick="window.app.toggleAssessmentMatch(${idx})">
             ${isMatched ? '✓' : ''}
@@ -961,6 +1031,18 @@ class EduPathApp {
         </td>
       `);
       tableBody.appendChild(tr);
+
+      // Bind trait input change
+      const traitInput = tr.querySelector(`#self-trait-input-${idx}`);
+      if (traitInput) {
+        const handleTraitChange = (e) => {
+          if (!this.studentProfile.selfTraits) this.studentProfile.selfTraits = {};
+          this.studentProfile.selfTraits[idx] = e.target.value;
+          this.saveProfileToStorage();
+        };
+        traitInput.addEventListener('input', handleTraitChange);
+        traitInput.addEventListener('change', handleTraitChange);
+      }
     });
 
     const result = ProjectAssessment.calculateProjectResult(this.assessmentMatches);
@@ -980,6 +1062,7 @@ class EduPathApp {
 
   toggleAssessmentMatch(idx) {
     this.assessmentMatches[idx] = !this.assessmentMatches[idx];
+    this.saveProfileToStorage();
     this.renderAssessmentView();
     this.playBeep(600);
   }

@@ -1167,6 +1167,55 @@ html, body {
   border-color: var(--brand);
 }
 
+.criteria-self-trait-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.criteria-self-trait-input:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+/* 3 Guiding Questions Styling */
+.three-questions-panel {
+  box-shadow: var(--shadow-sm);
+}
+
+.sgk-question-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.sgk-textarea {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.sgk-textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+}
+
 /* Print CSS */
 @media print {
   .top-nav, .tab-nav, .theme-toggle-btn, .btn-primary, .btn-secondary, .root-controls-grid, .ai-agent-selector, .quick-prompts-row {

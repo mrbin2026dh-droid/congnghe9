@@ -120,16 +120,25 @@ const ProjectAssessment = (() => {
    */
   function generatePrintableHTML(studentData, targetMajor, matches, assessmentResult) {
     const dateStr = new Date().toLocaleDateString('vi-VN');
+    const schoolName = studentData.school || 'THCS CHU VĂN AN';
+    const studentName = studentData.name || 'Nguyễn Văn An';
+    const gradeName = studentData.grade || '9A1';
+    const academicYear = studentData.academicYear || '2025 – 2026';
+    const hollandCode = studentData.code || 'RIE';
 
     let rowsHTML = '';
     CRITERIA_DEFINITIONS.forEach((c, idx) => {
       const isMatched = matches[idx] === true;
+      const selfTrait = (studentData.selfTraits && studentData.selfTraits[idx])
+        ? studentData.selfTraits[idx]
+        : c.selfTraitDefault;
+
       rowsHTML += `
         <tr>
           <td style="border:1px solid #334155; padding:8px; text-align:center;">${idx + 1}</td>
           <td style="border:1px solid #334155; padding:8px;">
             <strong>[${c.category}]</strong> ${c.title}<br>
-            <span style="font-size:12px; color:#475569;">${c.selfTraitDefault}</span>
+            <span style="font-size:12px; color:#475569;">${selfTrait}</span>
           </td>
           <td style="border:1px solid #334155; padding:8px; font-size:12px;">${c.requirement}</td>
           <td style="border:1px solid #334155; padding:8px; text-align:center; font-weight:bold; color:#059669;">
@@ -142,41 +151,46 @@ const ProjectAssessment = (() => {
       `;
     });
 
+    const q1Ans = studentData.threeQuestions && studentData.threeQuestions.understandSelf ? studentData.threeQuestions.understandSelf : 'Chưa nhập câu trả lời';
+    const q2Ans = studentData.threeQuestions && studentData.threeQuestions.understandCareer ? studentData.threeQuestions.understandCareer : 'Chưa nhập câu trả lời';
+    const q3Ans = studentData.threeQuestions && studentData.threeQuestions.careerPathPlan ? studentData.threeQuestions.careerPathPlan : 'Chưa nhập câu trả lời';
+
     return `
       <!DOCTYPE html>
       <html lang="vi">
       <head>
         <meta charset="utf-8">
-        <title>Báo Cáo Dự Án Bài 5 - Công Nghệ 9</title>
+        <title>Báo Cáo Dự Án Bài 5 - Công Nghệ 9 - ${studentName}</title>
         <style>
-          body { font-family: 'Times New Roman', serif; margin: 20mm; color: #000; line-height: 1.4; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h4 { margin: 0; font-size: 14pt; font-weight: normal; }
-          .header h3 { margin: 5px 0; font-size: 14pt; font-weight: bold; text-decoration: underline; }
-          .title { text-align: center; margin: 20px 0; font-size: 16pt; font-weight: bold; }
-          .info-box { margin-bottom: 15px; font-size: 12pt; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11pt; }
-          th { background-color: #f1f5f9; border: 1px solid #334155; padding: 8px; }
-          .result-box { border: 1px solid #000; padding: 12px; margin-bottom: 25px; border-radius: 4px; }
-          .signatures { display: flex; justify-content: space-between; margin-top: 30px; text-align: center; }
+          body { font-family: 'Times New Roman', serif; margin: 15mm; color: #000; line-height: 1.35; }
+          .header { text-align: center; margin-bottom: 15px; }
+          .header h4 { margin: 0; font-size: 13pt; font-weight: normal; }
+          .header h3 { margin: 4px 0; font-size: 13pt; font-weight: bold; text-decoration: underline; }
+          .title { text-align: center; margin: 15px 0 10px 0; font-size: 15pt; font-weight: bold; }
+          .info-box { margin-bottom: 12px; font-size: 11.5pt; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 10.5pt; }
+          th { background-color: #f1f5f9; border: 1px solid #334155; padding: 6px; }
+          .result-box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+          .questions-box { border: 1px solid #334155; padding: 10px; margin-bottom: 20px; border-radius: 4px; background: #fafafa; }
+          .signatures { display: flex; justify-content: space-between; margin-top: 25px; text-align: center; }
           .sig-col { width: 30%; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h4>BỘ GIÁO DỤC VÀ ĐÀO TẠO — TRƯỜNG THCS ....................................................</h4>
+          <h4>BỘ GIÁO DỤC VÀ ĐÀO TẠO — TRƯỜNG THCS ${schoolName.toUpperCase()}</h4>
           <h3>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
           <p style="margin:2px 0; font-style:italic;">Độc lập – Tự do – Hạnh phúc</p>
         </div>
 
         <div class="title">BÁO CÁO DỰ ÁN HỌC TẬP (BÀI 5 SGK CÔNG NGHỆ 9)<br>
-          <span style="font-size:13pt; font-weight:normal;">TỰ ĐÁNH GIÁ MỨC ĐỘ PHÙ HỢP CỦA BẢN THÂN VỚI NGÀNH NGHỀ KĨ THUẬT, CÔNG NGHỆ</span>
+          <span style="font-size:12pt; font-weight:normal;">TỰ ĐÁNH GIÁ MỨC ĐỘ PHÙ HỢP CỦA BẢN THÂN VỚI NGÀNH NGHỀ KĨ THUẬT, CÔNG NGHỆ</span>
         </div>
 
         <div class="info-box">
-          <p><strong>Họ và tên học sinh:</strong> ${studentData.name || 'Nguyễn Văn A'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Lớp:</strong> ${studentData.grade || '9A1'} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Năm học:</strong> 2025 – 2026</p>
-          <p><strong>Ngành nghề dự định chọn:</strong> ${targetMajor.name || 'Kỹ thuật Cơ điện tử & Robot'} (Mã Holland đề xuất: <strong>${targetMajor.code || 'RIE'}</strong>)</p>
-          <p><strong>Ngày thực hiện:</strong> ${dateStr}</p>
+          <p style="margin:3px 0;"><strong>Họ và tên học sinh:</strong> ${studentName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Lớp:</strong> ${gradeName} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Năm học:</strong> ${academicYear}</p>
+          <p style="margin:3px 0;"><strong>Mã Holland khảo sát:</strong> <strong style="color:#059669;">${hollandCode}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Ngành nghề đánh giá:</strong> ${targetMajor.name || 'Kỹ thuật Cơ điện tử & Robot'} (Mã Holland nghề: <strong>${targetMajor.code || 'RIE'}</strong>)</p>
+          <p style="margin:3px 0;"><strong>Ngày thực hiện:</strong> ${dateStr}</p>
         </div>
 
         <table>
@@ -195,16 +209,31 @@ const ProjectAssessment = (() => {
         </table>
 
         <div class="result-box">
-          <p style="margin:4px 0;"><strong>TỔNG ĐIỂM TRÙNG KHỚP:</strong> ${assessmentResult.totalScore} / 10 điểm</p>
-          <p style="margin:4px 0;"><strong>KẾT LUẬN MỨC ĐỘ PHÙ HỢP:</strong> <span style="font-size:13pt; font-weight:bold; color:#059669;">${assessmentResult.classification.toUpperCase()}</span></p>
-          <p style="margin:4px 0;"><strong>Nhận xét & Hướng dẫn của AI:</strong> ${assessmentResult.recommendation}</p>
+          <p style="margin:3px 0;"><strong>TỔNG ĐIỂM TRÙNG KHỚP:</strong> ${assessmentResult.totalScore} / 10 điểm</p>
+          <p style="margin:3px 0;"><strong>KẾT LUẬN MỨC ĐỘ PHÙ HỢP (SGK Bài 5):</strong> <span style="font-size:12pt; font-weight:bold; color:#059669;">${assessmentResult.classification.toUpperCase()}</span></p>
+          <p style="margin:3px 0;"><strong>Nhận xét & Hướng dẫn của AI:</strong> ${assessmentResult.recommendation}</p>
+        </div>
+
+        <div class="questions-box">
+          <h4 style="margin:0 0 6px 0; font-size:11pt; text-transform:uppercase; border-bottom:1px solid #cbd5e1; padding-bottom:3px;">
+            🧭 KẾT QUẢ BỘ BA CÂU HỎI ĐỊNH HƯỚNG CUỘC ĐỜI (SGK BÀI 5, TRANG 35)
+          </h4>
+          <p style="margin:4px 0; font-size:10pt;">
+            <strong>1. Hiểu mình:</strong> ${q1Ans}
+          </p>
+          <p style="margin:4px 0; font-size:10pt;">
+            <strong>2. Hiểu nghề:</strong> ${q2Ans}
+          </p>
+          <p style="margin:4px 0; font-size:10pt;">
+            <strong>3. Học nghề và rèn nghề (Định hướng phân luồng sau THCS):</strong> ${q3Ans}
+          </p>
         </div>
 
         <div class="signatures">
           <div class="sig-col">
             <p><strong>HỌC SINH TỰ ĐÁNH GIÁ</strong><br><em>(Ký và ghi rõ họ tên)</em></p>
             <br><br><br>
-            <p>${studentData.name || 'Nguyễn Văn A'}</p>
+            <p>${studentName}</p>
           </div>
           <div class="sig-col">
             <p><strong>Ý KIẾN PHỤ HUYNH</strong><br><em>(Ký và ghi rõ họ tên)</em></p>
