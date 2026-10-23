@@ -370,7 +370,7 @@ class EduPathApp {
         }
         // H4 requirement: Show student tabs, hide teacher tab
         if (tabNav) {
-          tabNav.style.display = 'flex';
+          tabNav.style.display = '';
         }
         if (teacherNavBtn) {
           teacherNavBtn.style.display = 'none';
@@ -423,16 +423,51 @@ class EduPathApp {
     this.studentProfile.name = matched.name || 'Học sinh';
     this.studentProfile.school = matched.school || 'Trường THCS';
     this.studentProfile.grade = matched.grade || '9A1';
-    this.studentProfile.code = matched.code || 'RIE';
+    this.studentProfile.code = matched.code || '';
     this.studentProfile.studentCode = matched.studentCode || cleanCode;
-    if (matched.hollandScores) {
-      this.studentProfile.scores = matched.hollandScores;
+    this.studentProfile.scores = matched.hollandScores || { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+    this.studentProfile.percentages = matched.hollandPercentages || { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+    this.studentProfile.targetMajorName = matched.major || '';
+
+    if (matched.assessmentMatches) {
+      this.assessmentMatches = matched.assessmentMatches;
+    } else {
+      this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
     }
-    if (matched.hollandPercentages) {
-      this.studentProfile.percentages = matched.hollandPercentages;
+    if (matched.threeQuestions) {
+      this.studentProfile.threeQuestions = matched.threeQuestions;
+    } else {
+      this.studentProfile.threeQuestions = { understandSelf: '', understandCareer: '', careerPathPlan: '' };
     }
-    if (matched.major) {
-      this.studentProfile.targetMajorName = matched.major;
+    if (matched.selfTraits) {
+      this.studentProfile.selfTraits = matched.selfTraits;
+    } else {
+      this.studentProfile.selfTraits = {};
+    }
+
+    // Sync Tree State to Real Student Progress (0% if new)
+    if (this.treeAnimator) {
+      const c = this.studentProfile.code;
+      const p = this.studentProfile.percentages || {};
+      if (c && c.length >= 3 && (p[c[0]] || p[c[1]] || p[c[2]])) {
+        this.treeAnimator.updateState({
+          rootInterest: p[c[0]] || 0,
+          rootAbility: p[c[1]] || 0,
+          rootPersonality: p[c[2]] || 0,
+          rootValues: p[c[0]] || 0,
+          fruitExpectation: Math.round(((p[c[0]] || 0) + (p[c[1]] || 0)) / 2)
+        });
+      } else {
+        this.treeAnimator.updateState({
+          rootInterest: 0,
+          rootAbility: 0,
+          rootPersonality: 0,
+          rootValues: 0,
+          fruitExpectation: 0
+        });
+      }
+      this.syncSlidersFromTreeState();
+      this.updateTreeMetricsDisplay();
     }
 
     this.currentUser = {
@@ -515,6 +550,17 @@ class EduPathApp {
       threeQuestions: { understandSelf: '', understandCareer: '', careerPathPlan: '' }
     };
     this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
+    if (this.treeAnimator) {
+      this.treeAnimator.updateState({
+        rootInterest: 0,
+        rootAbility: 0,
+        rootPersonality: 0,
+        rootValues: 0,
+        fruitExpectation: 0
+      });
+      this.syncSlidersFromTreeState();
+      this.updateTreeMetricsDisplay();
+    }
     this.syncAuthUI();
     this.showAuthModal();
     this.playBeep(330, 'sine', 0.15);
@@ -591,8 +637,27 @@ class EduPathApp {
   initTreeAnimator() {
     if (typeof TreeSVGAnimator !== 'undefined') {
       this.treeAnimator = new TreeSVGAnimator('tree-svg-container');
+      this.syncSlidersFromTreeState();
       this.updateTreeMetricsDisplay();
     }
+  }
+
+  syncSlidersFromTreeState() {
+    if (!this.treeAnimator) return;
+    const st = this.treeAnimator.state;
+    const map = [
+      { id: 'slider-interest', val: st.rootInterest },
+      { id: 'slider-ability', val: st.rootAbility },
+      { id: 'slider-personality', val: st.rootPersonality },
+      { id: 'slider-values', val: st.rootValues },
+      { id: 'slider-expectation', val: st.fruitExpectation }
+    ];
+    map.forEach(item => {
+      const el = document.getElementById(item.id);
+      if (el) el.value = item.val;
+      const display = document.getElementById(item.id + '-val');
+      if (display) display.textContent = item.val + '%';
+    });
   }
 
   bindEvents() {
@@ -606,6 +671,17 @@ class EduPathApp {
         }
       });
     });
+
+    // Horizontal scroll support for tab navigation
+    const tabNav = document.querySelector('.tab-nav');
+    if (tabNav) {
+      tabNav.addEventListener('wheel', (e) => {
+        if (tabNav.scrollWidth > tabNav.clientWidth && e.deltaY !== 0) {
+          e.preventDefault();
+          tabNav.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+    }
 
     // Tree Root Sliders
     const sliders = [
@@ -690,6 +766,41 @@ class EduPathApp {
     const ratioVal = document.getElementById('feedback-ratio-val');
     const content = document.getElementById('feedback-main-content');
     const rescueContainer = document.getElementById('rescue-action-container');
+
+    if (stats.stateType === 0) {
+      if (alertBox) {
+        alertBox.className = 'stability-alert-box initial';
+        alertBox.innerHTML = sanitize('<strong>🌱 CÂY NGHỀ NGHIỆP MỚI KHỞI TẠO:</strong> Tất cả chỉ số đang ở mức 0%. Hãy kéo thanh trượt để mô phỏng sự cân bằng cơ học hoặc hoàn thành bài trắc nghiệm Holland!');
+      }
+      if (!panel || !badge || !content) return;
+      panel.className = 'tree-feedback-container state-initial';
+      badge.className = 'feedback-badge initial';
+      badge.innerHTML = sanitize('🌱 TRẠNG THÁI KHỞI TẠO: CHƯA CÓ CHỈ SỐ (0%)');
+      if (ratioVal) ratioVal.innerHTML = sanitize('<span style="color:var(--text-muted);">0.00 (Chưa thiết lập)</span>');
+
+      content.innerHTML = sanitize(`
+        <h3 style="color:var(--brand);">🌱 Hãy bắt đầu vun đắp Cây Nghề Nghiệp!</h3>
+        <p class="feedback-text">
+          Chào mừng em đến với <strong>Mô hình Cây Nghề Nghiệp Sinh Học (Hình 4.3 SGK)</strong>! Hiện tại tài khoản của em chưa thiết lập các chỉ số đánh giá bản thân (tất cả các thanh trượt đang ở mức 0%).
+        </p>
+        <p class="feedback-text">
+          Để cây phát triển xanh tốt và đơm hoa kết trái bền vững:
+        </p>
+        <div class="pillars-grid" style="margin-top:0.4rem;">
+          <div class="pillar-item">🔵 <strong>Sở thích:</strong> Làm trắc nghiệm Holland (Tab 2) để khám phá nhóm nghề yêu thích.</div>
+          <div class="pillar-item">🟢 <strong>Khả năng:</strong> Tự đánh giá năng lực học tập và kỹ năng thực hành.</div>
+          <div class="pillar-item">🟠 <strong>Cá tính:</strong> Rèn luyện 5 phẩm chất kĩ thuật cốt lõi theo SGK.</div>
+          <div class="pillar-item">🟣 <strong>Giá trị:</strong> Xác định mục tiêu và điều kiện gia đình tại Dự án Bài 5 (Tab 4).</div>
+        </div>
+        <div class="challenge-callout" style="margin-top:0.6rem;">
+          💡 <strong>Khám phá ngay:</strong> Em có thể trực tiếp kéo các thanh trượt bên trên để mô phỏng sự cân bằng sinh học giữa "Gốc rễ" và "Quả ngọt"!
+        </div>
+      `);
+
+      if (rescueContainer) rescueContainer.style.display = 'none';
+      this.toggleRescueGuidance(false);
+      return;
+    }
 
     if (alertBox) {
       if (stats.stateType === 1) {
@@ -1059,10 +1170,11 @@ class EduPathApp {
     // Synchronize Tree roots with real test scores
     if (this.treeAnimator) {
       this.treeAnimator.updateState({
-        rootInterest: results.percentages[results.code[0]] || 80,
-        rootAbility: results.percentages[results.code[1]] || 70,
-        rootPersonality: results.percentages[results.code[2]] || 75
+        rootInterest: results.percentages[results.code[0]] || 0,
+        rootAbility: results.percentages[results.code[1]] || 0,
+        rootPersonality: results.percentages[results.code[2]] || 0
       });
+      this.syncSlidersFromTreeState();
       this.updateTreeMetricsDisplay();
     }
 
@@ -1153,6 +1265,11 @@ class EduPathApp {
 
   selectMajorForProject(majorId) {
     this.studentProfile.targetMajorId = majorId;
+    if (window.EduPathData && window.EduPathData.majors) {
+      const found = window.EduPathData.majors.find(m => m.id === majorId);
+      if (found) this.studentProfile.targetMajorName = found.name;
+    }
+    this.saveProfileToStorage();
     this.switchTab('project');
     this.renderAssessmentView();
     this.playBeep(680);
@@ -1282,6 +1399,8 @@ class EduPathApp {
       majorSelect.value = this.studentProfile.targetMajorId || window.EduPathData.majors[0].id;
       majorSelect.addEventListener('change', (e) => {
         this.studentProfile.targetMajorId = e.target.value;
+        const found = window.EduPathData.majors.find(m => m.id === e.target.value);
+        if (found) this.studentProfile.targetMajorName = found.name;
         this.saveProfileToStorage();
         this.renderAssessmentView();
         this.playBeep(640);

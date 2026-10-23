@@ -23,11 +23,11 @@ class TreeSVGAnimator {
     if (!this.svg) return;
 
     this.state = {
-      rootInterest: 80,
-      rootAbility: 75,
-      rootPersonality: 85,
-      rootValues: 70,
-      fruitExpectation: 80
+      rootInterest: 0,
+      rootAbility: 0,
+      rootPersonality: 0,
+      rootValues: 0,
+      fruitExpectation: 0
     };
 
     this.isUnstable = false;
@@ -177,8 +177,8 @@ class TreeSVGAnimator {
     // 1. Update Fruit Size across ALL 14 fruits simultaneously via #fruit-template
     if (this.fruitTemplate) {
       const fruitPct = this.state.fruitExpectation;
-      // Scale from 0.45x (tiny budding fruits) to 1.4x (giant heavy ripe apples)
-      const fruitScale = 0.45 + (fruitPct / 100) * 0.95;
+      // Scale from 0.35x (dormant budding fruits at 0%) to 1.4x (giant heavy ripe apples)
+      const fruitScale = fruitPct === 0 ? 0.35 : (0.45 + (fruitPct / 100) * 0.95);
       this.fruitTemplate.setAttribute('transform', `scale(${fruitScale.toFixed(3)})`);
     }
 
@@ -217,9 +217,37 @@ class TreeSVGAnimator {
     const flowDuration = Math.max(0.4, 2.5 - (avgRoots / 100) * 1.8); // 0.7s at 100%, 2.5s at 10%
     this.nutrientArrows.forEach((arrow) => {
       arrow.style.animationDuration = `${flowDuration.toFixed(2)}s`;
-      arrow.style.opacity = (0.3 + (avgRoots / 100) * 0.7).toString();
+      arrow.style.opacity = (avgRoots === 0 ? 0 : (0.3 + (avgRoots / 100) * 0.7)).toString();
       arrow.style.strokeWidth = `${2 + (avgRoots / 100) * 4}px`;
     });
+
+    const canopyElements = [
+      this.svg.querySelector('#tree-trunk'),
+      this.svg.querySelector('#tree-leaves'),
+      this.svg.querySelector('#tree-fruits')
+    ];
+
+    // Clean Initial State: All Sliders 0% (Uncalibrated)
+    if (avgRoots === 0 && this.state.fruitExpectation === 0) {
+      canopyElements.forEach((el) => {
+        if (el) {
+          el.style.transformOrigin = '400px 590px';
+          el.style.transform = 'rotate(0deg)';
+          el.style.transition = 'transform 0.5s ease';
+        }
+      });
+      this.svg.classList.remove('tree-unstable');
+      this.stabilityRatio = 0.0;
+      this.isUnstable = false;
+
+      return {
+        avgRoots: 0,
+        fruitDemand: 0,
+        ratio: 0.00,
+        isUnstable: false,
+        stateType: 0
+      };
+    }
 
     // 6. Stability Physics Calculation (Root-to-Fruit Balance)
     const fruitDemand = Math.max(20, this.state.fruitExpectation);
@@ -234,13 +262,6 @@ class TreeSVGAnimator {
     } else {
       stateType = 3; // Cây vững vàng trĩu quả
     }
-
-    // Visual Tree Tilt & Stability State
-    const canopyElements = [
-      this.svg.querySelector('#tree-trunk'),
-      this.svg.querySelector('#tree-leaves'),
-      this.svg.querySelector('#tree-fruits')
-    ];
 
     if (stateType === 1) {
       // Tree tilts under excessive fruit weight with weak root foundation
@@ -279,14 +300,14 @@ class TreeSVGAnimator {
     if (!rootObj || !rootObj.el) return;
 
     const el = rootObj.el;
-    // Scale root geometry from its base
-    const scale = 0.55 + (percentage / 100) * 0.65; // 0.55x (faded/thin) to 1.2x (thick/extended)
+    // Scale root geometry from its base: dormant at 0%, expands to 1.2x at 100%
+    const scale = percentage === 0 ? 0.38 : (0.50 + (percentage / 100) * 0.70);
     el.style.transformOrigin = rootObj.origin;
     el.style.transform = `scale(${scale.toFixed(3)})`;
     el.style.transition = 'transform 0.35s ease, opacity 0.35s ease, filter 0.35s ease';
 
     // Opacity
-    el.style.opacity = (0.35 + (percentage / 100) * 0.65).toString();
+    el.style.opacity = (percentage === 0 ? 0.2 : (0.35 + (percentage / 100) * 0.65)).toString();
 
     // Vibrant energetic glow when strong (>= 70%)
     if (percentage >= 70) {

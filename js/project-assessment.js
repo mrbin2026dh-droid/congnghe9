@@ -92,7 +92,11 @@ const ProjectAssessment = (() => {
     let classBadge = '';
     let recommendation = '';
 
-    if (totalScore <= 3) {
+    if (totalScore === 0) {
+      classification = 'Không phù hợp';
+      classBadge = 'badge-danger';
+      recommendation = 'Hiện tại em chưa tích chọn tiêu chí nào (0/10 điểm). Em hãy đọc kĩ 10 tiêu chí và bấm chọn các đặc điểm phù hợp của bản thân với nghề kĩ thuật đã chọn để xem kết quả phân tích!';
+    } else if (totalScore <= 3) {
       classification = 'Không phù hợp';
       classBadge = 'badge-danger';
       recommendation = 'Hiện tại bản thân chưa có nhiều điểm tương đồng với nhóm nghề kĩ thuật này. Em nên cân nhắc khám phá các lĩnh vực khác (như Kinh doanh, Xã hội, Nghệ thuật) hoặc cần có kế hoạch rèn luyện nghiêm túc để bù đắp các tiêu chí còn thiếu.';
@@ -120,11 +124,15 @@ const ProjectAssessment = (() => {
    */
   function generatePrintableHTML(studentData, targetMajor, matches, assessmentResult) {
     const dateStr = new Date().toLocaleDateString('vi-VN');
-    const schoolName = studentData.school || 'THCS CHU VĂN AN';
-    const studentName = studentData.name || 'Nguyễn Văn An';
-    const gradeName = studentData.grade || '9A1';
+    const studentUser = (window.app && window.app.currentUser) || {};
+    const rawSchool = studentData.school || studentUser.school || 'Trường THCS';
+    const schoolName = rawSchool.toUpperCase().startsWith('THCS') ? rawSchool.toUpperCase() : `THCS ${rawSchool.toUpperCase()}`;
+    const studentName = studentData.name || studentUser.name || 'Học sinh';
+    const gradeName = studentData.grade || studentUser.grade || '9A1';
     const academicYear = studentData.academicYear || '2025 – 2026';
-    const hollandCode = studentData.code || 'RIE';
+    const hollandCode = (studentData.code && studentData.code.trim().length > 0) ? studentData.code : 'Chưa làm khảo sát';
+    const majorName = (targetMajor && targetMajor.name) ? targetMajor.name : 'Chưa lựa chọn ngành nghề';
+    const majorCode = (targetMajor && targetMajor.code) ? targetMajor.code : '---';
 
     let rowsHTML = '';
     CRITERIA_DEFINITIONS.forEach((c, idx) => {
@@ -178,7 +186,7 @@ const ProjectAssessment = (() => {
       </head>
       <body>
         <div class="header">
-          <h4>BỘ GIÁO DỤC VÀ ĐÀO TẠO — TRƯỜNG THCS ${schoolName.toUpperCase()}</h4>
+          <h4>BỘ GIÁO DỤC VÀ ĐÀO TẠO — ${schoolName}</h4>
           <h3>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
           <p style="margin:2px 0; font-style:italic;">Độc lập – Tự do – Hạnh phúc</p>
         </div>
@@ -189,7 +197,7 @@ const ProjectAssessment = (() => {
 
         <div class="info-box">
           <p style="margin:3px 0;"><strong>Họ và tên học sinh:</strong> ${studentName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Lớp:</strong> ${gradeName} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Năm học:</strong> ${academicYear}</p>
-          <p style="margin:3px 0;"><strong>Mã Holland khảo sát:</strong> <strong style="color:#059669;">${hollandCode}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Ngành nghề đánh giá:</strong> ${targetMajor.name || 'Kỹ thuật Cơ điện tử & Robot'} (Mã Holland nghề: <strong>${targetMajor.code || 'RIE'}</strong>)</p>
+          <p style="margin:3px 0;"><strong>Mã Holland khảo sát:</strong> <strong style="color:#059669;">${hollandCode}</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Ngành nghề đánh giá:</strong> ${majorName} (Mã Holland nghề: <strong>${majorCode}</strong>)</p>
           <p style="margin:3px 0;"><strong>Ngày thực hiện:</strong> ${dateStr}</p>
         </div>
 
