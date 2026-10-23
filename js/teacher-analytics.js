@@ -495,7 +495,8 @@ const TeacherAnalytics = (() => {
 
     const studentRows = list.map((st, idx) => {
       const code = (st.code || '').trim().toUpperCase();
-      const hasSurvey = code.length > 0;
+      const hasValidHolland = Boolean(code.length >= 3 && code !== '---' && /^[RIASEC]{3}$/.test(code) && !st.isUndifferentiated);
+      const hasSurvey = hasValidHolland;
       if (hasSurvey) {
         completed += 1;
         const primary = code[0];
@@ -509,36 +510,39 @@ const TeacherAnalytics = (() => {
       // Check stream
       const stream = (st.stream || '').trim();
       const streamLower = stream.toLowerCase();
-      let normalizedStream = 'Chưa xác định';
-      if (streamLower.includes('thpt') || streamLower.includes('phổ thông')) {
-        thptCount += 1;
-        normalizedStream = 'Tiếp tục học THPT';
-      } else if (streamLower.includes('nghề') || streamLower.includes('9+') || streamLower.includes('trung cấp') || streamLower.includes('học nghề')) {
-        vocationalCount += 1;
-        normalizedStream = 'Giáo dục nghề nghiệp (9+)';
-      } else if (hasSurvey) {
-        otherStreamCount += 1;
-        normalizedStream = stream || 'Đang cân nhắc';
+      let normalizedStream = 'Chưa có';
+      if (hasSurvey) {
+        if (streamLower.includes('thpt') || streamLower.includes('phổ thông')) {
+          thptCount += 1;
+          normalizedStream = 'Tiếp tục học THPT';
+        } else if (streamLower.includes('nghề') || streamLower.includes('9+') || streamLower.includes('trung cấp') || streamLower.includes('học nghề')) {
+          vocationalCount += 1;
+          normalizedStream = 'Giáo dục nghề nghiệp (9+)';
+        } else {
+          otherStreamCount += 1;
+          normalizedStream = stream || 'Đang cân nhắc';
+        }
       }
 
       // Project score
-      if (typeof st.projectScore === 'number' && !isNaN(st.projectScore)) {
+      if (hasSurvey && typeof st.projectScore === 'number' && !isNaN(st.projectScore)) {
         totalScore += st.projectScore;
         scoredStudents += 1;
       }
 
-      let resolvedMajor = st.major;
+      let resolvedMajor = 'Chưa chọn';
       const dataObj = window.TeenVocaData || window.EduPathData;
-      if ((!resolvedMajor || resolvedMajor === 'Chưa chọn' || resolvedMajor === 'Chưa khảo sát') && hasSurvey) {
-        if (window.HollandEngine && dataObj && dataObj.majors) {
+      if (hasSurvey) {
+        resolvedMajor = st.major;
+        if ((!resolvedMajor || resolvedMajor === 'Chưa chọn' || resolvedMajor === 'Chưa khảo sát') && window.HollandEngine && dataObj && dataObj.majors) {
           const rec = window.HollandEngine.matchMajors(code, st.hollandPercentages || {});
           if (rec && rec.length > 0) {
             resolvedMajor = rec[0].name;
           }
         }
-      }
-      if (!resolvedMajor) {
-        resolvedMajor = hasSurvey ? 'Đang cập nhật' : 'Chưa khảo sát';
+        if (!resolvedMajor) {
+          resolvedMajor = 'Đang cập nhật';
+        }
       }
 
       return {
@@ -547,12 +551,12 @@ const TeacherAnalytics = (() => {
         name: st.name || 'Học sinh',
         grade: st.grade || className || '---',
         school: st.school || 'Trường THCS',
-        code: code || '---',
+        code: hasSurvey ? code : (st.isUndifferentiated ? 'CHƯA PHÂN HÓA' : '---'),
         hasSurvey,
         statusText: hasSurvey ? 'Đã hoàn thành' : 'Chưa khảo sát',
         major: resolvedMajor,
-        projectScore: typeof st.projectScore === 'number' ? st.projectScore : null,
-        classification: st.classification || (hasSurvey ? 'Phù hợp' : '---'),
+        projectScore: (hasSurvey && typeof st.projectScore === 'number') ? st.projectScore : null,
+        classification: (hasSurvey && st.classification) ? st.classification : (hasSurvey ? 'Phù hợp' : '---'),
         stream: normalizedStream
       };
     });

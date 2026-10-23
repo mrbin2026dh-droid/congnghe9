@@ -172,59 +172,67 @@ class TeenVocaApp {
     }
   }
 
-  syncProgressToFirebase() {
+  syncProgressToFirebase(forceSync = false) {
     if (!this.currentUser || this.currentUser.role !== 'student') return;
     const studentCode = this.currentUser.code || this.studentProfile.studentCode;
     if (!studentCode) return;
 
-    // Only sync if student actually has data (not blank initial state)
-    const hasHolland = Boolean(this.studentProfile.code && this.studentProfile.code.trim().length > 0);
+    const rawCode = (this.studentProfile.code || '').trim().toUpperCase();
+    const hasHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && !this.studentProfile.isUndifferentiated && /^[RIASEC]{3}$/.test(rawCode));
     const hasMatches = Boolean(this.assessmentMatches && this.assessmentMatches.some(m => m === true));
-    if (!hasHolland && !hasMatches && !this.studentProfile.targetMajorId) {
-      return; // Do not push unattempted fake progress to Firebase
+    
+    // Chỉ đồng bộ nếu có dữ liệu thực tế hoặc được yêu cầu forceSync (khi reset/khảo sát lại)
+    const hasAnyData = hasHolland || hasMatches || Boolean(this.studentProfile.targetMajorId) || (this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0);
+    if (!hasAnyData && !forceSync) {
+      return;
     }
 
-    let targetMajorName = this.studentProfile.targetMajorName;
-    if (!targetMajorName && this.studentProfile.targetMajorId && window.EduPathData && window.EduPathData.majors) {
-      const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId);
-      targetMajorName = targetMajor ? targetMajor.name : '';
-    }
-    if (!targetMajorName && hasHolland && window.HollandEngine && window.EduPathData && window.EduPathData.majors) {
-      const matched = window.HollandEngine.matchMajors(this.studentProfile.code, this.studentProfile.percentages || {});
-      if (matched && matched.length > 0 && !this.studentProfile.isUndifferentiated) {
-        this.studentProfile.targetMajorId = matched[0].id;
-        this.studentProfile.targetMajorName = matched[0].name;
-        targetMajorName = matched[0].name;
-      }
-    }
-    const targetMajorObj = (window.EduPathData && window.EduPathData.majors && this.studentProfile.targetMajorId)
-      ? window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId)
-      : null;
-
+    let targetMajorName = '';
+    let targetMajorId = '';
     let stream = '';
+
     if (hasHolland) {
-      // Phân luồng sau THCS theo SGK Công nghệ 9 Bài 2 & Bài 4
+      const dataObj = window.TeenVocaData || window.EduPathData;
+      if (this.studentProfile.targetMajorId && dataObj && dataObj.majors) {
+        const targetMajor = dataObj.majors.find(m => m.id === this.studentProfile.targetMajorId);
+        targetMajorName = targetMajor ? targetMajor.name : '';
+        targetMajorId = targetMajor ? targetMajor.id : '';
+      }
+      if (!targetMajorName && window.HollandEngine && dataObj && dataObj.majors) {
+        const matched = window.HollandEngine.matchMajors(rawCode, this.studentProfile.percentages || {});
+        if (matched && matched.length > 0) {
+          targetMajorId = matched[0].id;
+          targetMajorName = matched[0].name;
+          this.studentProfile.targetMajorId = targetMajorId;
+          this.studentProfile.targetMajorName = targetMajorName;
+        }
+      }
+      const targetMajorObj = (dataObj && dataObj.majors && targetMajorId)
+        ? dataObj.majors.find(m => m.id === targetMajorId)
+        : null;
+
       const isPureVocational = targetMajorObj && targetMajorObj.level && targetMajorObj.level.includes('Trung cấp nghề 9+') && !targetMajorObj.level.includes('Đại học');
-      const isTechVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R')) && targetMajorObj && targetMajorObj.level && targetMajorObj.level.includes('9+');
+      const isTechVocational = rawCode.startsWith('R') && targetMajorObj && targetMajorObj.level && targetMajorObj.level.includes('9+');
       if (isPureVocational || isTechVocational) {
         stream = 'Cao đẳng / Trung cấp Nghề 9+';
       } else {
         stream = 'Học tiếp THPT & Đại học';
       }
     }
-    const result = hasMatches && window.ProjectAssessment ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : null;
+
+    const result = (hasHolland && hasMatches && window.ProjectAssessment) ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : null;
 
     const payload = {
       name: this.studentProfile.name,
       school: this.studentProfile.school,
       grade: this.studentProfile.grade,
-      code: this.studentProfile.code || '',
-      major: targetMajorName || '',
-      targetMajorId: this.studentProfile.targetMajorId || '',
-      targetMajorName: targetMajorName || '',
+      code: hasHolland ? rawCode : '',
+      major: hasHolland ? targetMajorName : '',
+      targetMajorId: hasHolland ? targetMajorId : '',
+      targetMajorName: hasHolland ? targetMajorName : '',
       projectScore: result ? result.totalScore : null,
       classification: result ? result.classification : '',
-      stream: stream,
+      stream: hasHolland ? stream : '',
       hollandScores: this.studentProfile.scores,
       hollandPercentages: this.studentProfile.percentages,
       assessmentMatches: this.assessmentMatches || [],
@@ -546,10 +554,29 @@ class TeenVocaApp {
       this.studentProfile.selfTraits = {};
     }
 
-    if (this.studentProfile.surveyHistory.length > 0) {
-      this.renderSurveyAttemptSelector();
-      const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
-      this.applySurveyAttempt(activeId);
+    const rawCode = (this.studentProfile.code || '').trim().toUpperCase();
+    const hasValidHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && !this.studentProfile.isUndifferentiated && /^[RIASEC]{3}$/.test(rawCode));
+
+    if (hasValidHolland) {
+      if (this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0) {
+        this.renderSurveyAttemptSelector();
+        const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
+        this.applySurveyAttempt(activeId);
+      } else {
+        const activeCard = document.getElementById('quiz-active-card');
+        const resultCard = document.getElementById('quiz-result-card');
+        if (activeCard) activeCard.style.display = 'none';
+        if (resultCard) resultCard.style.display = 'block';
+      }
+    } else {
+      const activeCard = document.getElementById('quiz-active-card');
+      const resultCard = document.getElementById('quiz-result-card');
+      if (activeCard) activeCard.style.display = 'block';
+      if (resultCard) resultCard.style.display = 'none';
+      this.currentQuestionIdx = 0;
+      this.quizAnswers = Array.from({ length: this.quizQuestions.length }, () => null);
+      this.renderQuestionPalette();
+      this.renderCurrentQuestion();
     }
 
     // Sync Tree State to Real Student Progress (0% if new)
@@ -888,13 +915,25 @@ class TeenVocaApp {
     } else if (tabId === 'project') {
       this.renderAssessmentView();
     } else if (tabId === 'quiz') {
-      if (this.studentProfile && this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0) {
-        const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
-        const activeAttempt = this.studentProfile.surveyHistory.find(a => a.id === activeId);
-        const resultCard = document.getElementById('quiz-result-card');
-        if (activeAttempt && resultCard && resultCard.style.display !== 'none') {
+      const rawCode = (this.studentProfile.code || '').trim().toUpperCase();
+      const hasValidHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && !this.studentProfile.isUndifferentiated && /^[RIASEC]{3}$/.test(rawCode));
+
+      const activeCard = document.getElementById('quiz-active-card');
+      const resultCard = document.getElementById('quiz-result-card');
+
+      if (hasValidHolland) {
+        if (this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0) {
+          const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
           this.applySurveyAttempt(activeId);
+        } else {
+          if (activeCard) activeCard.style.display = 'none';
+          if (resultCard) resultCard.style.display = 'block';
         }
+      } else {
+        if (activeCard) activeCard.style.display = 'block';
+        if (resultCard) resultCard.style.display = 'none';
+        this.renderQuestionPalette();
+        this.renderCurrentQuestion();
       }
     }
   }
@@ -1136,15 +1175,77 @@ class TeenVocaApp {
     }
   }
 
-  retakeQuiz() {
+  async retakeQuiz() {
     this.currentQuestionIdx = 0;
     this.quizAnswers = Array.from({ length: this.quizQuestions.length }, () => null);
+
+    // Xóa kết quả khảo sát hiện tại trên profile học sinh
+    this.studentProfile.code = '';
+    this.studentProfile.scores = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+    this.studentProfile.percentages = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+    this.studentProfile.targetMajorId = '';
+    this.studentProfile.targetMajorName = '';
+    this.studentProfile.major = '';
+    this.studentProfile.projectScore = null;
+    this.studentProfile.classification = '';
+    this.studentProfile.stream = '';
+    this.studentProfile.isUndifferentiated = false;
+    this.studentProfile.activeAttemptId = '';
+    this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
+
+    // Lưu vào LocalStorage
+    this.saveProfileToStorage();
+
+    // Đồng bộ ngay lập tức trạng thái xóa/chờ lên Firebase để giáo viên nhận được kết quả thời gian thực
+    const fb = window.TeenVocaFirebase || window.EduPathFirebase;
+    const studentCode = (this.currentUser && this.currentUser.code) || this.studentProfile.studentCode;
+    if (fb && studentCode) {
+      try {
+        await fb.saveStudentProgress(studentCode, {
+          name: this.studentProfile.name,
+          school: this.studentProfile.school,
+          grade: this.studentProfile.grade,
+          code: '',
+          major: '',
+          targetMajorId: '',
+          targetMajorName: '',
+          projectScore: null,
+          classification: '',
+          stream: '',
+          hollandScores: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+          hollandPercentages: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+          assessmentMatches: [false, false, false, false, false, false, false, false, false, false],
+          surveyHistory: this.studentProfile.surveyHistory || [],
+          activeAttemptId: '',
+          isUndifferentiated: false
+        });
+      } catch (err) {
+        console.warn('Lỗi khi đồng bộ xóa kết quả lên Firebase:', err);
+      }
+    }
+
+    // Reset Cây nghề nghiệp về trạng thái ban đầu 0%
+    if (this.treeAnimator) {
+      this.treeAnimator.updateState({
+        rootInterest: 0,
+        rootAbility: 0,
+        rootPersonality: 0,
+        rootValues: 0,
+        fruitExpectation: 0
+      });
+      this.syncSlidersFromTreeState();
+      this.updateTreeMetricsDisplay();
+    }
+
+    // Chuyển sang màn hình câu hỏi
     const activeCard = document.getElementById('quiz-active-card');
     const resultCard = document.getElementById('quiz-result-card');
     if (activeCard) activeCard.style.display = 'block';
     if (resultCard) resultCard.style.display = 'none';
+
     this.renderQuestionPalette();
     this.renderCurrentQuestion();
+    this.showToastNotification('🔄 Đã xóa kết quả khảo sát trên hệ thống! Bạn có thể bắt đầu làm lại bài khảo sát.');
     this.playBeep(620);
   }
 
@@ -1226,6 +1327,7 @@ class TeenVocaApp {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `likert-btn ${currentAns === s.value ? 'selected' : ''}`;
+        btn.setAttribute('data-value', String(s.value));
         btn.innerHTML = sanitize(`
           <span class="likert-btn-num">${s.value}</span>
           <span class="likert-btn-label">${s.label}</span>
@@ -1649,6 +1751,12 @@ class TeenVocaApp {
     }
 
     this.saveProfileToStorage();
+
+    // Chuyển đổi hiển thị sang card kết quả
+    const activeCard = document.getElementById('quiz-active-card');
+    const resultBox = document.getElementById('quiz-result-card');
+    if (activeCard) activeCard.style.display = 'none';
+    if (resultBox) resultBox.style.display = 'block';
 
     // Cập nhật UI
     const undiffAlert = document.getElementById('quiz-undifferentiated-alert');
@@ -3881,17 +3989,29 @@ class TeenVocaApp {
 
       classData.forEach((st, idx) => {
         const studentCode = st.studentCode || `HS-${idx + 1}`;
-        const hollandBadge = st.code ? `<span style="font-weight:800; color:var(--brand);">${st.code}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
-        let resolvedMajor = st.major;
-        if (st.code && st.code !== '---' && window.HollandEngine && window.EduPathData && window.EduPathData.majors) {
-          const recMajors = window.HollandEngine.matchMajors(st.code, st.hollandPercentages || {});
-          if (recMajors && recMajors.length > 0 && !st.isUndifferentiated) {
-            if (!resolvedMajor || resolvedMajor === 'Chưa chọn') {
+        const rawCode = (st.code || '').trim().toUpperCase();
+        const hasValidHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && /^[RIASEC]{3}$/.test(rawCode) && !st.isUndifferentiated);
+
+        let hollandBadge;
+        if (hasValidHolland) {
+          hollandBadge = `<span style="font-weight:800; color:var(--brand);">${rawCode}</span>`;
+        } else if (st.isUndifferentiated) {
+          hollandBadge = `<span style="color:#f59e0b; font-weight:700; font-size:0.75rem;" title="Chưa phân hóa (6 nhóm bằng nhau)">Chưa phân hóa</span>`;
+        } else {
+          hollandBadge = `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
+        }
+
+        let resolvedMajor = null;
+        if (hasValidHolland && window.HollandEngine && (window.TeenVocaData || window.EduPathData)) {
+          const dataObj = window.TeenVocaData || window.EduPathData;
+          const recMajors = window.HollandEngine.matchMajors(rawCode, st.hollandPercentages || {});
+          if (recMajors && recMajors.length > 0) {
+            resolvedMajor = st.major;
+            if (!resolvedMajor || resolvedMajor === 'Chưa chọn' || resolvedMajor === 'Chưa khảo sát') {
               resolvedMajor = recMajors[0].name;
-            } else {
-              // Tự động kiểm tra và đồng bộ nếu st.major bị kẹt từ lần khảo sát cũ khác mã
-              const curObj = window.EduPathData.majors.find(m => m.name === resolvedMajor);
-              if (curObj && curObj.primaryType !== st.code[0]) {
+            } else if (dataObj && dataObj.majors) {
+              const curObj = dataObj.majors.find(m => m.name === resolvedMajor);
+              if (curObj && curObj.primaryType !== rawCode[0]) {
                 const fitScore = recMajors.find(m => m.name === resolvedMajor);
                 if ((!fitScore || fitScore.fitPercentage < 35) && recMajors[0].fitPercentage >= 60) {
                   resolvedMajor = recMajors[0].name;
@@ -3900,12 +4020,13 @@ class TeenVocaApp {
             }
           }
         }
-        const majorText = resolvedMajor ? resolvedMajor : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
-        const scoreText = typeof st.projectScore === 'number' ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
-        const realtimeBadge = st.code
-          ? `<span class="realtime-status-pill online" title="Đã có dữ liệu khảo sát thời gian thực từ Firebase (Mã: ${st.code})" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 5px #10b981;"></span> Live</span>`
+
+        const majorText = (hasValidHolland && resolvedMajor) ? resolvedMajor : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
+        const scoreText = (hasValidHolland && typeof st.projectScore === 'number') ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
+        const realtimeBadge = hasValidHolland
+          ? `<span class="realtime-status-pill online" title="Đã có dữ liệu khảo sát thời gian thực từ Firebase (Mã: ${rawCode})" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 5px #10b981;"></span> Live</span>`
           : `<span class="realtime-status-pill offline" title="Chưa có dữ liệu khảo sát thời gian thực" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(156,163,175,0.12); color:#6b7280; border:1px solid rgba(156,163,175,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block;"></span> Chờ</span>`;
-        const streamText = (st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
+        const streamText = (hasValidHolland && st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
 
         const isSelected = this.selectedTeacherStudentCode && (this.selectedTeacherStudentCode.toUpperCase() === studentCode.toUpperCase());
         const tr = document.createElement('tr');
