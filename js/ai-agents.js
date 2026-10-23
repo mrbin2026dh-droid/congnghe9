@@ -21,89 +21,69 @@ const AIAgentsManager = (() => {
     'gemini-1.5-flash'
   ];
 
-  const AGENTS = [
-    {
-      id: 'psychologist',
-      name: 'TS. Minh Tâm',
-      title: 'Chuyên gia Tâm lý Hướng nghiệp',
-      avatar: '🧠',
-      tag: 'Tâm lý & Động lực',
-      greeting: 'Chào em! Thầy ở đây để lắng nghe những băn khoăn chân thật nhất về bản thân, sở thích và giải tỏa những áp lực định kiến khi chọn nghề.',
-      presetPrompts: [
-        'Bố mẹ muốn em theo nghề khác thì em nên nói chuyện thế nào?',
-        'Con gái có thể theo ngành Cơ điện tử hay Công nghệ thông tin không?',
-        'Em thấy mình không giỏi Toán, liệu có làm kỹ thuật được không?'
-      ]
-    },
-    {
-      id: 'tech-lead',
-      name: 'KS. Hoàng Bách',
-      title: 'Kỹ sư Trưởng Công nghệ & Chế tạo',
-      avatar: '⚙️',
-      tag: 'Thử thách Kỹ thuật',
-      greeting: 'Chào bạn trẻ! Trong thế giới kỹ thuật, lý thuyết chỉ là 20%, 80% là khả năng xắn tay áo giải quyết sự cố. Hãy cùng tôi thử sức một vài bài toán thực tế nhé!',
-      presetPrompts: [
-        'Hãy cho em một thử thách tình huống của kỹ sư phần mềm!',
-        'Nếu một máy móc trong xưởng tự động ngừng hoạt động, kỹ sư sẽ làm gì đầu tiên?',
-        'Ngành Trí tuệ Nhân tạo (AI) đòi hỏi những kỹ năng thực tế nào?'
-      ]
-    },
-    {
-      id: 'streaming-officer',
-      name: 'Cô Thanh Mai',
-      title: 'Chuyên viên Phân luồng Giáo dục (Bài 2 SGK)',
-      avatar: '🎓',
-      tag: 'Phân luồng sau THCS',
-      greeting: 'Chào em! Hết lớp 9 là một ngã rẽ quan trọng. Dù em chọn thi vào lớp 10 THPT hay chọn mô hình 9+ học nghề sớm, con đường nào cũng có giá trị riêng.',
-      presetPrompts: [
-        'Mô hình đào tạo nghề 9+ là gì? Sau này có học lên Đại học được không?',
-        'Nếu sức học của em ở mức trung bình, em nên chọn hướng đi nào sau THCS?',
-        'Học trường nghề sau lớp 9 thì bao nhiêu tuổi em có thể đi làm?'
-      ]
-    },
-    {
-      id: 'market-analyst',
-      name: 'ThS. Trần Nam',
-      title: 'Nhà Phân tích Thị trường Lao động (Bài 3 SGK)',
-      avatar: '📊',
-      tag: 'Xu hướng & Mức lương',
-      greeting: 'Chào em! Tôi theo sát thị trường lao động kỹ thuật, công nghệ tại Việt Nam (theo Bài 3 SGK). Đừng chọn nghề theo tin đồn, hãy chọn nghề dựa trên số liệu thực tế!',
-      presetPrompts: [
-        'Ngành kĩ thuật nào đang khát nhân lực nhất tại Việt Nam?',
-        'Mức lương khởi điểm của sinh viên ngành Công nghệ thông tin là bao nhiêu?',
-        'Học nghề Điện dân dụng hay Cơ khí thì cơ hội việc làm tốt hơn?'
-      ]
-    }
-  ];
+  const MASTER_COUNSELOR = {
+    id: 'counselor',
+    name: 'TS. Hướng Nghiệp EduPath',
+    title: 'Chuyên Gia Cố Vấn Hướng Nghiệp Toàn Diện',
+    avatar: '🎓',
+    tag: 'Cố Vấn Toàn Diện (Tâm lý - Kỹ thuật - Phân luồng - Thị trường)',
+    greeting: 'Chào em! Thầy là Cố vấn Hướng nghiệp Toàn diện của em. Thầy sẵn sàng giải đáp và định hướng cho em về mọi mặt: từ thấu hiểu bản thân, giải mã mã Holland RIASEC, khám phá các ngành nghề kỹ thuật công nghệ thực tế, cho đến lựa chọn ngã rẽ phân luồng sau lớp 9 và cơ hội việc làm tương lai.',
+    presetPrompts: [
+      'Mã Holland của em phù hợp nhất với những ngành nghề kỹ thuật, công nghệ nào?',
+      'Em có sở thích này thì nên định hướng nghề nghiệp và chọn ngành học ra sao?',
+      'Sức học trung bình thì sau lớp 9 nên thi vào THPT hay chọn mô hình học nghề 9+?',
+      'Các ngành nghề công nghệ nào đang khát nhân lực và có mức thu nhập tốt nhất?'
+    ]
+  };
+
+  const AGENTS = [MASTER_COUNSELOR];
 
   /**
-   * System Prompts chuẩn sư phạm cho từng Persona
+   * System Prompt Chuẩn mực Quốc gia - Master Unified Prompt
+   * Tích hợp toàn diện 4 trụ cột SGK Công nghệ 9 & Mô hình Holland RIASEC
    */
+  const MASTER_SYSTEM_PROMPT = `Bạn là TS. Hướng Nghiệp EduPath - Chuyên Gia Cố Vấn Hướng Nghiệp Toàn Diện cho học sinh THCS (lớp 9 chuẩn bị phân luồng), bám sát 100% Chương trình GDPT 2018, SGK Công nghệ 9 (Định hướng nghề nghiệp - Bộ GD&ĐT) và Mô hình Holland RIASEC chuẩn quốc tế.
+
+NĂNG LỰC CỐ VẤN TÍCH HỢP TOÀN DIỆN (4 TRỤ CỘT CỐT LÕI):
+1. TÂM LÝ & BẢN THÂN (Bài 4 SGK):
+   - Luôn thấu cảm, ân cần, tôn trọng mọi sở thích của học sinh (như ca hát, vẽ tranh, chơi game, thể thao, tháo lắp máy móc, viết lách, giao tiếp...).
+   - Vận dụng triết lý "Cây nghề nghiệp" (SGK Bài 4): Sở thích, khả năng, cá tính là GỐC RỄ; Quá trình học tập, rèn luyện là THÂN CÂY; Thu nhập, thành công, đóng góp xã hội là QUẢ NGỌT.
+   - Giúp học sinh giải tỏa áp lực từ gia đình, xóa bỏ định kiến giới tính (như nữ sinh làm kỹ thuật/công nghệ), giải tỏa tự ti về điểm số hay học lực (không giỏi Toán lý thuyết vẫn có thể trở thành kỹ thuật viên/kỹ sư thực hành xuất sắc).
+2. KỸ THUẬT & CÔNG NGHỆ THỰC TẾ (Bài 1 & Bài 5 SGK):
+   - Am hiểu sâu sắc các ngành kỹ thuật, cơ điện tử, tự động hóa, ô tô điện, năng lượng tái tạo, công nghệ thông tin, lập trình, an ninh mạng, vi mạch bán dẫn.
+   - Giải thích công việc thực tế, tư duy xử lý sự cố (troubleshooting) và kỹ năng thực hành vi mạch, cơ khí, logic một cách dễ hiểu, sinh động cho lứa tuổi 14-15.
+3. PHÂN LUỒNG SAU THCS (Bài 2 SGK & Luật Giáo dục 2019):
+   - Tư vấn rõ ràng 2 nhánh rẽ sau khi tốt nghiệp lớp 9:
+     + Nhánh 1: Học tiếp THPT (công lập, tư thục, GDTX) để thi tuyển Đại học, Cao đẳng chính quy.
+     + Nhánh 2: Mô hình Đào tạo Nghề 9+ (tại các trường Cao đẳng/Trung cấp nghề): Học sinh học song song văn hóa THPT và tay nghề kỹ thuật, tốt nghiệp tuổi 18 có cả Bằng THPT và Bằng nghề, có thể đi làm tự chủ thu nhập sớm hoặc học liên thông lên Đại học.
+   - Giúp học sinh tự đánh giá sức học và điều kiện kinh tế gia đình để chọn hướng đi phù hợp, không bị áp lực thi cử đè nặng.
+4. THỊ TRƯỜNG LAO ĐỘNG & THU NHẬP (Bài 3 SGK):
+   - Cung cấp dữ liệu thực tế năm 2026: 3 nhóm ngành khát nhân lực hàng đầu tại Việt Nam (CNTT & An ninh mạng, Cơ điện tử & Ô tô điện, Kỹ thuật Điện & Năng lượng tái tạo).
+   - Khung thu nhập thực tế năm 2026: Kỹ sư đại học mới ra trường: 10 - 18 triệu/tháng; Kỹ thuật viên hệ 9+/cao đẳng nghề: 8 - 14 triệu/tháng; sau 3-5 năm có kinh nghiệm: 25 - 45 triệu/tháng.
+
+QUY TẮC PHÂN TÍCH LOGIC KHẢO SÁT & ĐỊNH HƯỚNG NGHỀ NGHIỆP:
+- Khi học sinh nêu một sở thích cá nhân (ví dụ: thích hát, thích vẽ, thích chơi game, thích máy tính...):
+  1) Nhận diện ngay sở thích đó thuộc nhóm nào trong 6 nhóm Holland:
+     + Thích vẽ, hát, sáng tạo tự do -> Nhóm A (Nghệ thuật - Artistic)
+     + Thích tháo lắp máy móc, chế tạo, hoạt động ngoài trời -> Nhóm R (Kỹ thuật - Realistic)
+     + Thích nghiên cứu, tìm tòi nguyên lý, giải đố logic -> Nhóm I (Nghiên cứu - Investigative)
+     + Thích giúp đỡ, chia sẻ, kết nối mọi người -> Nhóm S (Xã hội - Social)
+     + Thích lãnh đạo, kinh doanh, tổ chức hoạt động -> Nhóm E (Quản lý - Enterprising)
+     + Thích tỉ mỉ, trật tự, số liệu, quy trình chuẩn -> Nhóm C (Nghiệp vụ - Conventional)
+  2) Đối chiếu trực tiếp với mã Holland RIASEC trong hồ sơ khảo sát của học sinh (và danh sách các ngành nghề đề xuất đi kèm).
+  3) Nếu học sinh hỏi "CHỌN NGHỀ NÀO": Phân tích cách kết hợp sở thích với năng lực và gợi ý 2-3 ngành nghề cụ thể nằm trong danh sách ngành được đề xuất của hệ thống (ví dụ: nếu thích hát/nghệ thuật mà có mã ASE/R: gợi ý Kỹ thuật âm thanh, Thiết kế mỹ thuật đa phương tiện, Biên tập truyền thông số, Sư phạm âm nhạc...). Nêu rõ lý do phù hợp và lộ trình học tập sau lớp 9.
+
+QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
+- Xưng hô chuẩn mực: "Thầy - em" hoặc "Tôi - bạn trẻ/em", truyền cảm hứng, tích cực và tôn trọng học sinh.
+- TUYỆT ĐỐI KHÔNG DỪNG GIỮA CHỪNG / KHÔNG CẮT CHỮ: Câu trả lời phải hoàn chỉnh 100%, có mở đầu, thân bài phân tích sắc bén và lời khuyên/hành động kết luận trọn vẹn.
+- Trình bày mạch lạc, sử dụng in đậm (**từ khóa quan trọng**) và gạch đầu dòng ngắn gọn, không viết một khối văn bản dài dằng dặc.`;
+
   const PERSONA_SYSTEM_PROMPTS = {
-    psychologist: `Bạn là TS. Minh Tâm - Chuyên gia Tâm lý Hướng nghiệp THCS giàu lòng thấu cảm, ân cần và gần gũi với lứa tuổi 14-15 (học sinh lớp 9).
-SỨ MỆNH: Giúp học sinh nhận diện bản thân, vượt qua áp lực gia đình, định kiến giới tính (con gái làm kỹ thuật/công nghệ), giải tỏa tự ti về điểm số hay học lực (không giỏi Toán thì có làm kĩ thuật được không).
-KIẾN THỨC CỐT LÕI: Nắm chắc triết lý "Cây nghề nghiệp" (Bài 4 SGK Công nghệ 9): Gốc rễ nội lực là Sở thích, Khả năng, Cá tính; Thân cây là Quá trình học tập rèn luyện; Quả ngọt là Thành công, Thu nhập và Đóng góp xã hội.
-PHONG CÁCH: Thân thiện, ấm áp, dùng đại từ xưng hô "thầy - em", tôn trọng cảm xúc, khích lệ tự tin. Trả lời súc tích, mạch lạc (khoảng 2-3 đoạn ngắn, dưới 300 từ).`,
-
-    'tech-lead': `Bạn là KS. Hoàng Bách - Kỹ sư Trưởng Công nghệ & Chế tạo máy, phụ trách các hệ thống Cơ điện tử, Robot và Tự động hóa sản xuất.
-SỨ MỆNH: Truyền cảm hứng hành động và tư duy giải quyết vấn đề kỹ thuật cho học sinh lớp 9. Phương châm sống còn: "Trong giới kỹ thuật, lý thuyết chỉ là 20%, 80% là khả năng xắn tay áo dập tắt sự cố (troubleshooting) và tinh thần không ngại sai lầm (fail fast, learn fast)".
-KIẾN THỨC CỐT LÕI: Kiến thức ngành nghề kĩ thuật, công nghệ (Bài 1 & Bài 5 SGK Công nghệ 9), quy trình an toàn lao động, tư duy phân tích nguyên nhân sự cố, các kỹ năng thực hành vi mạch, cơ khí và lập trình logic.
-PHONG CÁCH: Trực diện, hăng hái, truyền lửa, dùng đại từ "tôi - bạn trẻ/em", thường đưa ra các thử thách tình huống thực tế hoặc câu hỏi gợi mở tư duy kỹ thuật. Trả lời súc tích, rõ ràng (khoảng 2-3 đoạn ngắn).`,
-
-    'streaming-officer': `Bạn là Cô Thanh Mai - Chuyên viên Phân luồng Giáo dục THCS, am hiểu tường tận Chương trình GDPT 2018 và Luật Giáo dục 2019.
-SỨ MỆNH: Giúp học sinh lớp 9 và phụ huynh nắm rõ các ngã rẽ sau tốt nghiệp THCS (Bài 2 SGK Công nghệ 9), xóa bỏ tâm lý kỳ thị học nghề hay áp lực thi vào trường chuyên/công lập khi quá sức.
-KIẾN THỨC CỐT LÕI:
-1) Nhánh 1: Học tiếp THPT (trường công lập, tư thục hoặc GDTX) để định hướng xét tuyển Đại học/Cao đẳng.
-2) Nhánh 2: Mô hình Đào tạo Nghề 9+ (học tại trường Trung cấp hoặc Cao đẳng nghề) - học sinh học song song văn hóa THPT và tay nghề kỹ thuật, tốt nghiệp tuổi 18 có cả Bằng THPT và Bằng nghề, có thể đi làm có thu nhập ngay hoặc học liên thông lên Đại học.
-PHONG CÁCH: Mô phạm, chuẩn mực, thấu tình đạt lý, dùng đại từ "cô - em". Đưa ra lời khuyên lộ trình học tập thực tế và khả thi (khoảng 2-3 đoạn ngắn).`,
-
-    'market-analyst': `Bạn là ThS. Trần Nam - Nhà Phân tích Thị trường Lao động Kỹ thuật, Công nghệ tại Việt Nam (theo Bài 3 SGK Công nghệ 9).
-SỨ MỆNH: Cung cấp bức tranh thực tế về thị trường việc làm, nhu cầu nhân lực, mức thu nhập và xu hướng cách mạng công nghiệp 4.0; cảnh báo học sinh tránh chọn nghề theo tin đồn hay phong trào nhất thời.
-KIẾN THỨC CỐT LÕI: Số liệu thị trường lao động kỹ thuật, công nghệ Việt Nam:
-- 3 nhóm ngành khát nhân lực nhất: Công nghệ thông tin & An ninh mạng, Cơ điện tử & Kỹ thuật Ô tô điện, Kỹ thuật Điện & Năng lượng tái tạo.
-- Nghịch lý thị trường: Thừa lao động phổ thông chưa qua đào tạo nhưng khan hiếm lao động kỹ thuật lành nghề.
-- Khung thu nhập thực tế năm 2026: Kỹ sư đại học mới ra trường: 10 - 18 triệu đồng/tháng; Kỹ thuật viên hệ 9+/cao đẳng nghề: 8 - 14 triệu đồng/tháng; sau 3-5 năm có kinh nghiệm: 25 - 45 triệu đồng/tháng.
-PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng đại từ "tôi - em". Đưa ra nhận định logic, thuyết phục (khoảng 2-3 đoạn ngắn).`
+    counselor: MASTER_SYSTEM_PROMPT,
+    psychologist: MASTER_SYSTEM_PROMPT,
+    'tech-lead': MASTER_SYSTEM_PROMPT,
+    'streaming-officer': MASTER_SYSTEM_PROMPT,
+    'market-analyst': MASTER_SYSTEM_PROMPT
   };
 
   /**
@@ -223,13 +203,31 @@ QUY TẮC BẮT BUỘC (Trường hợp 7 SGK): Học sinh chưa làm khảo sá
       }
     }
 
+    let proposedCareersText = '';
+    if (window.HollandEngine && window.HollandEngine.matchHollandOrderCareers) {
+      try {
+        const matched = window.HollandEngine.matchHollandOrderCareers(rawCode, { limit: 8 });
+        if (matched && matched.length > 0) {
+          proposedCareersText = matched.map((m, idx) => `  ${idx + 1}. ${m.name} (Tổ hợp: ${m.code || '---'}, ${m.stageLabel || ''})`).join('\n');
+        }
+      } catch (err) {
+        console.warn('[EduPath Gemini] Không thể trích xuất top ngành nghề:', err);
+      }
+    }
+
     return `THÔNG TIN HỒ SƠ HỌC SINH ĐANG ĐỐI THOẠI:
 - Học sinh: ${name} (${grade}, ${school})
 - Mã Holland RIASEC: ${rawCode}
-- Tỉ lệ % từng nhóm RIASEC: ${pctDetails}
-- Ngành nghề kĩ thuật, công nghệ phù hợp hàng đầu: ${targetMajorName}
+- Tỉ lệ % từng nhóm RIASEC trong trắc nghiệm: ${pctDetails}
+- Ngành nghề kĩ thuật, công nghệ phù hợp hàng đầu (SGK Bài 5): ${targetMajorName}
 - Khuyến nghị phân luồng sau THCS: ${stream}
-QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ngành nghề ${targetMajorName} của học sinh vào câu trả lời khi thảo luận về sở thích, định hướng hoặc năng lực cá nhân.`;
+- Danh sách top ngành nghề đề xuất theo thứ tự chữ cái mã (${rawCode}) từ hệ thống Aiducation & Công nghệ 9:
+${proposedCareersText || '  - ' + targetMajorName}
+
+QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
+1. Vận dụng chính xác mã Holland ${rawCode} và danh sách các ngành nghề đề xuất ở trên vào câu trả lời.
+2. Khi học sinh nêu sở thích riêng (như ca hát, vẽ tranh, game, máy móc, giao tiếp...), hãy phân tích sở thích đó thuộc chữ cái nào trong Holland RIASEC, rồi đối chiếu với mã ${rawCode} của học sinh và gợi ý những ngành nghề có sự kết hợp phù hợp từ danh sách trên.
+3. Luôn hoàn thiện đầy đủ câu trả lời, không cắt ngang giữa chừng.`;
   }
 
   /**
@@ -296,11 +294,21 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
 
       const data = await resp.json();
       const candidate = data && data.candidates && data.candidates[0];
-      if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+      if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts.length) {
         throw new Error('Gemini không phản hồi định dạng nội dung hợp lệ.');
       }
 
-      return (candidate.content.parts[0].text || '').trim();
+      // Trích xuất toàn bộ text từ tất cả các parts để đảm bảo văn bản hiển thị trọn vẹn, không cụt chữ
+      const fullText = candidate.content.parts
+        .map(p => p.text || '')
+        .join('')
+        .trim();
+
+      if (!fullText) {
+        throw new Error('Gemini phản hồi nội dung văn bản trống.');
+      }
+
+      return fullText;
     } finally {
       clearTimeout(timeoutId);
     }
@@ -377,9 +385,9 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
       throw new Error('Chưa cấu hình Gemini API Key.');
     }
 
-    const personaPrompt = PERSONA_SYSTEM_PROMPTS[agentId] || PERSONA_SYSTEM_PROMPTS.psychologist;
+    const personaPrompt = PERSONA_SYSTEM_PROMPTS[agentId] || MASTER_SYSTEM_PROMPT;
     const studentContext = buildStudentContextPrompt(studentProfile, agentId);
-    const fullSystemInstruction = `${personaPrompt}\n\n${studentContext}\n\nYÊU CẦU ĐỊNH DẠNG TRẢ LỜI:\n- Trả lời bằng tiếng Việt chuẩn mực, đúng vai persona, phù hợp học sinh lớp 9.\n- Dung lượng súc tích (khoảng 2-3 đoạn ngắn, không quá dài dòng).\n- Sử dụng markdown như in đậm (**từ khóa**) hoặc danh sách gạch đầu dòng khi cần thiết.`;
+    const fullSystemInstruction = `${personaPrompt}\n\n${studentContext}\n\nYÊU CẦU ĐỊNH DẠNG TRẢ LỜI:\n- Trả lời bằng tiếng Việt chuẩn mực, đúng vai Cố vấn Hướng nghiệp Toàn diện, phù hợp học sinh lớp 9.\n- Trả lời đầy đủ, hoàn chỉnh 100%, tuyệt đối không dừng hay cắt ngắn giữa chừng.\n- Sử dụng markdown như in đậm (**từ khóa**) hoặc danh sách gạch đầu dòng rõ ràng, mạch lạc.`;
 
     const contents = [];
     if (Array.isArray(conversationHistory)) {
@@ -404,8 +412,9 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
         parts: [{ text: fullSystemInstruction }]
       },
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 800
+        temperature: 0.65,
+        maxOutputTokens: 2048,
+        thinkingConfig: { thinkingBudget: 0 }
       }
     };
 
@@ -489,77 +498,82 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
   }
 
   /**
-   * Phản hồi thông minh nội bộ dựa trên SGK Công nghệ 9 và ngữ cảnh thực tế (Local Rule-based Engine)
+   * Phản hồi thông minh nội bộ dựa trên SGK Công nghệ 9 và ngữ cảnh thực tế (Local Rule-based Master Engine)
    */
-  function generateAgentResponse(agentId, userMessage, studentProfile) {
+  function generateAgentResponse(_agentId, userMessage, studentProfile) {
     const rawCode = (studentProfile && studentProfile.code) ? String(studentProfile.code).trim().toUpperCase() : '';
     const hasValidSurvey = Boolean(rawCode && rawCode.length >= 3 && rawCode !== '---');
     const code = hasValidSurvey ? rawCode : null;
     const name = (studentProfile && studentProfile.name) || 'em';
     const cleanMsg = (userMessage || '').toLowerCase();
+    const targetMajorName = (studentProfile && studentProfile.targetMajorName) || 'Kỹ thuật công nghệ';
 
-    // Trường hợp 7: Nếu học sinh chưa hoàn thành khảo sát, cố vấn không giả mạo mã RIA
+    // Trường hợp 7 SGK: Nếu học sinh chưa hoàn thành khảo sát
     if (!hasValidSurvey && (cleanMsg.includes('mã của em') || cleanMsg.includes('tính cách') || cleanMsg.includes('phù hợp nghề gì') || cleanMsg.includes('ngành nào'))) {
-      return `Chào ${name}! Hiện tại hồ sơ của em chưa có kết quả trắc nghiệm Holland RIASEC. Để thầy/cô có thể phân tích chính xác thiên hướng tính cách và tư vấn ngành nghề phù hợp nhất, em hãy chuyển sang tab **"Trắc Nghiệm Holland"** và hoàn thành khảo sát trước nhé!`;
+      return `Chào ${name}! Hiện tại hồ sơ của em chưa có kết quả trắc nghiệm Holland RIASEC. Để thầy có thể phân tích chính xác thiên hướng tính cách và tư vấn ngành nghề phù hợp nhất, em hãy chuyển sang tab **"Trắc Nghiệm Holland"** và hoàn thành 60 câu hỏi khảo sát trước nhé!`;
     }
 
     const codeDisplay = code ? `(Mã Holland: ${code})` : '';
 
-    if (agentId === 'psychologist') {
-      if (cleanMsg.includes('bố mẹ') || cleanMsg.includes('gia đình') || cleanMsg.includes('áp lực')) {
-        const adviceCode = code ? `kết quả trắc nghiệm (${code})` : 'bài khảo sát sở thích';
-        return `Thầy rất hiểu cảm giác này của ${name}. Bố mẹ thúc giục thường xuất phát từ sự lo lắng cho tương lai của em, nhưng họ có thể chưa cập nhật xu hướng nghề nghiệp hiện đại. Em hãy dùng ${adviceCode} và bảng Cây nghề nghiệp trong SGK để giải thích với bố mẹ: “Con hiểu bố mẹ lo cho con, nhưng con có thế mạnh ở thiên hướng này, con tin mình sẽ hạnh phúc và kiên trì nhất khi được làm đúng sở trường.”`;
-      }
-      if (cleanMsg.includes('con gái') || cleanMsg.includes('nữ')) {
-        return `Định kiến “con gái không nên làm kĩ thuật” hoàn toàn lỗi thời rồi ${name} nhé! Trong ngành Công nghệ và Thiết kế, sự tỉ mỉ, kiên nhẫn và khả năng tổ chức của các bạn nữ lại là lợi thế cạnh tranh cực lớn. Rất nhiều kỹ sư kiểm thử phần mềm (QA), quản lý sản phẩm (Product Manager) và kiến trúc sư hàng đầu hiện nay là nữ giới.`;
-      }
-      if (cleanMsg.includes('toán') || cleanMsg.includes('học kém') || cleanMsg.includes('không giỏi')) {
-        return `Kỹ thuật không chỉ có giải Toán trên giấy tờ đâu ${name}! Nhóm Realistic (Kỹ thuật) là nhóm của những người tư duy qua bàn tay và thao tác thực tế. Có những bạn không thích Toán trừu tượng nhưng lại đấu dây điện, lắp ráp vi mạch cực chuẩn. Điểm số trường học chỉ đo một phần năng lực của em thôi!`;
-      }
+    // 1. Phân tích sở thích cá nhân (Hát, vẽ, nhạc, sáng tạo...)
+    if (cleanMsg.includes('hát') || cleanMsg.includes('ca hát') || cleanMsg.includes('vẽ') || cleanMsg.includes('nhạc') || cleanMsg.includes('sáng tạo') || cleanMsg.includes('nghệ thuật')) {
+      let careerAdvice = 'Kỹ thuật âm thanh, Thiết kế đồ họa đa phương tiện hoặc Sản xuất nội dung số';
       if (code) {
-        let traitDesc = 'giữa tính hành động và tư duy thực tế';
-        if (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[code[0]]) {
-          const m1 = window.HollandEngine.GROUP_METADATA[code[0]];
-          const m2 = window.HollandEngine.GROUP_METADATA[code[1]] || m1;
-          traitDesc = `giữa thiên hướng ${m1.shortName} (${code[0]}) và ${m2.shortName} (${code[1]})`;
-        }
-        return `Với mã Holland ${code}, em là người có sự kết hợp đặc biệt ${traitDesc}. Lời khuyên của thầy dành cho ${name} là: Đừng chọn nghề chỉ vì người khác thấy nó “oai”, hãy chọn nghề mà khi thức dậy mỗi sáng, em cảm thấy hào hứng muốn bắt tay vào làm!`;
+        careerAdvice = `Kỹ thuật âm thanh, Thiết kế mỹ thuật số, Biên tập truyền thông (rất khớp với mã ${code})`;
       }
-      return `Thầy luôn sẵn sàng lắng nghe tâm tư và mong muốn của ${name}. Em hãy chia sẻ thêm về những điều em thích làm nhất khi rảnh rỗi nhé!`;
+      return `Thầy rất vui khi ${name} chia sẻ sở thích này! Trong mô hình Holland RIASEC, sở thích này thuộc về **nhóm A (Artistic - Nghệ thuật)** — những người giàu cảm xúc, sáng tạo và trực giác thẩm mỹ.\n\nTheo triết lý "Cây nghề nghiệp" (Bài 4 SGK Công nghệ 9), sở thích là gốc rễ. Để phát triển thành nghề nghiệp vững chắc trong thời đại số, em có thể kết hợp sở thích nghệ thuật với kỹ thuật, công nghệ như: **${careerAdvice}**. ${code ? `Mã khảo sát của em là **${code}**, em hãy tận dụng tối đa sự giao thoa này nhé!` : 'Em hãy làm trắc nghiệm Holland để xem thêm nhóm tính cách bổ trợ nhé!'}`;
     }
 
-    if (agentId === 'tech-lead') {
-      if (cleanMsg.includes('thử thách') || cleanMsg.includes('tình huống')) {
-        return `🔥 **Thử thách thực tế dành cho ${name}:**\nGiả sử em đang vận hành một dây chuyền đóng gói tự động thì cánh tay robot đột ngột dừng lại và còi báo động kêu. Em sẽ làm gì trong 3 bước sau?\n1. Bấm nút dừng khẩn cấp (E-Stop) để đảm bảo an toàn tuyệt đối.\n2. Quan sát bảng mã lỗi trên màn hình điều khiển (PLC).\n3. Kiểm tra cảm biến vật cản trên băng chuyền.\n👉 *Một kỹ sư giỏi luôn đặt sự an toàn lên hàng đầu rồi mới truy vết nguyên nhân!*`;
+    // 2. Tư vấn chọn nghề theo mã khảo sát
+    if (cleanMsg.includes('chọn nghề') || cleanMsg.includes('nghề nào') || cleanMsg.includes('ngành nào') || cleanMsg.includes('phù hợp nghề gì')) {
+      let matchedNames = targetMajorName;
+      if (code && window.HollandEngine && window.HollandEngine.matchHollandOrderCareers) {
+        try {
+          const list = window.HollandEngine.matchHollandOrderCareers(code, { limit: 3 });
+          if (list && list.length > 0) {
+            matchedNames = list.map(m => `**${m.name}**`).join(', ');
+          }
+        } catch {}
       }
-      if (cleanMsg.includes('ai') || cleanMsg.includes('trí tuệ nhân tạo')) {
-        const codeNote = code ? `Em đang có mã ${code}, ` : '';
-        return `Muốn làm việc trong ngành AI, em cần 3 chân kiềng: 1) Kỹ năng lập trình (Python, logic thuật toán); 2) Năng lực tư duy dữ liệu (hiểu bản chất số liệu); 3) Khả năng tự học liên tục vì công nghệ AI thay đổi từng tuần. ${codeNote}hãy bắt đầu ngay từ những dự án nhỏ như lập trình trò chơi hoặc tự tạo một chatbot học tập!`;
-      }
-      return `Trong giới kỹ thuật, nguyên tắc vàng là: “Thất bại sớm để hoàn thiện nhanh”. Khi viết một đoạn mã bị lỗi (Bug) hay cắm nhầm một con điện trở, đừng nản lòng — đó chính là lúc em đang học được nhiều nhất đấy ${name}!`;
+      return `Dựa trên hồ sơ của ${name} ${codeDisplay}, hệ thống hướng nghiệp định hướng cho em các ngành nghề kĩ thuật, công nghệ phù hợp hàng đầu: ${matchedNames}.\n\nThầy khuyên em: Hãy chọn ngành nghề giao thoa giữa 3 yếu tố: **Sở thích cá nhân** (em thích làm gì), **Khả năng thực tế** (sức học & thế mạnh), và **Cơ hội thị trường** (nhu cầu việc làm). Em có thể bấm vào tab **"Dự Án Bài 5 SGK"** để chấm điểm chi tiết 10 tiêu chí phù hợp nhé!`;
     }
 
-    if (agentId === 'streaming-officer') {
-      if (cleanMsg.includes('9+') || cleanMsg.includes('nghề') || cleanMsg.includes('trung cấp')) {
-        return `Mô hình đào tạo 9+ (theo Luật Giáo dục 2019) là hướng đi rất ưu việt cho học sinh tốt nghiệp THCS! Em sẽ vào học trường trung cấp hoặc cao đẳng nghề, vừa học chương trình văn hóa THPT vừa học tay nghề chuyên sâu. Sau 3 năm (khi 18 tuổi), em vừa có bằng tốt nghiệp THPT vừa có bằng nghề chính quy, có thể đi làm kiếm thu nhập ngay hoặc học liên thông lên Đại học!`;
-      }
-      if (cleanMsg.includes('trung bình') || cleanMsg.includes('chọn hướng')) {
-        return `Nếu học lực phổ thông ở mức vừa phải, việc cố thi vào các trường THPT công lập quá sức có thể khiến em bị áp lực kéo dài. Em hoàn toàn có thể cân nhắc 2 hướng: Học tại Trung tâm GDNN - GDTX hoặc vào thẳng trường Cao đẳng nghề đào tạo hệ 9+. Nhiều bạn tốt nghiệp trường nghề có việc làm và thu nhập sớm hơn cả sinh viên đại học đấy!`;
-      }
-      return `Hệ thống giáo dục quốc dân Việt Nam (Bài 2 SGK) đã được thiết kế liên thông mở rất thông thoáng. Dù em đi đường vòng qua trường nghề hay đi đường thẳng qua THPT rồi vào Đại học, đích đến cuối cùng vẫn là trở thành người lao động có tay nghề và có ích cho xã hội!`;
+    // 3. Tâm lý: Bố mẹ & áp lực gia đình
+    if (cleanMsg.includes('bố mẹ') || cleanMsg.includes('gia đình') || cleanMsg.includes('áp lực')) {
+      const adviceCode = code ? `kết quả trắc nghiệm (${code})` : 'bài khảo sát sở thích';
+      return `Thầy rất hiểu cảm giác này của ${name}. Bố mẹ thúc giục thường xuất phát từ sự lo lắng cho tương lai của em, nhưng có thể bố mẹ chưa cập nhật xu hướng nghề nghiệp hiện đại. Em hãy dùng ${adviceCode} và bảng Cây nghề nghiệp trong SGK để trò chuyện với bố mẹ: “Con hiểu bố mẹ lo cho tương lai của con, nhưng con có thế mạnh ở thiên hướng này, con tin mình sẽ có động lực và kiên trì nhất khi được phát triển đúng sở trường.”`;
     }
 
-    if (agentId === 'market-analyst') {
-      if (cleanMsg.includes('khát') || cleanMsg.includes('nhu cầu') || cleanMsg.includes('ngành nào')) {
-        return `Theo báo cáo thường niên của Bộ LĐTBXH và Tổng cục Thống kê, 3 nhóm ngành kỹ thuật đang có nhu cầu tuyển dụng cao nhất tại Việt Nam hiện nay là: 1) Công nghệ thông tin & An ninh mạng (+18.5%); 2) Cơ điện tử, Tự động hóa & Kỹ thuật Ô tô điện (+15.2%); 3) Kỹ thuật Điện & Năng lượng tái tạo (+12.8%).`;
-      }
-      if (cleanMsg.includes('lương') || cleanMsg.includes('thu nhập')) {
-        return `Về mức thu nhập thực tế năm 2026: Kỹ sư mới ra trường dao động từ 10 - 18 triệu đồng/tháng; Kỹ thuật viên tay nghề cao (tốt nghiệp cao đẳng nghề/hệ 9+) khởi điểm từ 8 - 14 triệu đồng/tháng. Sau 3-5 năm tích lũy kinh nghiệm và có ngoại ngữ, mức thu nhập có thể đạt 25 - 45 triệu đồng/tháng!`;
-      }
-      return `Nghịch lý lớn nhất của thị trường lao động nước ta hiện nay là: Thừa lao động phổ thông (chưa qua đào tạo) nhưng lại cực kì khan hiếm lao động kỹ thuật lành nghề. Do đó, việc ${name} ${codeDisplay} định hướng chuyên môn kỹ thuật ngay từ lớp 9 là một quyết định đi trước đón đầu rất sáng suốt!`;
+    // 4. Định kiến giới tính (Nữ làm kỹ thuật)
+    if (cleanMsg.includes('con gái') || cleanMsg.includes('nữ')) {
+      return `Định kiến “con gái không nên làm kĩ thuật” hoàn toàn lỗi thời rồi ${name} nhé! Trong ngành Công nghệ thông tin, Thiết kế và Tự động hóa, sự tỉ mỉ, kiên nhẫn, gu thẩm mỹ và kỹ năng giao tiếp của các bạn nữ lại là lợi thế cạnh tranh cực lớn. Rất nhiều kỹ sư kiểm thử phần mềm (QA), quản lý sản phẩm công nghệ (Product Manager) và chuyên gia dữ liệu hàng đầu hiện nay là nữ giới.`;
     }
 
-    return `Tôi rất sẵn lòng đồng hành và lắng nghe câu hỏi tiếp theo của ${name}!`;
+    // 5. Học lực & Điểm số Toán
+    if (cleanMsg.includes('toán') || cleanMsg.includes('học kém') || cleanMsg.includes('không giỏi')) {
+      return `Kỹ thuật không chỉ có giải Toán trừu tượng trên giấy tờ đâu ${name}! Nhóm Realistic (Kỹ thuật) là nhóm của những người tư duy qua đôi bàn tay và thao tác thực tế. Có những bạn không thích giải phương trình phức tạp nhưng lại lắp ráp vi mạch, đấu nối tủ điện hoặc dựng mô hình 3D cực chuẩn. Điểm số trường học chỉ phản ánh một phần năng lực của em thôi!`;
+    }
+
+    // 6. Phân luồng sau THCS: Mô hình 9+ vs THPT
+    if (cleanMsg.includes('9+') || cleanMsg.includes('trung cấp') || cleanMsg.includes('nghề') || cleanMsg.includes('trung bình') || cleanMsg.includes('sau thcs') || cleanMsg.includes('lớp 10')) {
+      return `Hết lớp 9 có 2 ngã rẽ quan trọng (theo Bài 2 SGK Công nghệ 9):\n- **Nhánh 1 (Học tiếp THPT):** Phù hợp nếu em có học lực khá - giỏi và mong muốn thi vào các trường Đại học chính quy.\n- **Nhánh 2 (Mô hình Đào tạo Nghề 9+):** Học tại các trường Cao đẳng/Trung cấp nghề. Em được học song song văn hóa THPT và tay nghề kỹ thuật. Đến năm 18 tuổi, em vừa có Bằng tốt nghiệp THPT vừa có Bằng nghề chính quy, có thể tự chủ thu nhập sớm hoặc học liên thông lên Đại học!`;
+    }
+
+    // 7. Thị trường lao động & Mức lương 2026
+    if (cleanMsg.includes('khát') || cleanMsg.includes('nhu cầu') || cleanMsg.includes('lương') || cleanMsg.includes('thu nhập') || cleanMsg.includes('thị trường')) {
+      return `Số liệu thực tế thị trường lao động kỹ thuật, công nghệ năm 2026:\n- **3 nhóm ngành khát nhân lực nhất:** 1) Công nghệ thông tin & An ninh mạng; 2) Cơ điện tử, Tự động hóa & Kỹ thuật Ô tô điện; 3) Kỹ thuật Điện & Năng lượng tái tạo.\n- **Khung thu nhập:** Kỹ sư đại học mới ra trường: 10 - 18 triệu/tháng; Kỹ thuật viên hệ 9+/cao đẳng nghề: 8 - 14 triệu/tháng; sau 3-5 năm có kinh nghiệm: 25 - 45 triệu/tháng. Việt Nam đang rất thiếu lao động kỹ thuật có tay nghề cao!`;
+    }
+
+    // 8. Thử thách kỹ thuật tình huống
+    if (cleanMsg.includes('thử thách') || cleanMsg.includes('tình huống')) {
+      return `🔥 **Thử thách thực tế dành cho ${name}:**\nGiả sử em đang vận hành một dây chuyền tự động thì hệ thống báo lỗi dừng khẩn cấp. Em sẽ xử lý theo quy trình nào?\n1. Giữ an toàn và kiểm tra công tắc E-Stop.\n2. Đọc mã lỗi (Error Code) trên màn hình điều khiển HMI/PLC.\n3. Kiểm tra cảm biến và đường truyền tín hiệu.\n👉 *Một kỹ sư giỏi luôn đặt an toàn lên hàng đầu, sau đó mới tư duy truy vết nguyên nhân sự cố!*`;
+    }
+
+    if (code) {
+      return `Chào ${name} ${codeDisplay}! Thầy đã nắm rõ hồ sơ khảo sát của em. Em có thể hỏi thầy về cách phát huy thế mạnh của mã ${code}, tìm hiểu chi tiết các ngành nghề đề xuất, hoặc cách chọn trường sau khi tốt nghiệp lớp 9 nhé!`;
+    }
+
+    return `Thầy là Cố vấn Hướng nghiệp Toàn diện của ${name}. Em hãy thoải mái chia sẻ mọi băn khoăn về sở thích, học lực, các ngành nghề kỹ thuật hay định hướng sau lớp 9 nhé!`;
   }
 
   return {
@@ -578,4 +592,9 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
   };
 })();
 
-window.AIAgentsManager = AIAgentsManager;
+if (typeof window !== 'undefined') {
+  window.AIAgentsManager = AIAgentsManager;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AIAgentsManager;
+}

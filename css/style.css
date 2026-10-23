@@ -1428,18 +1428,59 @@ html, body {
   background-color: var(--surface-elevated);
 }
 
-/* AI Agents Roleplay Chat */
+/* AI Advisor Chat */
 .ai-agent-selector {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  display: block;
+  margin-bottom: 1rem;
 }
 
-@media (max-width: 768px) {
-  .ai-agent-selector {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.unified-advisor-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.15rem;
+  background-color: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.unified-advisor-card .advisor-avatar {
+  font-size: 2.2rem;
+  background: rgba(37, 99, 235, 0.12);
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.unified-advisor-card .advisor-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.unified-advisor-card .advisor-pillars {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+}
+
+.unified-advisor-card .pillar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  font-weight: 600;
 }
 
 .agent-card-pill {

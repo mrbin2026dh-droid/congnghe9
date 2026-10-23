@@ -16,8 +16,9 @@ class EduPathApp {
     this.currentQuestionIdx = 0;
     this.quizAnswers = [];
     this.quizQuestions = [];
-    this.activeAgentId = 'psychologist';
+    this.activeAgentId = 'counselor';
     this.agentChatHistories = {
+      counselor: [],
       psychologist: [],
       'tech-lead': [],
       'streaming-officer': [],
@@ -119,6 +120,9 @@ class EduPathApp {
     let safe = this.escapeHtml(text);
     safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     safe = safe.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    safe = safe.replace(/^[*-]\s+(.*)$/gm, '• $1');
+    safe = safe.replace(/^###\s+(.*)$/gm, '<strong>$1</strong>');
+    safe = safe.replace(/^##\s+(.*)$/gm, '<strong>$1</strong>');
     safe = safe.replace(/\n/g, '<br>');
     return safe;
   }
@@ -1794,27 +1798,50 @@ class EduPathApp {
     const sanitize = window.sanitize;
 
     selector.textContent = '';
-    AIAgentsManager.AGENTS.forEach(agent => {
-      const pill = document.createElement('div');
-      pill.className = `agent-card-pill ${agent.id === this.activeAgentId ? 'active' : ''}`;
-      pill.setAttribute('data-agent-id', agent.id);
-      pill.innerHTML = sanitize(`
-        <span style="font-size:1.5rem;">${agent.avatar}</span>
-        <div>
-          <div style="font-weight:700; font-size:0.875rem;">${agent.name}</div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">${agent.tag}</div>
+    if (AIAgentsManager.AGENTS.length === 1) {
+      const agent = AIAgentsManager.AGENTS[0];
+      this.activeAgentId = agent.id;
+      const card = document.createElement('div');
+      card.className = 'unified-advisor-card';
+      card.innerHTML = sanitize(`
+        <div class="advisor-avatar">${agent.avatar}</div>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <span class="advisor-name">${agent.name}</span>
+            <span style="font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:var(--radius-full); background:rgba(16,185,129,0.15); color:#10b981; font-weight:700;">● Chuyên Gia Trực Tuyến</span>
+          </div>
+          <div class="advisor-pillars">
+            <span class="pillar-tag">🧠 Tâm lý & Bản thân</span>
+            <span class="pillar-tag">⚙️ Kỹ thuật thực tế</span>
+            <span class="pillar-tag">🎓 Phân luồng sau THCS</span>
+            <span class="pillar-tag">📊 Thị trường & Mức lương</span>
+          </div>
         </div>
       `);
-      pill.addEventListener('click', () => {
-        if (this.activeAgentId === agent.id) return;
-        this.activeAgentId = agent.id;
-        document.querySelectorAll('.agent-card-pill').forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        this.renderAgentChat();
-        this.playBeep(580);
+      selector.appendChild(card);
+    } else {
+      AIAgentsManager.AGENTS.forEach(agent => {
+        const pill = document.createElement('div');
+        pill.className = `agent-card-pill ${agent.id === this.activeAgentId ? 'active' : ''}`;
+        pill.setAttribute('data-agent-id', agent.id);
+        pill.innerHTML = sanitize(`
+          <span style="font-size:1.5rem;">${agent.avatar}</span>
+          <div>
+            <div style="font-weight:700; font-size:0.875rem;">${agent.name}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${agent.tag}</div>
+          </div>
+        `);
+        pill.addEventListener('click', () => {
+          if (this.activeAgentId === agent.id) return;
+          this.activeAgentId = agent.id;
+          document.querySelectorAll('.agent-card-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          this.renderAgentChat();
+          this.playBeep(580);
+        });
+        selector.appendChild(pill);
       });
-      selector.appendChild(pill);
-    });
+    }
 
     this.updateGeminiStatusBadge();
     this.renderAgentChat();
