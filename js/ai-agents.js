@@ -93,7 +93,13 @@ const AIAgentsManager = (() => {
         return `Kỹ thuật không chỉ có giải Toán trên giấy tờ đâu ${name}! Nhóm Realistic (Kỹ thuật) là nhóm của những người tư duy qua bàn tay và thao tác thực tế. Có những bạn không thích Toán trừu tượng nhưng lại đấu dây điện, lắp ráp vi mạch cực chuẩn. Điểm số trường học chỉ đo một phần năng lực của em thôi!`;
       }
       if (code) {
-        return `Với mã Holland ${code}, em là người có sự kết hợp đặc biệt giữa tính hành động và tư duy thực tế. Lời khuyên của thầy dành cho ${name} là: Đừng chọn nghề chỉ vì người khác thấy nó “oai”, hãy chọn nghề mà khi thức dậy mỗi sáng, em cảm thấy hào hứng muốn bắt tay vào làm!`;
+        let traitDesc = 'giữa tính hành động và tư duy thực tế';
+        if (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[code[0]]) {
+          const m1 = window.HollandEngine.GROUP_METADATA[code[0]];
+          const m2 = window.HollandEngine.GROUP_METADATA[code[1]] || m1;
+          traitDesc = `giữa thiên hướng ${m1.shortName} (${code[0]}) và ${m2.shortName} (${code[1]})`;
+        }
+        return `Với mã Holland ${code}, em là người có sự kết hợp đặc biệt ${traitDesc}. Lời khuyên của thầy dành cho ${name} là: Đừng chọn nghề chỉ vì người khác thấy nó “oai”, hãy chọn nghề mà khi thức dậy mỗi sáng, em cảm thấy hào hứng muốn bắt tay vào làm!`;
       }
       return `Thầy luôn sẵn sàng lắng nghe tâm tư và mong muốn của ${name}. Em hãy chia sẻ thêm về những điều em thích làm nhất khi rảnh rỗi nhé!`;
     }

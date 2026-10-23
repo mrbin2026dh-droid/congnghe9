@@ -155,9 +155,30 @@ class EduPathApp {
       const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId);
       targetMajorName = targetMajor ? targetMajor.name : '';
     }
+    if (!targetMajorName && hasHolland && window.HollandEngine && window.EduPathData && window.EduPathData.majors) {
+      const matched = window.HollandEngine.matchMajors(this.studentProfile.code, this.studentProfile.percentages || {});
+      if (matched && matched.length > 0 && !this.studentProfile.isUndifferentiated) {
+        this.studentProfile.targetMajorId = matched[0].id;
+        this.studentProfile.targetMajorName = matched[0].name;
+        targetMajorName = matched[0].name;
+      }
+    }
+    const targetMajorObj = (window.EduPathData && window.EduPathData.majors && this.studentProfile.targetMajorId)
+      ? window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId)
+      : null;
+
+    let stream = '';
+    if (hasHolland) {
+      // Phân luồng sau THCS theo SGK Công nghệ 9 Bài 2 & Bài 4
+      const isPureVocational = targetMajorObj && targetMajorObj.level && targetMajorObj.level.includes('Trung cấp nghề 9+') && !targetMajorObj.level.includes('Đại học');
+      const isTechVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R')) && targetMajorObj && targetMajorObj.level && targetMajorObj.level.includes('9+');
+      if (isPureVocational || isTechVocational) {
+        stream = 'Cao đẳng / Trung cấp Nghề 9+';
+      } else {
+        stream = 'Học tiếp THPT & Đại học';
+      }
+    }
     const result = hasMatches && window.ProjectAssessment ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : null;
-    const isVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R'));
-    const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : (hasHolland ? 'Học tiếp THPT & Đại học' : '');
 
     const payload = {
       name: this.studentProfile.name,
@@ -1207,6 +1228,21 @@ class EduPathApp {
     this.studentProfile.scores = results.rawScores;
     this.studentProfile.percentages = results.percentages;
     this.studentProfile.isUndifferentiated = Boolean(results.isUndifferentiated);
+
+    // Recommended Majors theo công thức mới
+    const matchedMajors = HollandEngine.matchMajors(results.code, results.percentages, {
+      isUndifferentiated: results.isUndifferentiated
+    });
+
+    if (matchedMajors && matchedMajors.length > 0 && !results.isUndifferentiated) {
+      const topMajor = matchedMajors[0];
+      this.studentProfile.targetMajorId = topMajor.id;
+      this.studentProfile.targetMajorName = topMajor.name;
+      this.studentProfile.major = topMajor.name;
+      attempt.targetMajorId = topMajor.id;
+      attempt.targetMajorName = topMajor.name;
+    }
+
     this.saveProfileToStorage();
 
     const activeCard = document.getElementById('quiz-active-card');
@@ -1244,10 +1280,7 @@ class EduPathApp {
     // Render In-Depth Personality Insights & Conflict
     this.renderPersonalityInsights(results);
 
-    // Recommended Majors theo công thức mới
-    const matchedMajors = HollandEngine.matchMajors(results.code, results.percentages, {
-      isUndifferentiated: results.isUndifferentiated
-    });
+    // Render danh sách ngành học đã khớp nối
     this.renderMatchedMajors(matchedMajors);
 
     // Synchronize Tree roots with real test scores
@@ -1353,6 +1386,25 @@ class EduPathApp {
     this.studentProfile.percentages = attempt.percentages;
     this.studentProfile.isUndifferentiated = Boolean(attempt.isUndifferentiated);
 
+    const matchedMajors = HollandEngine.matchMajors(attempt.code, attempt.percentages, {
+      isUndifferentiated: attempt.isUndifferentiated
+    });
+
+    let topMajor = null;
+    if (attempt.targetMajorId && window.EduPathData && window.EduPathData.majors) {
+      topMajor = window.EduPathData.majors.find(m => m.id === attempt.targetMajorId);
+    }
+    if (!topMajor && matchedMajors && matchedMajors.length > 0 && !attempt.isUndifferentiated) {
+      topMajor = matchedMajors[0];
+    }
+    if (topMajor) {
+      this.studentProfile.targetMajorId = topMajor.id;
+      this.studentProfile.targetMajorName = topMajor.name;
+      this.studentProfile.major = topMajor.name;
+      attempt.targetMajorId = topMajor.id;
+      attempt.targetMajorName = topMajor.name;
+    }
+
     this.saveProfileToStorage();
 
     // Cập nhật UI
@@ -1387,9 +1439,6 @@ class EduPathApp {
     this.renderRIASECBreakdown(dummyResults);
     this.renderPersonalityInsights(dummyResults);
 
-    const matchedMajors = HollandEngine.matchMajors(attempt.code, attempt.percentages, {
-      isUndifferentiated: attempt.isUndifferentiated
-    });
     this.renderMatchedMajors(matchedMajors);
 
     // Đồng bộ Cây nghề nghiệp
@@ -2318,8 +2367,7 @@ class EduPathApp {
       } else {
         const vocationalCount = streamedStudents.filter(s => {
           const streamStr = (s.stream || '').toLowerCase();
-          const codeStr = (s.code || '').toUpperCase();
-          return streamStr.includes('nghề') || streamStr.includes('cao đẳng') || streamStr.includes('trung cấp') || codeStr.startsWith('R');
+          return streamStr.includes('nghề') || streamStr.includes('cao đẳng') || streamStr.includes('trung cấp') || streamStr.includes('9+');
         }).length;
         const thptCount = totalStreamed - vocationalCount;
         const thptPct = Math.round((thptCount / totalStreamed) * 100);
@@ -2331,12 +2379,35 @@ class EduPathApp {
         if (vocBarEl) vocBarEl.style.width = `${vocPct}%`;
 
         if (recEl) {
+          const groupLabels = {
+            R: 'Kỹ thuật thực hành (R)',
+            I: 'Nghiên cứu & CNTT / KHTN (I)',
+            A: 'Nghệ thuật & Thiết kế sáng tạo (A)',
+            S: 'Xã hội, Sư phạm & Nhân văn (S)',
+            E: 'Quản lý & Kinh doanh công nghệ (E)',
+            C: 'Nghiệp vụ, Logistics & Quy trình (C)'
+          };
+          const dominantGroups = {};
+          streamedStudents.forEach(st => {
+            const c = (st.code || '').trim().toUpperCase();
+            if (c.length > 0 && groupLabels[c[0]]) {
+              dominantGroups[c[0]] = (dominantGroups[c[0]] || 0) + 1;
+            }
+          });
+          const topPrimaryGroups = Object.keys(dominantGroups)
+            .sort((a, b) => dominantGroups[b] - dominantGroups[a])
+            .map(k => groupLabels[k])
+            .slice(0, 2)
+            .join(', ');
+
+          const groupDesc = topPrimaryGroups ? `các khối ngành ${topPrimaryGroups}` : 'các khối ngành phù hợp với năng khiếu';
+
           if (vocationalCount > 0 && thptCount > 0) {
-            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> Trong số ${totalStreamed} em đã có kết quả: ${vocPct}% học sinh (${vocationalCount} em) có thiên hướng kỹ thuật thực tế (R) phù hợp mô hình Cao đẳng / Trung cấp Nghề 9+; ${thptPct}% học sinh (${thptCount} em) phù hợp tiếp tục học THPT và xét tuyển Đại học.`);
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm (Theo SGK Công nghệ 9):</strong> Trong số ${totalStreamed} em đã có kết quả: <strong>${thptPct}% học sinh (${thptCount} em)</strong> phù hợp <strong>học tiếp THPT</strong> để định hướng xét tuyển Đại học/Cao đẳng ${groupDesc}. <strong>${vocPct}% học sinh (${vocationalCount} em)</strong> có thiên hướng kỹ thuật thực hành (R) phù hợp mô hình <strong>Đào tạo Nghề 9+</strong> (Cao đẳng / Trung cấp nghề) để sớm có việc làm ổn định.`);
           } else if (vocationalCount > 0) {
-            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${vocationalCount} em đã đánh giá) có thiên hướng kỹ thuật thực tế (R), khuyến nghị phân luồng sớm vào các trường đào tạo nghề 9+ kỹ thuật cao.`);
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm (Theo SGK Công nghệ 9):</strong> 100% học sinh (${vocationalCount} em đã đánh giá) có thiên hướng kỹ thuật thực hành (R), khuyến nghị phân luồng vào <strong>Mô hình Đào tạo Nghề 9+</strong> (Trung cấp / Cao đẳng nghề kỹ thuật) để nhanh chóng phát triển kỹ năng thực tiễn.`);
           } else {
-            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${thptCount} em đã đánh giá) có xu hướng học thuật, phù hợp học tiếp THPT và xét tuyển Đại học.`);
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm (Theo SGK Công nghệ 9):</strong> 100% học sinh (${thptCount} em đã đánh giá) phù hợp <strong>học tiếp THPT</strong> để định hướng xét tuyển Đại học / Cao đẳng ${groupDesc}. Nhà trường và GV nên tư vấn học sinh đăng ký tổ hợp môn THPT phù hợp.`);
           }
         }
       }
@@ -2359,7 +2430,25 @@ class EduPathApp {
       classData.forEach((st, idx) => {
         const studentCode = st.studentCode || `HS-${idx + 1}`;
         const hollandBadge = st.code ? `<span style="font-weight:800; color:var(--brand);">${st.code}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
-        const majorText = st.major ? st.major : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
+        let resolvedMajor = st.major;
+        if (st.code && st.code !== '---' && window.HollandEngine && window.EduPathData && window.EduPathData.majors) {
+          const recMajors = window.HollandEngine.matchMajors(st.code, st.hollandPercentages || {});
+          if (recMajors && recMajors.length > 0 && !st.isUndifferentiated) {
+            if (!resolvedMajor || resolvedMajor === 'Chưa chọn') {
+              resolvedMajor = recMajors[0].name;
+            } else {
+              // Tự động kiểm tra và đồng bộ nếu st.major bị kẹt từ lần khảo sát cũ khác mã
+              const curObj = window.EduPathData.majors.find(m => m.name === resolvedMajor);
+              if (curObj && curObj.primaryType !== st.code[0]) {
+                const fitScore = recMajors.find(m => m.name === resolvedMajor);
+                if ((!fitScore || fitScore.fitPercentage < 35) && recMajors[0].fitPercentage >= 60) {
+                  resolvedMajor = recMajors[0].name;
+                }
+              }
+            }
+          }
+        }
+        const majorText = resolvedMajor ? resolvedMajor : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
         const scoreText = typeof st.projectScore === 'number' ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
         const streamText = st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`;
 
