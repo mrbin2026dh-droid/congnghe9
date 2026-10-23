@@ -1090,10 +1090,39 @@ class EduPathApp {
     const exportBtn = document.getElementById('export-class-csv-btn');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
-        TeacherAnalytics.exportClassCSV(TeacherAnalytics.DEFAULT_CLASS_DATA, '9A1');
+        const classData = TeacherAnalytics.currentClassData || TeacherAnalytics.DEFAULT_CLASS_DATA;
+        TeacherAnalytics.exportClassCSV(classData, this.studentProfile.grade || '9A1');
         this.playBeep(800);
       });
     }
+
+    const addStudentBtn = document.getElementById('add-current-to-roster-btn');
+    if (addStudentBtn) {
+      addStudentBtn.addEventListener('click', () => {
+        this.addCurrentStudentToTeacherRoster();
+      });
+    }
+  }
+
+  addCurrentStudentToTeacherRoster() {
+    const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId) || window.EduPathData.majors[0];
+    const result = ProjectAssessment.calculateProjectResult(this.assessmentMatches);
+    const isVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R')) || targetMajor.level.includes('9+');
+    const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
+
+    TeacherAnalytics.addStudentToRoster({
+      school: this.studentProfile.school || 'THCS Chu Văn An',
+      grade: this.studentProfile.grade || '9A1',
+      name: this.studentProfile.name || 'Học sinh mới',
+      code: this.studentProfile.code || 'RIE',
+      major: targetMajor.name,
+      projectScore: result.totalScore,
+      classification: result.classification,
+      stream: stream
+    });
+
+    this.renderTeacherHeatmap();
+    this.playBeep(850, 'triangle', 0.2);
   }
 
   renderTeacherHeatmap() {
@@ -1101,20 +1130,23 @@ class EduPathApp {
     if (!canvas) return;
     const sanitize = window.sanitize;
 
-    const dist = TeacherAnalytics.computeDistribution(TeacherAnalytics.DEFAULT_CLASS_DATA);
+    const classData = TeacherAnalytics.currentClassData || TeacherAnalytics.DEFAULT_CLASS_DATA;
+    const dist = TeacherAnalytics.computeDistribution(classData);
     TeacherAnalytics.renderClassHeatmap(canvas, dist);
 
     const tbody = document.getElementById('teacher-student-table-body');
     if (tbody) {
       tbody.textContent = '';
-      TeacherAnalytics.DEFAULT_CLASS_DATA.forEach((st, idx) => {
+      classData.forEach((st, idx) => {
         const tr = document.createElement('tr');
         tr.innerHTML = sanitize(`
-          <td>${idx + 1}</td>
+          <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
+          <td>${st.school || 'THCS Chu Văn An'}</td>
+          <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '9A1'}</span></td>
           <td><strong>${st.name}</strong></td>
-          <td><span style="font-weight:700; color:var(--brand);">${st.code}</span></td>
+          <td style="text-align:center;"><span style="font-weight:800; color:var(--brand);">${st.code}</span></td>
           <td>${st.major}</td>
-          <td><strong>${st.projectScore}/10</strong></td>
+          <td style="text-align:center;"><strong>${st.projectScore}/10</strong></td>
           <td><span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span></td>
         `);
         tbody.appendChild(tr);

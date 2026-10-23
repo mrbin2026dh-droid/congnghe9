@@ -7,21 +7,67 @@
 const TeacherAnalytics = (() => {
   // Sample realistic class roster for demo classroom 9A1
   const DEFAULT_CLASS_DATA = [
-    { id: 1, name: 'Nguyễn Văn An', code: 'RIE', major: 'Kỹ thuật Cơ điện tử', projectScore: 9, stream: 'THPT & Đại học Kỹ thuật' },
-    { id: 2, name: 'Trần Thị Bích', code: 'AIR', major: 'Thiết kế Đồ họa & UI/UX', projectScore: 8, stream: 'THPT & ĐH Mỹ thuật' },
-    { id: 3, name: 'Lê Hoàng Cường', code: 'RCI', major: 'Cơ khí Chế tạo máy (9+)', projectScore: 8, stream: 'Cao đẳng Nghề 9+' },
-    { id: 4, name: 'Phạm Đức Dũng', code: 'IRC', major: 'Công nghệ thông tin', projectScore: 10, stream: 'THPT & Đại học CNTT' },
-    { id: 5, name: 'Vũ Ngọc Hân', code: 'SEC', major: 'Sư phạm Kỹ thuật', projectScore: 7, stream: 'THPT & Đại học Sư phạm' },
-    { id: 6, name: 'Đặng Minh Khôi', code: 'RCS', major: 'Điện dân dụng (9+)', projectScore: 9, stream: 'Trung cấp Nghề 9+' },
-    { id: 7, name: 'Bùi Phương Linh', code: 'EIR', major: 'Quản lý Sản phẩm Tech', projectScore: 8, stream: 'THPT & Đại học Kinh tế Tech' },
-    { id: 8, name: 'Hoàng Anh Tuấn', code: 'REC', major: 'Công nghệ Ô tô & Xe điện', projectScore: 9, stream: 'Cao đẳng Nghề 9+' },
-    { id: 9, name: 'Đỗ Thanh Tùng', code: 'ICR', major: 'An toàn thông tin', projectScore: 8, stream: 'THPT & Đại học Bách Khoa' },
-    { id: 10, name: 'Ngô Bảo Yến', code: 'RAI', major: 'Kiến trúc & Xây dựng', projectScore: 9, stream: 'THPT & Đại học Kiến trúc' }
+    { id: 1, school: 'THCS Chu Văn An', grade: '9A1', name: 'Nguyễn Văn An', code: 'RIE', major: 'Kỹ thuật Cơ điện tử', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kỹ thuật' },
+    { id: 2, school: 'THCS Chu Văn An', grade: '9A1', name: 'Trần Thị Bích', code: 'AIR', major: 'Thiết kế Đồ họa & UI/UX', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & ĐH Mỹ thuật' },
+    { id: 3, school: 'THCS Chu Văn An', grade: '9A1', name: 'Lê Hoàng Cường', code: 'RCI', major: 'Cơ khí Chế tạo máy (9+)', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
+    { id: 4, school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Phạm Đức Dũng', code: 'IRC', major: 'Công nghệ thông tin', projectScore: 10, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học CNTT' },
+    { id: 5, school: 'THCS Lê Quý Đôn', grade: '9A2', name: 'Vũ Ngọc Hân', code: 'SEC', major: 'Sư phạm Kỹ thuật', projectScore: 7, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Sư phạm' },
+    { id: 6, school: 'THCS Nguyễn Du', grade: '9B1', name: 'Đặng Minh Khôi', code: 'RCS', major: 'Điện dân dụng (9+)', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Trung cấp Nghề 9+' },
+    { id: 7, school: 'THCS Nguyễn Du', grade: '9B1', name: 'Bùi Phương Linh', code: 'EIR', major: 'Quản lý Sản phẩm Tech', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kinh tế Tech' },
+    { id: 8, school: 'THCS Trưng Vương', grade: '9C', name: 'Hoàng Anh Tuấn', code: 'REC', major: 'Công nghệ Ô tô & Xe điện', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'Cao đẳng Nghề 9+' },
+    { id: 9, school: 'THCS Trưng Vương', grade: '9C', name: 'Đỗ Thanh Tùng', code: 'ICR', major: 'An toàn thông tin', projectScore: 8, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Bách Khoa' },
+    { id: 10, school: 'THCS Chu Văn An', grade: '9A1', name: 'Ngô Bảo Yến', code: 'RAI', major: 'Kiến trúc & Xây dựng', projectScore: 9, classification: 'Phù hợp hoàn toàn', stream: 'THPT & Đại học Kiến trúc' }
   ];
 
-  /**
-   * Tính toán phân bố RIASEC cả lớp
-   */
+  const currentClassData = [...DEFAULT_CLASS_DATA];
+
+  function addStudentToRoster(studentObj) {
+    const nextId = currentClassData.length > 0 ? Math.max(...currentClassData.map(s => s.id || 0)) + 1 : 1;
+    const newStudent = {
+      id: nextId,
+      school: studentObj.school || 'THCS Chu Văn An',
+      grade: studentObj.grade || '9A1',
+      name: studentObj.name || 'Học sinh',
+      code: studentObj.code || 'RIE',
+      major: studentObj.major || 'Kỹ thuật Cơ điện tử',
+      projectScore: typeof studentObj.projectScore === 'number' ? studentObj.projectScore : 8,
+      classification: studentObj.classification || 'Phù hợp hoàn toàn',
+      stream: studentObj.stream || 'Học tiếp THPT & Đại học'
+    };
+    currentClassData.push(newStudent);
+    return currentClassData;
+  }
+
+  function generateCSVContent(classList, className = '9A1') {
+    let csv = '\uFEFF'; // UTF-8 BOM for Microsoft Excel
+    csv += 'STT,Trường THCS,Lớp,Họ và tên,Mã Holland,Ngành nghề phù hợp,Điểm Bài 5,Xếp loại SGK,Định hướng phân luồng\n';
+
+    classList.forEach((st, idx) => {
+      const school = (st.school || 'THCS Chu Văn An').replace(/"/g, '""');
+      const grade = (st.grade || className).replace(/"/g, '""');
+      const name = (st.name || '').replace(/"/g, '""');
+      const code = (st.code || '').replace(/"/g, '""');
+      const major = (st.major || '').replace(/"/g, '""');
+      const classification = (st.classification || 'Phù hợp').replace(/"/g, '""');
+      const stream = (st.stream || '').replace(/"/g, '""');
+      csv += `${idx + 1},"${school}","${grade}","${name}","${code}","${major}",${st.projectScore},"${classification}","${stream}"\n`;
+    });
+
+    return csv;
+  }
+
+  function exportClassCSV(classList, className = '9A1') {
+    const csvContent = generateCSVContent(classList, className);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Bao_Cao_Huong_Nghiep_${className}_EduPath.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
   function computeDistribution(classList) {
     const counts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     const total = classList.length || 1;
@@ -112,25 +158,11 @@ const TeacherAnalytics = (() => {
   /**
    * Xuất danh sách học sinh ra file CSV để nhập điểm vào Smas/VnEdu
    */
-  function exportClassCSV(classList, className = '9A1') {
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'STT,Họ và tên,Mã Holland,Ngành nghề phù hợp,Điểm Dự án Bài 5,Định hướng phân luồng\n';
-
-    classList.forEach((st, idx) => {
-      csvContent += `${idx + 1},"${st.name}","${st.code}","${st.major}",${st.projectScore},"${st.stream}"\n`;
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Ket_Qua_Huong_Nghiep_Lop_${className}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
   return {
     DEFAULT_CLASS_DATA,
+    currentClassData,
+    addStudentToRoster,
+    generateCSVContent,
     computeDistribution,
     renderClassHeatmap,
     exportClassCSV

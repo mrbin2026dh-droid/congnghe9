@@ -630,9 +630,14 @@
               <h2 class="card-title">👨‍🏫 Bảng Điều Khiển Quản Lý Lớp Học & Phân Luồng (Teacher Dashboard)</h2>
               <p class="card-subtitle">Bức tranh toàn cảnh về phân bố tính cách RIASEC và định hướng sau THCS</p>
             </div>
-            <button class="btn-primary" id="export-class-csv-btn">
-              📥 Xuất Danh Sách Điểm (CSV / Excel)
-            </button>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button class="btn-secondary" id="add-current-to-roster-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+                ➕ Thêm Bài Làm Này Vào Lớp
+              </button>
+              <button class="btn-primary" id="export-class-csv-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+                📥 Xuất Danh Sách Điểm (CSV / Excel)
+              </button>
+            </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1.5fr; gap:1.5rem; margin-bottom:1.5rem;">
@@ -678,12 +683,14 @@
             <table class="matrix-table">
               <thead>
                 <tr>
-                  <th style="width:5%;">STT</th>
-                  <th style="width:25%;">Họ và tên học sinh</th>
-                  <th style="width:12%;">Mã Holland</th>
-                  <th style="width:25%;">Ngành nghề phù hợp</th>
-                  <th style="width:13%;">Điểm Bài 5</th>
-                  <th style="width:20%;">Định hướng phân luồng</th>
+                  <th style="width:4%; text-align:center;">STT</th>
+                  <th style="width:16%;">Trường THCS</th>
+                  <th style="width:7%; text-align:center;">Lớp</th>
+                  <th style="width:18%;">Họ và tên học sinh</th>
+                  <th style="width:9%; text-align:center;">Mã Holland</th>
+                  <th style="width:20%;">Ngành nghề phù hợp</th>
+                  <th style="width:8%; text-align:center;">Điểm Bài 5</th>
+                  <th style="width:18%;">Định hướng phân luồng</th>
                 </tr>
               </thead>
               <tbody id="teacher-student-table-body"></tbody>
