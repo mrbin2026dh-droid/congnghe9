@@ -291,6 +291,34 @@ window.EduPathFirebase = (() => {
         const index = localListeners.indexOf(callback);
         if (index >= 0) localListeners.splice(index, 1);
       };
+    },
+
+    getTeacherPin: async () => {
+      if (isFirebaseReady && dbInstance) {
+        try {
+          const snapshot = await dbInstance.ref('settings/teacherPin').once('value');
+          if (snapshot.exists()) {
+            return String(snapshot.val());
+          }
+        } catch (e) {
+          console.warn('Lỗi đọc teacherPin từ Firebase:', e);
+        }
+      }
+      return localStorage.getItem('edupath_teacher_pin') || '123456';
+    },
+
+    setTeacherPin: async (newPin) => {
+      const cleanPin = String(newPin).trim();
+      localStorage.setItem('edupath_teacher_pin', cleanPin);
+      if (isFirebaseReady && dbInstance) {
+        try {
+          await dbInstance.ref('settings/teacherPin').set(cleanPin);
+          return true;
+        } catch (e) {
+          console.warn('Lỗi ghi teacherPin lên Firebase:', e);
+        }
+      }
+      return true;
     }
   };
 })();

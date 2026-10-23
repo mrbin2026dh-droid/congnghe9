@@ -223,6 +223,24 @@ def run_system_verification():
         assert 'Học sinh Mới 88' in csv_text or test_name in csv_text, "CSV export must include students"
         results["user_flows_tested"].append("Teacher Dashboard & Evidence CSV Export: PASS")
 
+        # Clean up NH-9A1 on Firebase to leave pristine clean state
+        page.evaluate("""async () => {
+            if (window.EduPathFirebase) {
+                await window.EduPathFirebase.updateStudent('NH-9A1', {
+                    code: '',
+                    major: '',
+                    projectScore: null,
+                    classification: '',
+                    stream: '',
+                    hollandScores: null,
+                    hollandPercentages: null,
+                    assessmentMatches: null,
+                    threeQuestions: null,
+                    selfTraits: null
+                });
+            }
+        }""")
+
         # F12 Console Error Check
         assert len(results["console_errors"]) == 0, f"Found {len(results['console_errors'])} console errors: {results['console_errors']}"
 

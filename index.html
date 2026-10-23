@@ -442,9 +442,12 @@
             </div>
 
             <!-- Question Palette Navigation Grid -->
-            <div class="quiz-palette-wrapper" style="margin-bottom:1.25rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; font-size:0.825rem; font-weight:600;">
-                <span>🎯 Bảng điều hướng câu hỏi:</span>
+            <div class="quiz-palette-wrapper" style="margin-bottom:1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; font-size:0.825rem; font-weight:600; flex-wrap:wrap; gap:0.4rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span>🎯 Bảng điều hướng câu hỏi:</span>
+                  <button type="button" id="btn-toggle-palette" style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:4px; padding:0.15rem 0.5rem; font-size:0.75rem; color:var(--brand); cursor:pointer; font-weight:700;">Thu gọn ▴</button>
+                </div>
                 <span id="quiz-palette-legend" style="color:var(--text-muted); font-size:0.75rem;">🟢 Đã trả lời &nbsp;|&nbsp; ⚪ Chưa trả lời</span>
               </div>
               <div class="quiz-question-palette" id="quiz-question-palette"></div>
@@ -461,9 +464,9 @@
             </div>
 
             <!-- Bottom Navigation -->
-            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
-              <button class="btn-secondary" id="quiz-prev-btn" disabled>⮌ Câu trước</button>
-              <button class="btn-primary" id="quiz-next-btn">Câu tiếp theo ➔</button>
+            <div class="quiz-nav-actions" style="display:flex; justify-content:space-between; margin-top:1.25rem; gap:1rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+              <button class="btn-secondary" id="quiz-prev-btn" style="min-height:44px; padding:0.5rem 1.25rem; font-size:0.9rem;" disabled>⮌ Câu trước</button>
+              <button class="btn-primary" id="quiz-next-btn" style="min-height:44px; padding:0.5rem 1.5rem; font-size:0.9rem;">Câu tiếp theo ➔</button>
             </div>
           </div>
 
@@ -643,6 +646,9 @@
               <button class="btn-secondary" id="export-class-csv-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 📥 Xuất Danh Sách Điểm (CSV / Excel)
               </button>
+              <button class="btn-secondary" id="btn-open-change-pin-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+                🔐 Đổi Mã PIN
+              </button>
             </div>
           </div>
 
@@ -739,11 +745,47 @@
       <form class="auth-form" id="teacher-login-form" style="display: none;">
         <div class="form-group">
           <label for="login-teacher-pin">Mã bảo mật Giáo viên</label>
-          <input type="password" id="login-teacher-pin" class="auth-input" placeholder="Nhập mã PIN giáo viên (123456)" autocomplete="off" required>
-          <span class="form-hint">Mã mặc định hệ thống: 123456</span>
+          <input type="password" id="login-teacher-pin" class="auth-input" placeholder="Nhập mã bảo mật giáo viên" autocomplete="off" required>
         </div>
         <div class="auth-error-msg" id="teacher-login-error" style="display: none;"></div>
         <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Đăng Nhập Giáo Viên</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= TEACHER CHANGE PIN MODAL ================= -->
+  <div class="auth-modal-overlay" id="teacher-change-pin-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="change-pin-modal-title" style="max-width: 440px;">
+      <button type="button" class="auth-modal-close" id="btn-close-change-pin-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header">
+        <h2 id="change-pin-modal-title" class="auth-modal-title">🔐 Đổi Mã PIN Giáo Viên</h2>
+        <p class="auth-modal-desc">Cập nhật mã bảo mật tài khoản giáo viên quản trị</p>
+      </div>
+
+      <form class="auth-form" id="teacher-change-pin-form" onsubmit="return false;">
+        <div class="form-group">
+          <label for="change-pin-current">Mã PIN hiện tại</label>
+          <input type="password" id="change-pin-current" class="auth-input" placeholder="Nhập mã PIN hiện tại" autocomplete="off" required>
+        </div>
+
+        <div class="form-group">
+          <label for="change-pin-new">Mã PIN mới</label>
+          <input type="password" id="change-pin-new" class="auth-input" placeholder="Nhập mã PIN mới (tối thiểu 6 ký tự)" autocomplete="off" required>
+          <span class="form-hint">Mã PIN bảo mật tối thiểu 6 ký tự</span>
+        </div>
+
+        <div class="form-group">
+          <label for="change-pin-confirm">Xác nhận mã PIN mới</label>
+          <input type="password" id="change-pin-confirm" class="auth-input" placeholder="Nhập lại mã PIN mới" autocomplete="off" required>
+        </div>
+
+        <div class="auth-error-msg" id="change-pin-error" style="display: none;"></div>
+        <div class="auth-success-msg" id="change-pin-success" style="display: none; background:var(--brand-soft); color:var(--brand); border:1px solid var(--brand); padding:0.6rem 0.8rem; border-radius:var(--radius-sm); font-size:0.85rem; margin-bottom:1rem; font-weight:600;"></div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+          <button type="button" class="btn-session-action" id="btn-cancel-change-pin" style="flex: 1;">Hủy bỏ</button>
+          <button type="submit" class="btn-auth-submit" id="btn-submit-change-pin" style="flex: 1; margin-top: 0;">Lưu Mã PIN Mới</button>
+        </div>
       </form>
     </div>
   </div>

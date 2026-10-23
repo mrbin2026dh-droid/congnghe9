@@ -487,11 +487,27 @@ class EduPathApp {
     this.playBeep(660, 'sine', 0.15);
   }
 
-  handleTeacherLogin(pin) {
+  async handleTeacherLogin(pin) {
     const teacherErr = document.getElementById('teacher-login-error');
-    if (pin !== '123456') {
+    if (!pin) {
       if (teacherErr) {
-        teacherErr.textContent = 'Mã bảo mật giáo viên không chính xác (mặc định: 123456).';
+        teacherErr.textContent = 'Vui lòng nhập mã bảo mật giáo viên.';
+        teacherErr.style.display = 'block';
+      }
+      this.playBeep(220, 'sawtooth', 0.2);
+      return;
+    }
+
+    let activePin = '123456';
+    if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
+      activePin = await window.EduPathFirebase.getTeacherPin();
+    } else {
+      activePin = localStorage.getItem('edupath_teacher_pin') || '123456';
+    }
+
+    if (pin.trim() !== String(activePin).trim()) {
+      if (teacherErr) {
+        teacherErr.textContent = 'Mã bảo mật giáo viên không chính xác. Vui lòng kiểm tra lại.';
         teacherErr.style.display = 'block';
       }
       this.playBeep(220, 'sawtooth', 0.2);
@@ -979,6 +995,17 @@ class EduPathApp {
     if (retakeBtn) {
       retakeBtn.onclick = () => this.retakeQuiz();
     }
+
+    // Toggle palette collapse button
+    const togglePaletteBtn = document.getElementById('btn-toggle-palette');
+    const paletteEl = document.getElementById('quiz-question-palette');
+    if (togglePaletteBtn && paletteEl) {
+      togglePaletteBtn.onclick = () => {
+        const isHidden = paletteEl.style.display === 'none';
+        paletteEl.style.display = isHidden ? 'flex' : 'none';
+        togglePaletteBtn.textContent = isHidden ? 'Thu gọn ▴' : 'Mở rộng ▾';
+      };
+    }
   }
 
   retakeQuiz() {
@@ -1015,6 +1042,11 @@ class EduPathApp {
       });
 
       palette.appendChild(btn);
+    }
+
+    const activeBtn = palette.querySelector('.palette-item.current');
+    if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+      activeBtn.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
   }
 
@@ -1584,6 +1616,30 @@ class EduPathApp {
       });
     }
 
+    // Change Teacher PIN modal bindings
+    const openPinBtn = document.getElementById('btn-open-change-pin-modal');
+    if (openPinBtn) {
+      openPinBtn.addEventListener('click', () => this.openChangePinModal());
+    }
+
+    const closePinBtn = document.getElementById('btn-close-change-pin-modal');
+    if (closePinBtn) {
+      closePinBtn.addEventListener('click', () => this.closeChangePinModal());
+    }
+
+    const cancelPinBtn = document.getElementById('btn-cancel-change-pin');
+    if (cancelPinBtn) {
+      cancelPinBtn.addEventListener('click', () => this.closeChangePinModal());
+    }
+
+    const pinForm = document.getElementById('teacher-change-pin-form');
+    if (pinForm) {
+      pinForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleChangeTeacherPin();
+      });
+    }
+
     const classFilter = document.getElementById('teacher-class-filter-select');
     if (classFilter) {
       classFilter.addEventListener('change', (e) => {
@@ -1746,6 +1802,97 @@ class EduPathApp {
 
     this.renderTeacherHeatmap();
     this.playBeep(400, 'sawtooth', 0.15);
+  }
+
+  openChangePinModal() {
+    const modal = document.getElementById('teacher-change-pin-modal');
+    const errBox = document.getElementById('change-pin-error');
+    const successBox = document.getElementById('change-pin-success');
+    const curIn = document.getElementById('change-pin-current');
+    const newIn = document.getElementById('change-pin-new');
+    const confIn = document.getElementById('change-pin-confirm');
+
+    if (errBox) errBox.style.display = 'none';
+    if (successBox) successBox.style.display = 'none';
+    if (curIn) curIn.value = '';
+    if (newIn) newIn.value = '';
+    if (confIn) confIn.value = '';
+
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeChangePinModal() {
+    const modal = document.getElementById('teacher-change-pin-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleChangeTeacherPin() {
+    const currentPinInput = document.getElementById('change-pin-current');
+    const newPinInput = document.getElementById('change-pin-new');
+    const confirmPinInput = document.getElementById('change-pin-confirm');
+    const errBox = document.getElementById('change-pin-error');
+    const successBox = document.getElementById('change-pin-success');
+
+    if (errBox) errBox.style.display = 'none';
+    if (successBox) successBox.style.display = 'none';
+
+    const currentPin = currentPinInput ? currentPinInput.value.trim() : '';
+    const newPin = newPinInput ? newPinInput.value.trim() : '';
+    const confirmPin = confirmPinInput ? confirmPinInput.value.trim() : '';
+
+    if (!currentPin) {
+      if (errBox) {
+        errBox.textContent = 'Vui lòng nhập mã PIN hiện tại.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    let activePin = '123456';
+    if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
+      activePin = await window.EduPathFirebase.getTeacherPin();
+    } else {
+      activePin = localStorage.getItem('edupath_teacher_pin') || '123456';
+    }
+
+    if (currentPin !== String(activePin).trim()) {
+      if (errBox) {
+        errBox.textContent = 'Mã PIN hiện tại không chính xác.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    if (newPin.length < 6) {
+      if (errBox) {
+        errBox.textContent = 'Mã PIN mới phải có tối thiểu 6 ký tự.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      if (errBox) {
+        errBox.textContent = 'Mã PIN mới và xác nhận mã PIN không trùng khớp.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    if (window.EduPathFirebase && window.EduPathFirebase.setTeacherPin) {
+      await window.EduPathFirebase.setTeacherPin(newPin);
+    } else {
+      localStorage.setItem('edupath_teacher_pin', newPin);
+    }
+
+    if (successBox) {
+      successBox.textContent = 'Đổi mã PIN giáo viên thành công! Mã mới đã được lưu bảo mật.';
+      successBox.style.display = 'block';
+    }
+    this.playBeep(880, 'sine', 0.2);
+    setTimeout(() => {
+      this.closeChangePinModal();
+    }, 1200);
   }
 
   addCurrentStudentToTeacherRoster() {
