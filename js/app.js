@@ -309,7 +309,8 @@ class EduPathApp {
         infoText.textContent = 'Quản trị Hệ thống';
       } else {
         const studentCodeDisplay = this.currentUser.code || this.currentUser.studentCode || 'Học sinh';
-        infoText.textContent = `${studentCodeDisplay} · ${this.studentProfile.name || ''}`;
+        const displayName = this.studentProfile.name || this.currentUser.name || '';
+        infoText.textContent = displayName ? `${studentCodeDisplay} · ${displayName}` : studentCodeDisplay;
       }
     }
   }
@@ -449,7 +450,8 @@ class EduPathApp {
         }
         if (infoText) {
           const studentCodeDisplay = this.currentUser.code || this.currentUser.studentCode || 'Học sinh';
-          infoText.textContent = `${studentCodeDisplay} · ${this.studentProfile.name || ''}`;
+          const displayName = this.studentProfile.name || this.currentUser.name || '';
+          infoText.textContent = displayName ? `${studentCodeDisplay} · ${displayName}` : studentCodeDisplay;
         }
         // H4 requirement: Show student tabs, hide teacher tab
         if (tabNav) {
@@ -2541,6 +2543,13 @@ class EduPathApp {
 
   // --- TEACHER DASHBOARD MODULE ---
   initTeacherDashboard() {
+    const syncAllBtn = document.getElementById('btn-sync-all-realtime');
+    if (syncAllBtn) {
+      syncAllBtn.addEventListener('click', () => {
+        this.syncAllStudentsRealtime();
+      });
+    }
+
     const exportBtn = document.getElementById('export-class-csv-btn');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
@@ -3153,6 +3162,103 @@ class EduPathApp {
     }
   }
 
+  async syncAllStudentsRealtime() {
+    const classFilter = document.getElementById('teacher-class-filter-select');
+    const activeFilter = classFilter ? classFilter.value : '';
+    const syncBtn = document.getElementById('btn-sync-all-realtime');
+
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      const textSpan = syncBtn.querySelector('.sync-all-text');
+      if (textSpan) textSpan.textContent = '⏳ Đang đồng bộ...';
+    }
+
+    try {
+      if (window.EduPathFirebase) {
+        const freshStudents = await window.EduPathFirebase.getAllStudents(activeFilter);
+        TeacherAnalytics.currentClassData = freshStudents || [];
+        if (!activeFilter) {
+          this.syncTeacherClassFilterDropdown(freshStudents);
+        }
+        this.renderTeacherHeatmap();
+        this.playBeep(980, 'sine', 0.2);
+        this.showToastNotification(`⚡ Đã đồng bộ thành công dữ liệu khảo sát thời gian thực của ${freshStudents.length} học sinh!`);
+      }
+    } catch (err) {
+      console.error('Lỗi khi đồng bộ cả lớp:', err);
+      alert('Lỗi đồng bộ cả lớp từ Firebase: ' + err.message);
+    } finally {
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        const textSpan = syncBtn.querySelector('.sync-all-text');
+        if (textSpan) textSpan.textContent = '🔄 Đồng Bộ Realtime (Cả Lớp)';
+      }
+    }
+  }
+
+  async syncSingleStudentRealtime(studentCode, btnElement) {
+    if (!studentCode) return;
+    const cleanCode = studentCode.toUpperCase().trim();
+    if (!window.EduPathFirebase) return;
+
+    if (btnElement) {
+      btnElement.disabled = true;
+      btnElement.textContent = '⏳ Đang tải...';
+    }
+
+    try {
+      const freshData = await window.EduPathFirebase.getStudent(cleanCode);
+      if (!freshData) {
+        alert(`Không tìm thấy dữ liệu học sinh ${cleanCode} trên Firebase.`);
+        return;
+      }
+
+      // Update in TeacherAnalytics.currentClassData
+      const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+      const idx = list.findIndex(s => s.studentCode && s.studentCode.toUpperCase() === cleanCode);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...freshData };
+      } else {
+        list.push(freshData);
+      }
+
+      this.renderTeacherHeatmap();
+      this.playBeep(880, 'triangle', 0.15);
+      const studentName = freshData.name || cleanCode;
+      const hollandStatus = freshData.code ? `(Mã Holland: ${freshData.code})` : '(Chưa làm khảo sát)';
+      this.showToastNotification(`📡 Đã lấy dữ liệu thời gian thực của ${studentName} ${hollandStatus}!`);
+    } catch (err) {
+      console.error('Lỗi khi đồng bộ realtime học sinh:', err);
+      alert('Không thể lấy dữ liệu realtime từ Firebase: ' + err.message);
+    } finally {
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.innerHTML = window.sanitize('<span class="sync-icon">🔄</span> Realtime');
+      }
+    }
+  }
+
+  showToastNotification(msg, type = 'success') {
+    let container = document.getElementById('edupath-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'edupath-toast-container';
+      container.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none;';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const isError = type === 'error';
+    const bg = isError ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)';
+    toast.style.cssText = `background:${bg}; color:#ffffff; padding:0.65rem 1.1rem; border-radius:8px; font-size:0.85rem; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,0.2); display:flex; align-items:center; gap:0.5rem; pointer-events:auto; transition:all 0.3s ease;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3200);
+  }
+
   openExcelImportModal() {
     const modal = document.getElementById('excel-import-modal');
     const errBox = document.getElementById('excel-import-error');
@@ -3550,7 +3656,10 @@ class EduPathApp {
         }
         const majorText = resolvedMajor ? resolvedMajor : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
         const scoreText = typeof st.projectScore === 'number' ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
-        const streamText = st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`;
+        const realtimeBadge = st.code
+          ? `<span class="realtime-status-pill online" title="Đã có dữ liệu khảo sát thời gian thực từ Firebase (Mã: ${st.code})" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 5px #10b981;"></span> Live</span>`
+          : `<span class="realtime-status-pill offline" title="Chưa có dữ liệu khảo sát thời gian thực" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(156,163,175,0.12); color:#6b7280; border:1px solid rgba(156,163,175,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block;"></span> Chờ</span>`;
+        const streamText = (st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
 
         const isSelected = this.selectedTeacherStudentCode && (this.selectedTeacherStudentCode.toUpperCase() === studentCode.toUpperCase());
         const tr = document.createElement('tr');
@@ -3571,6 +3680,9 @@ class EduPathApp {
           <td style="text-align:center;">${scoreText}</td>
           <td>${streamText}</td>
           <td style="text-align:center; white-space:nowrap;">
+            <button type="button" class="btn-table-action btn-sync-student" data-code="${studentCode}" title="Lấy dữ liệu khảo sát thời gian thực của học sinh ${studentCode} từ Firebase" style="color:#059669; border-color:#10b981; font-weight:700; display:inline-flex; align-items:center; gap:0.25rem;">
+              <span class="sync-icon">🔄</span> Realtime
+            </button>
             <button type="button" class="btn-table-action btn-table-chart" data-code="${studentCode}" title="Xem biểu đồ của riêng học sinh này">📊 Biểu đồ</button>
             <button type="button" class="btn-table-action btn-table-edit" data-code="${studentCode}">Sửa</button>
             <button type="button" class="btn-table-action btn-table-delete" data-code="${studentCode}">Xóa</button>
@@ -3584,6 +3696,15 @@ class EduPathApp {
           this.selectedTeacherStudentCode = (this.selectedTeacherStudentCode === studentCode) ? null : studentCode;
           this.renderTeacherHeatmap();
           this.playBeep(650, 'sine', 0.08);
+        });
+      });
+
+      // Bind button đồng bộ realtime từng học sinh
+      tbody.querySelectorAll('.btn-sync-student').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const code = e.currentTarget.getAttribute('data-code');
+          await this.syncSingleStudentRealtime(code, e.currentTarget);
         });
       });
 

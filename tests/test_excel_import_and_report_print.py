@@ -74,14 +74,14 @@ def test_excel_import_and_report_print():
         excel_modal = page.locator('#excel-import-modal')
         assert excel_modal.is_visible(), "Excel import modal must be visible"
 
-        # Create a sample CSV file on disk to simulate upload with custom classes (e.g. 9B1, 9C)
+        # Create a sample CSV file on disk to simulate upload with custom classes (e.g. 9B1, 9T)
         temp_csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sample_students_import.csv')
         with open(temp_csv_path, 'w', encoding='utf-8-sig') as f:
             f.write("STT,Mã học sinh,Họ và tên,Lớp,Trường THCS\n")
             f.write("1,9B1-01,Hoàng Kim Ngân,9B1,THCS Chu Văn An\n")
             f.write("2,9B1-02,Đặng Tiến Đạt,9B1,THCS Chu Văn An\n")
             f.write("3,9B1-03,Bùi Phương Thảo,9B1,THCS Chu Văn An\n")
-            f.write("4,9C-01,Nguyễn Nhật Minh,9C,THCS Chu Văn An\n")
+            f.write("4,9T-01,Nguyễn Nhật Minh,9T,THCS Chu Văn An\n")
 
         try:
             # Set file input
@@ -117,7 +117,7 @@ def test_excel_import_and_report_print():
             assert "9B1-01" in roster_codes, "9B1-01 must be in teacher roster"
             assert "9B1-02" in roster_codes, "9B1-02 must be in teacher roster"
             assert "9B1-03" in roster_codes, "9B1-03 must be in teacher roster"
-            assert "9C-01" in roster_codes, "9C-01 must be in teacher roster"
+            assert "9T-01" in roster_codes, "9T-01 must be in teacher roster"
 
             # Verify dynamic class dropdown options (NO HARDCODING)
             filter_options = page.evaluate("""() => {
@@ -127,7 +127,7 @@ def test_excel_import_and_report_print():
             print("Teacher class filter options:", filter_options)
             option_values = [opt['value'] for opt in filter_options]
             assert "9B1" in option_values, "Dropdown must dynamically contain imported class '9B1'"
-            assert "9C" in option_values, "Dropdown must dynamically contain imported class '9C'"
+            assert "9T" in option_values, "Dropdown must dynamically contain imported class '9T'"
 
             # Ensure only classes that actually exist in the roster are in the dropdown
             roster_grades = page.evaluate("() => Array.from(new Set(window.TeacherAnalytics.currentClassData.map(s => (s.grade || '').trim().toUpperCase()).filter(Boolean)))")
@@ -142,7 +142,7 @@ def test_excel_import_and_report_print():
             }""")
             print("Datalist grade options:", datalist_options)
             assert "9B1" in datalist_options, "Datalist must dynamically contain '9B1'"
-            assert "9C" in datalist_options, "Datalist must dynamically contain '9C'"
+            assert "9T" in datalist_options, "Datalist must dynamically contain '9T'"
 
             # Test class filtering interaction for 9B1
             page.select_option('#teacher-class-filter-select', '9B1')
@@ -154,15 +154,15 @@ def test_excel_import_and_report_print():
             print(f"Rows count after filtering by 9B1: {visible_rows_count_9b1}")
             assert visible_rows_count_9b1 >= 3, "Filtered roster must display imported 9B1 students"
 
-            # Test class filtering interaction for 9C
-            page.select_option('#teacher-class-filter-select', '9C')
+            # Test class filtering interaction for 9T
+            page.select_option('#teacher-class-filter-select', '9T')
             page.wait_for_timeout(400)
-            visible_rows_count_9c = page.evaluate("""() => {
+            visible_rows_count_9t = page.evaluate("""() => {
                 const rows = document.querySelectorAll('#teacher-student-table-body tr');
                 return rows.length;
             }""")
-            print(f"Rows count after filtering by 9C: {visible_rows_count_9c}")
-            assert visible_rows_count_9c >= 1, "Filtered roster must display imported 9C student"
+            print(f"Rows count after filtering by 9T: {visible_rows_count_9t}")
+            assert visible_rows_count_9t >= 1, "Filtered roster must display imported 9T student"
 
             # Reset filter to all classes
             page.select_option('#teacher-class-filter-select', '')

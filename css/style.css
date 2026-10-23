@@ -251,10 +251,9 @@ html, body {
 .user-info-text {
   font-weight: 600;
   color: var(--text-primary);
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
   white-space: nowrap;
+  font-size: 0.85rem;
 }
 
 .btn-session-action {
@@ -659,7 +658,7 @@ html, body {
     justify-content: space-between;
   }
   .user-info-text {
-    max-width: 120px;
+    max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1753,4 +1752,33 @@ html, body {
     padding: 0 !important;
     margin: 0 !important;
   }
+}
+
+/* Realtime Sync & Live Pulse */
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.live-pulse-dot {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.btn-sync-student {
+  background-color: var(--surface-card);
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  transition: all 0.2s ease;
+}
+
+.btn-sync-student:hover {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: #10b981 !important;
+  transform: translateY(-1px);
 }

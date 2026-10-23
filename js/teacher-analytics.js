@@ -27,7 +27,20 @@ const TeacherAnalytics = (() => {
     };
     const existingIdx = list.findIndex(s => s.studentCode === newStudent.studentCode);
     if (existingIdx >= 0) {
-      list[existingIdx] = newStudent;
+      const existing = list[existingIdx] || {};
+      list[existingIdx] = {
+        ...existing,
+        ...newStudent,
+        id: existing.id || nextId,
+        name: newStudent.name || existing.name || '',
+        grade: newStudent.grade || existing.grade || '',
+        school: newStudent.school || existing.school || '',
+        code: (newStudent.code && newStudent.code.trim().length > 0) ? newStudent.code : (existing.code || ''),
+        major: (newStudent.major && newStudent.major.trim().length > 0) ? newStudent.major : (existing.major || ''),
+        projectScore: typeof newStudent.projectScore === 'number' ? newStudent.projectScore : existing.projectScore,
+        classification: newStudent.classification || existing.classification || '',
+        stream: newStudent.stream || existing.stream || ''
+      };
     } else {
       list.push(newStudent);
     }
@@ -132,12 +145,20 @@ const TeacherAnalytics = (() => {
     let headerIdx = -1;
     let colMap = { code: -1, name: -1, grade: -1, school: -1 };
 
+    function normalizeHeader(str) {
+      return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    }
+
     for (let r = 0; r < Math.min(rows.length, 10); r++) {
-      const row = rows[r].map(cell => String(cell || '').trim().toLowerCase());
-      const codeIdx = row.findIndex(c => c.includes('mã') || c.includes('code') || c === 'mahs' || c.includes('ma ') || c === 'id');
-      const nameIdx = row.findIndex((c, idx) => idx !== codeIdx && (c.includes('tên') || c.includes('ten') || c.includes('họ tên') || c.includes('họ và tên') || c.includes('ho va ten') || c.startsWith('họ ') || c.startsWith('ho ') || c === 'họ' || c === 'ho' || c.includes('name')));
-      const gradeIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && (c.includes('lớp') || c.includes('lop') || c.includes('grade') || c.includes('class')));
-      const schoolIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== gradeIdx && (c.includes('trường') || c.includes('truong') || c.includes('school')));
+      const row = rows[r].map(normalizeHeader);
+      const codeIdx = row.findIndex(c => c !== 'stt' && (c.includes('ma hoc sinh') || c.includes('ma hs') || c.includes('mahs') || c.includes('code') || c === 'id' || (c.includes('ma') && !c.includes('ten'))));
+      const nameIdx = row.findIndex((c, idx) => idx !== codeIdx && (c.includes('ten') || c.includes('ho va ten') || c.includes('ho ten') || c.startsWith('ho ') || c === 'ho' || c.includes('name') || c.includes('fullname')));
+      const gradeIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && (c.includes('lop') || c.includes('grade') || c.includes('class')));
+      const schoolIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== gradeIdx && (c.includes('truong') || c.includes('school')));
 
       if (codeIdx !== -1 && nameIdx !== -1) {
         headerIdx = r;

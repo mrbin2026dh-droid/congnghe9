@@ -174,8 +174,8 @@ window.EduPathFirebase = (() => {
         try {
           const snapshot = await dbInstance.ref('students').once('value');
           if (snapshot.exists()) {
-            const data = snapshot.val();
-            const list = Object.values(data);
+            const data = snapshot.val() || {};
+            const list = Object.values(data).filter(s => s && s.studentCode);
             return list.filter(s => {
               if (!normClass) return true;
               const sGrade = (s.grade || '').toUpperCase();
@@ -206,7 +206,7 @@ window.EduPathFirebase = (() => {
         throw new Error('Mã học sinh không được chứa ký tự đặc biệt: . # $ [ ] /');
       }
 
-      const payload = {
+      let payload = {
         ...student,
         studentCode: cleanCode,
         updatedAt: new Date().toISOString()
@@ -215,6 +215,28 @@ window.EduPathFirebase = (() => {
       let firebaseError = null;
       if (isFirebaseReady && dbInstance) {
         try {
+          const snap = await dbInstance.ref(`students/${cleanCode}`).once('value');
+          if (snap.exists()) {
+            const existing = snap.val() || {};
+            payload = {
+              ...existing,
+              ...payload,
+              name: student.name || existing.name || '',
+              grade: student.grade || existing.grade || '',
+              school: student.school || existing.school || '',
+              code: (student.code && student.code.trim().length > 0) ? student.code : (existing.code || ''),
+              major: (student.major && student.major.trim().length > 0) ? student.major : (existing.major || ''),
+              hollandScores: student.hollandScores || existing.hollandScores || null,
+              hollandPercentages: student.hollandPercentages || existing.hollandPercentages || null,
+              surveyHistory: student.surveyHistory || existing.surveyHistory || null,
+              threeQuestions: student.threeQuestions || existing.threeQuestions || null,
+              selfTraits: student.selfTraits || existing.selfTraits || null,
+              projectScore: typeof student.projectScore === 'number' ? student.projectScore : (existing.projectScore !== undefined ? existing.projectScore : null),
+              classification: student.classification || existing.classification || '',
+              stream: student.stream || existing.stream || '',
+              updatedAt: new Date().toISOString()
+            };
+          }
           const cleanPayload = sanitizeForFirebase(payload);
           await dbInstance.ref(`students/${cleanCode}`).set(cleanPayload);
         } catch (err) {
@@ -226,7 +248,13 @@ window.EduPathFirebase = (() => {
       const roster = getLocalRoster();
       const idx = roster.findIndex(s => s.studentCode && s.studentCode.toUpperCase() === cleanCode);
       if (idx >= 0) {
-        roster[idx] = { ...roster[idx], ...payload };
+        const existingLocal = roster[idx] || {};
+        roster[idx] = {
+          ...existingLocal,
+          ...payload,
+          code: (payload.code && payload.code.trim().length > 0) ? payload.code : (existingLocal.code || ''),
+          major: (payload.major && payload.major.trim().length > 0) ? payload.major : (existingLocal.major || '')
+        };
       } else {
         payload.id = roster.length > 0 ? Math.max(...roster.map(s => s.id || 0)) + 1 : 1;
         roster.push(payload);
@@ -350,8 +378,8 @@ window.EduPathFirebase = (() => {
         const ref = dbInstance.ref('students');
         const listener = (snapshot) => {
           if (snapshot.exists()) {
-            const data = snapshot.val();
-            const list = Object.values(data);
+            const data = snapshot.val() || {};
+            const list = Object.values(data).filter(s => s && s.studentCode);
             const filtered = list.filter(s => {
               if (!normClass) return true;
               const sGrade = (s.grade || '').toUpperCase();
