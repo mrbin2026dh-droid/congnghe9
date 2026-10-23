@@ -57,7 +57,7 @@ def test_full_system_firebase_auth():
             page.wait_for_timeout(200)
 
         # Fill student login
-        page.locator('#login-student-code').fill('NH-9A2') # Trần Thị Bích
+        page.locator('#login-student-code').fill('NH-9A1') # Nguyễn Văn A
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(300)
 

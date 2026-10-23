@@ -75,6 +75,219 @@ const TeacherAnalytics = (() => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
+  /**
+   * Tải file mẫu Excel danh sách học sinh (.xlsx hoặc .csv)
+   */
+  function downloadExcelTemplate() {
+    const headers = ['STT', 'Mã học sinh', 'Họ và tên', 'Lớp', 'Trường THCS'];
+    const sampleRows = [
+      [1, '9A1-01', 'Nguyễn Văn An', '9A1', 'THCS Chu Văn An'],
+      [2, '9A1-02', 'Trần Thị Bích', '9A1', 'THCS Chu Văn An'],
+      [3, '9A1-03', 'Lê Hoàng Long', '9A1', 'THCS Chu Văn An'],
+      [4, '9A1-04', 'Phạm Minh Đức', '9A1', 'THCS Chu Văn An'],
+      [5, '9A1-05', 'Võ Thị Mai', '9A1', 'THCS Chu Văn An']
+    ];
+
+    if (typeof window.XLSX !== 'undefined') {
+      const aoa = [headers, ...sampleRows];
+      const ws = window.XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [
+        { wch: 8 },
+        { wch: 16 },
+        { wch: 26 },
+        { wch: 12 },
+        { wch: 28 }
+      ];
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, 'DanhSachHocSinh');
+      window.XLSX.writeFile(wb, 'Mau_Danh_Sach_Hoc_Sinh_EduPath.xlsx');
+    } else {
+      let csv = '\uFEFF' + headers.join(',') + '\n';
+      sampleRows.forEach(row => {
+        csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Mau_Danh_Sach_Hoc_Sinh_EduPath.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /**
+   * Đọc và trích xuất danh sách học sinh từ raw rows
+   * @param {Array<Array>} rows
+   */
+  function extractStudentsFromRows(rows) {
+    if (!rows || rows.length < 2) {
+      throw new Error('Tệp không chứa đủ dữ liệu (Cần có ít nhất 1 dòng tiêu đề và 1 dòng thông tin học sinh).');
+    }
+
+    let headerIdx = -1;
+    let colMap = { code: -1, name: -1, grade: -1, school: -1 };
+
+    for (let r = 0; r < Math.min(rows.length, 10); r++) {
+      const row = rows[r].map(cell => String(cell || '').trim().toLowerCase());
+      const codeIdx = row.findIndex(c => c.includes('mã') || c.includes('code') || c === 'mahs' || c === 'id');
+      const nameIdx = row.findIndex(c => c.includes('tên') || c.includes('họ') || c.includes('name'));
+      const gradeIdx = row.findIndex(c => c.includes('lớp') || c.includes('lop') || c.includes('grade') || c.includes('class'));
+      const schoolIdx = row.findIndex(c => c.includes('trường') || c.includes('truong') || c.includes('school'));
+
+      if (codeIdx !== -1 && nameIdx !== -1) {
+        headerIdx = r;
+        colMap = { code: codeIdx, name: nameIdx, grade: gradeIdx, school: schoolIdx };
+        break;
+      }
+    }
+
+    if (headerIdx === -1) {
+      // Giả định thứ tự mặc định nếu không khớp từ khóa
+      headerIdx = 0;
+      colMap = { code: 1, name: 2, grade: 3, school: 4 };
+    }
+
+    const students = [];
+    const startRow = headerIdx + 1;
+    const forbiddenChars = /[.#$[\]/]/;
+
+    for (let r = startRow; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length === 0) continue;
+
+      let studentCode = colMap.code >= 0 && row[colMap.code] !== undefined ? String(row[colMap.code]).trim() : '';
+      let name = colMap.name >= 0 && row[colMap.name] !== undefined ? String(row[colMap.name]).trim() : '';
+      let grade = colMap.grade >= 0 && row[colMap.grade] !== undefined ? String(row[colMap.grade]).trim() : '';
+      let school = colMap.school >= 0 && row[colMap.school] !== undefined ? String(row[colMap.school]).trim() : '';
+
+      if (!studentCode && !name) continue;
+
+      if (!grade) grade = '9A1';
+      if (!school) school = 'THCS Chu Văn An';
+
+      if (!studentCode && name) {
+        const padNum = String(students.length + 1).padStart(2, '0');
+        studentCode = `${grade}-${padNum}`;
+      }
+
+      studentCode = studentCode.toUpperCase().replace(/\s+/g, '-');
+      if (forbiddenChars.test(studentCode)) {
+        studentCode = studentCode.replace(/[.#$[\]/]/g, '-');
+      }
+
+      students.push({
+        studentCode,
+        name,
+        grade,
+        school,
+        code: '',
+        major: '',
+        projectScore: null,
+        classification: '',
+        stream: '',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    if (students.length === 0) {
+      throw new Error('Không tìm thấy bản ghi học sinh hợp lệ nào trong tệp.');
+    }
+
+    return students;
+  }
+
+  /**
+   * Bộ giải mã CSV độc lập (thuần JavaScript) khi không có thư viện bên ngoài
+   */
+  function parseCSVText(text) {
+    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    return lines.map(line => {
+      const row = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          row.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      row.push(current.trim());
+      return row;
+    });
+  }
+
+  /**
+   * Đọc tệp Excel hoặc CSV được tải lên từ máy tính
+   * @param {File} file
+   * @returns {Promise<Array>}
+   */
+  function parseExcelFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error('Chưa chọn tệp tin.'));
+
+      const fileName = file.name.toLowerCase();
+      const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+      const isCsv = fileName.endsWith('.csv') || fileName.endsWith('.txt');
+
+      if (!isExcel && !isCsv) {
+        return reject(new Error('Định dạng tệp không được hỗ trợ. Vui lòng chọn tệp .xlsx, .xls hoặc .csv'));
+      }
+
+      if (isExcel && typeof window.XLSX !== 'undefined') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = window.XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rawRows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const students = extractStudentsFromRows(rawRows);
+            resolve(students);
+          } catch (err) {
+            reject(new Error('Lỗi khi đọc file Excel: ' + (err.message || 'Tệp không hợp lệ.')));
+          }
+        };
+        reader.onerror = () => reject(new Error('Không thể đọc tệp từ thiết bị.'));
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result;
+            if (typeof window.XLSX !== 'undefined') {
+              const workbook = window.XLSX.read(text, { type: 'string' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              const rawRows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+              resolve(extractStudentsFromRows(rawRows));
+            } else {
+              const rawRows = parseCSVText(text);
+              resolve(extractStudentsFromRows(rawRows));
+            }
+          } catch (err) {
+            reject(new Error('Lỗi khi đọc file CSV: ' + (err.message || 'Tệp không hợp lệ.')));
+          }
+        };
+        reader.onerror = () => reject(new Error('Không thể đọc tệp từ thiết bị.'));
+        reader.readAsText(file, 'utf-8');
+      }
+    });
+  }
   function computeDistribution(classList) {
     const counts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     // Only count students who have taken Holland quiz (code is not empty)
@@ -214,7 +427,11 @@ const TeacherAnalytics = (() => {
     generateCSVContent,
     computeDistribution,
     renderClassHeatmap,
-    exportClassCSV
+    exportClassCSV,
+    downloadExcelTemplate,
+    parseExcelFile,
+    extractStudentsFromRows,
+    parseCSVText
   };
 })();
 

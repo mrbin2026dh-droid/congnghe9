@@ -170,7 +170,12 @@ const ProjectAssessment = (() => {
         <meta charset="utf-8">
         <title>Báo Cáo Dự Án Bài 5 - Công Nghệ 9 - ${studentName}</title>
         <style>
-          body { font-family: 'Times New Roman', serif; margin: 15mm; color: #000; line-height: 1.35; }
+          @page { size: A4 portrait; margin: 12mm 15mm; }
+          body { font-family: 'Times New Roman', serif; margin: 12mm 15mm; color: #000; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+          }
           .header { text-align: center; margin-bottom: 15px; }
           .header h4 { margin: 0; font-size: 13pt; font-weight: normal; }
           .header h3 { margin: 4px 0; font-size: 13pt; font-weight: bold; text-decoration: underline; }

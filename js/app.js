@@ -380,8 +380,25 @@ class EduPathApp {
     this.syncAuthUI();
   }
 
-  showAuthModal() {
+  showAuthModal(role = 'student') {
     const authModal = document.getElementById('auth-modal');
+    const tabStudent = document.getElementById('auth-tab-student');
+    const tabTeacher = document.getElementById('auth-tab-teacher');
+    const formStudent = document.getElementById('student-login-form');
+    const formTeacher = document.getElementById('teacher-login-form');
+
+    if (role === 'teacher') {
+      if (tabTeacher) tabTeacher.classList.add('active');
+      if (tabStudent) tabStudent.classList.remove('active');
+      if (formTeacher) formTeacher.style.display = 'flex';
+      if (formStudent) formStudent.style.display = 'none';
+    } else {
+      if (tabStudent) tabStudent.classList.add('active');
+      if (tabTeacher) tabTeacher.classList.remove('active');
+      if (formStudent) formStudent.style.display = 'flex';
+      if (formTeacher) formTeacher.style.display = 'none';
+    }
+
     if (authModal) authModal.style.display = 'flex';
   }
 
@@ -2257,6 +2274,25 @@ class EduPathApp {
       });
     }
 
+    const closeReportBtn = document.getElementById('btn-close-report-modal');
+    if (closeReportBtn) {
+      closeReportBtn.addEventListener('click', () => this.closeReportModal());
+    }
+
+    const printModalBtn = document.getElementById('btn-print-from-modal');
+    if (printModalBtn) {
+      printModalBtn.addEventListener('click', () => {
+        this.triggerPrintReport(this.currentReportHTML);
+      });
+    }
+
+    const downloadReportBtn = document.getElementById('btn-download-report-html');
+    if (downloadReportBtn) {
+      downloadReportBtn.addEventListener('click', () => {
+        this.downloadReportHTML(this.currentReportHTML);
+      });
+    }
+
     // Populate Major Selector Dropdown
     const majorSelect = document.getElementById('assessment-major-select');
     if (majorSelect && window.EduPathData.majors) {
@@ -2397,21 +2433,102 @@ class EduPathApp {
   }
 
   printOfficialReport() {
-    const sanitize = window.sanitize;
-    const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId) || window.EduPathData.majors[0];
-    const result = ProjectAssessment.calculateProjectResult(this.assessmentMatches);
-    const html = ProjectAssessment.generatePrintableHTML(this.studentProfile, targetMajor, this.assessmentMatches, result);
+    const targetMajor = (window.EduPathData && window.EduPathData.majors)
+      ? (window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId) || window.EduPathData.majors[0])
+      : null;
+    const result = window.ProjectAssessment
+      ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches)
+      : { totalScore: 0, classification: 'Không phù hợp', recommendation: '' };
+    const html = window.ProjectAssessment
+      ? window.ProjectAssessment.generatePrintableHTML(this.studentProfile, targetMajor, this.assessmentMatches, result)
+      : '<p>Lỗi tạo báo cáo</p>';
 
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.open();
-      printWin.document.documentElement.innerHTML = sanitize(html);
-      printWin.document.close();
-      printWin.focus();
-      setTimeout(() => {
-        printWin.print();
-      }, 350);
+    this.currentReportHTML = html;
+
+    // Hiển thị giao diện xem trước báo cáo
+    const previewModal = document.getElementById('report-preview-modal');
+    const previewIframe = document.getElementById('report-modal-iframe');
+    if (previewModal && previewIframe) {
+      previewIframe.srcdoc = html;
+      previewModal.style.display = 'flex';
     }
+
+    // Tự động kích hoạt in trực tiếp
+    this.triggerPrintReport(html);
+  }
+
+  triggerPrintReport(html) {
+    if (!html) return;
+    try {
+      let printFrame = document.getElementById('report-print-iframe');
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'report-print-iframe';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = 'none';
+        printFrame.style.visibility = 'hidden';
+        document.body.appendChild(printFrame);
+      }
+
+      printFrame.onload = () => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (frameErr) {
+          console.warn('Lỗi in qua iframe, chuyển sang Blob URL:', frameErr);
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          const blobUrl = URL.createObjectURL(blob);
+          const pWin = window.open(blobUrl, '_blank');
+          if (pWin) {
+            pWin.focus();
+            setTimeout(() => {
+              pWin.print();
+              URL.revokeObjectURL(blobUrl);
+            }, 400);
+          }
+        }
+      };
+
+      printFrame.srcdoc = html;
+    } catch (err) {
+      console.warn('Lỗi gọi in trực tiếp:', err);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const pWin = window.open(blobUrl, '_blank');
+      if (pWin) {
+        pWin.focus();
+        setTimeout(() => {
+          pWin.print();
+          URL.revokeObjectURL(blobUrl);
+        }, 400);
+      }
+    }
+  }
+
+  downloadReportHTML(html) {
+    const rawHTML = html || this.currentReportHTML;
+    if (!rawHTML) return;
+    const studentName = (this.studentProfile && this.studentProfile.name) || 'Hoc_Sinh';
+    const cleanName = studentName.replace(/\s+/g, '_');
+    const blob = new Blob([rawHTML], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bao_Cao_Bai_5_${cleanName}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.playBeep(720);
+  }
+
+  closeReportModal() {
+    const previewModal = document.getElementById('report-preview-modal');
+    if (previewModal) previewModal.style.display = 'none';
   }
 
   // --- TEACHER DASHBOARD MODULE ---
@@ -2423,6 +2540,51 @@ class EduPathApp {
         TeacherAnalytics.exportClassCSV(classData, this.studentProfile.grade || '9A1');
         this.playBeep(800);
       });
+    }
+
+    // Tải file mẫu Excel
+    const downloadTemplateBtn = document.getElementById('btn-download-excel-template');
+    if (downloadTemplateBtn) {
+      downloadTemplateBtn.addEventListener('click', () => {
+        TeacherAnalytics.downloadExcelTemplate();
+        this.playBeep(720);
+      });
+    }
+
+    // Modal nhập học sinh từ Excel
+    const openExcelBtn = document.getElementById('btn-open-excel-import-modal');
+    if (openExcelBtn) {
+      openExcelBtn.addEventListener('click', () => this.openExcelImportModal());
+    }
+
+    const closeExcelBtn = document.getElementById('btn-close-excel-modal');
+    if (closeExcelBtn) {
+      closeExcelBtn.addEventListener('click', () => this.closeExcelImportModal());
+    }
+
+    const cancelExcelBtn = document.getElementById('btn-cancel-excel-import');
+    if (cancelExcelBtn) {
+      cancelExcelBtn.addEventListener('click', () => this.closeExcelImportModal());
+    }
+
+    const modalDownloadTemplateBtn = document.getElementById('btn-modal-download-template');
+    if (modalDownloadTemplateBtn) {
+      modalDownloadTemplateBtn.addEventListener('click', () => {
+        TeacherAnalytics.downloadExcelTemplate();
+        this.playBeep(720);
+      });
+    }
+
+    const triggerFileBtn = document.getElementById('btn-trigger-file-select');
+    const fileInput = document.getElementById('excel-file-input');
+    if (triggerFileBtn && fileInput) {
+      triggerFileBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => this.handleExcelFileSelected(e));
+    }
+
+    const confirmImportBtn = document.getElementById('btn-confirm-excel-import');
+    if (confirmImportBtn) {
+      confirmImportBtn.addEventListener('click', () => this.executeBatchExcelImport());
     }
 
     const addStudentBtn = document.getElementById('add-current-to-roster-btn');
@@ -2892,6 +3054,172 @@ class EduPathApp {
 
     this.renderTeacherHeatmap();
     this.playBeep(850, 'triangle', 0.2);
+  }
+
+  openExcelImportModal() {
+    const modal = document.getElementById('excel-import-modal');
+    const errBox = document.getElementById('excel-import-error');
+    const succBox = document.getElementById('excel-import-success');
+    const previewContainer = document.getElementById('excel-preview-container');
+    const progressBox = document.getElementById('excel-import-progress-box');
+    const fileInput = document.getElementById('excel-file-input');
+    const nameDisplay = document.getElementById('excel-file-name-display');
+    const confirmBtn = document.getElementById('btn-confirm-excel-import');
+
+    if (errBox) errBox.style.display = 'none';
+    if (succBox) succBox.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (progressBox) progressBox.style.display = 'none';
+    if (fileInput) fileInput.value = '';
+    if (nameDisplay) nameDisplay.textContent = 'Chưa có tệp nào được chọn.';
+    if (confirmBtn) confirmBtn.disabled = true;
+    this.pendingExcelStudents = [];
+
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeExcelImportModal() {
+    const modal = document.getElementById('excel-import-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async handleExcelFileSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    const nameDisplay = document.getElementById('excel-file-name-display');
+    const errBox = document.getElementById('excel-import-error');
+    const succBox = document.getElementById('excel-import-success');
+    const previewContainer = document.getElementById('excel-preview-container');
+    const previewSummary = document.getElementById('excel-preview-summary');
+    const previewTbody = document.getElementById('excel-preview-tbody');
+    const confirmBtn = document.getElementById('btn-confirm-excel-import');
+
+    if (errBox) errBox.style.display = 'none';
+    if (succBox) succBox.style.display = 'none';
+    this.pendingExcelStudents = [];
+
+    if (!file) {
+      if (nameDisplay) nameDisplay.textContent = 'Chưa có tệp nào được chọn.';
+      if (confirmBtn) confirmBtn.disabled = true;
+      if (previewContainer) previewContainer.style.display = 'none';
+      return;
+    }
+
+    if (nameDisplay) {
+      nameDisplay.textContent = `📄 Đã chọn: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    }
+
+    try {
+      const students = await TeacherAnalytics.parseExcelFile(file);
+      this.pendingExcelStudents = students;
+
+      if (previewSummary) {
+        previewSummary.textContent = `Đã nhận diện: ${students.length} học sinh hợp lệ từ file`;
+      }
+
+      if (previewTbody) {
+        previewTbody.textContent = '';
+        const previewList = students.slice(0, 10);
+        previewList.forEach((st, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = window.sanitize(`
+            <td style="text-align:center;">${idx + 1}</td>
+            <td><strong style="color:var(--brand);">${st.studentCode}</strong></td>
+            <td>${st.name}</td>
+            <td style="text-align:center;">${st.grade}</td>
+            <td>${st.school}</td>
+          `);
+          previewTbody.appendChild(tr);
+        });
+        if (students.length > 10) {
+          const trMore = document.createElement('tr');
+          trMore.innerHTML = window.sanitize(`
+            <td colspan="5" style="text-align:center; font-style:italic; color:var(--text-muted); font-size:0.75rem;">
+              ...và còn ${students.length - 10} học sinh khác sẽ được lưu vào hệ thống
+            </td>
+          `);
+          previewTbody.appendChild(trMore);
+        }
+      }
+
+      if (previewContainer) previewContainer.style.display = 'flex';
+      if (confirmBtn) confirmBtn.disabled = false;
+      this.playBeep(640);
+    } catch (parseErr) {
+      console.error('Lỗi phân tích file Excel:', parseErr);
+      if (errBox) {
+        errBox.textContent = parseErr.message || 'Lỗi khi đọc file Excel.';
+        errBox.style.display = 'block';
+      }
+      if (confirmBtn) confirmBtn.disabled = true;
+      if (previewContainer) previewContainer.style.display = 'none';
+      this.playBeep(220, 'sawtooth', 0.2);
+    }
+  }
+
+  async executeBatchExcelImport() {
+    const students = this.pendingExcelStudents || [];
+    if (!students || students.length === 0) return;
+
+    const confirmBtn = document.getElementById('btn-confirm-excel-import');
+    const cancelBtn = document.getElementById('btn-cancel-excel-import');
+    const filePickerBtn = document.getElementById('btn-trigger-file-select');
+    const progressBox = document.getElementById('excel-import-progress-box');
+    const progressBar = document.getElementById('excel-progress-bar');
+    const progressText = document.getElementById('excel-progress-text');
+    const progressPercent = document.getElementById('excel-progress-percent');
+    const errBox = document.getElementById('excel-import-error');
+    const succBox = document.getElementById('excel-import-success');
+
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (filePickerBtn) filePickerBtn.disabled = true;
+    if (errBox) errBox.style.display = 'none';
+    if (succBox) succBox.style.display = 'none';
+    if (progressBox) progressBox.style.display = 'flex';
+
+    let successCount = 0;
+    const errors = [];
+    const total = students.length;
+
+    for (let i = 0; i < total; i++) {
+      const st = students[i];
+      const pct = Math.round(((i + 1) / total) * 100);
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      if (progressPercent) progressPercent.textContent = `${pct}%`;
+      if (progressText) progressText.textContent = `Đang lưu (${i + 1}/${total}): ${st.studentCode} - ${st.name}...`;
+
+      try {
+        TeacherAnalytics.addStudentToRoster(st);
+        if (window.EduPathFirebase) {
+          await window.EduPathFirebase.addStudent(st);
+        }
+        successCount += 1;
+      } catch (err) {
+        console.error(`Lỗi lưu học sinh ${st.studentCode}:`, err);
+        errors.push(`${st.studentCode}: ${err.message || 'Lỗi'}`);
+      }
+    }
+
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (filePickerBtn) filePickerBtn.disabled = false;
+
+    if (successCount > 0) {
+      if (succBox) {
+        succBox.innerHTML = window.sanitize(`
+          🎉 <strong>Nhập thành công:</strong> Đã tạo và lưu chính xác <strong>${successCount} / ${total}</strong> tài khoản học sinh lên Firebase Realtime Database!
+        `);
+        succBox.style.display = 'block';
+      }
+      this.renderTeacherHeatmap();
+      this.playBeep(880, 'sine', 0.25);
+    }
+
+    if (errors.length > 0) {
+      if (errBox) {
+        errBox.textContent = `Có ${errors.length} lỗi trong quá trình lưu: ${errors.slice(0, 3).join('; ')}`;
+        errBox.style.display = 'block';
+      }
+    }
   }
 
   renderTeacherHeatmap() {

@@ -114,7 +114,6 @@ class CareerTreeCanvas {
   }
 
   drawRoots(x, y) {
-    const ctx = this.ctx;
     const maxDepth = this.height - y - 30;
 
     const rInterest = (this.state.rootInterest / 100) * maxDepth;

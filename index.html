@@ -15,6 +15,8 @@
   
   <!-- GSAP Animation Library for Lifelike Biological Motion -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- SheetJS Library for Excel Import & Template Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="app-root">
@@ -691,6 +693,12 @@
               <button class="btn-primary" id="btn-open-add-student-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Học Sinh
               </button>
+              <button class="btn-primary" id="btn-open-excel-import-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem; background:var(--brand); border-color:var(--brand);" title="Nhập danh sách học sinh từ file Excel (.xlsx / .csv) để tạo tài khoản hàng loạt">
+                📊 Nhập từ Excel
+              </button>
+              <button class="btn-secondary" id="btn-download-excel-template" style="padding:0.4rem 0.75rem; font-size:0.8rem;" title="Tải file mẫu Excel danh sách học sinh">
+                📥 Tải Mẫu Excel
+              </button>
               <button class="btn-secondary" id="add-current-to-roster-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Bài Làm Này Vào Lớp
               </button>
@@ -948,6 +956,110 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ================= REPORT PREVIEW & PRINT MODAL ================= -->
+  <div class="auth-modal-overlay" id="report-preview-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="report-modal-title" style="max-width: 880px; width: 95%; max-height: 94vh;">
+      <button type="button" class="auth-modal-close" id="btn-close-report-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 0.5rem;">
+        <h2 id="report-modal-title" class="auth-modal-title">📄 Báo Cáo Dự Án Bài 5 (SGK Công Nghệ 9)</h2>
+        <p class="auth-modal-desc">Bản in chính thức chuẩn định dạng nộp giáo viên bộ môn</p>
+        <div style="display:flex; gap:0.5rem; margin-top:0.6rem; flex-wrap:wrap;">
+          <button type="button" class="btn-primary" id="btn-print-from-modal" style="padding:0.45rem 1rem; font-size:0.85rem;">
+            🖨️ In / Lưu Dưới Dạng PDF
+          </button>
+          <button type="button" class="btn-secondary" id="btn-download-report-html" style="padding:0.45rem 0.85rem; font-size:0.85rem;">
+            📥 Tải File Báo Cáo (.html)
+          </button>
+        </div>
+      </div>
+      <div id="report-modal-content-wrapper" style="overflow-y:auto; flex:1; max-height:calc(94vh - 160px); background:#fff; border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <iframe id="report-modal-iframe" style="width:100%; height:620px; border:none; display:block;" title="Xem trước bản in báo cáo"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= EXCEL STUDENT IMPORT MODAL ================= -->
+  <div class="auth-modal-overlay" id="excel-import-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="excel-import-title" style="max-width: 760px; width: 95%; max-height: 94vh;">
+      <button type="button" class="auth-modal-close" id="btn-close-excel-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 0.5rem;">
+        <h2 id="excel-import-title" class="auth-modal-title">📊 Tải Danh Sách Học Sinh Từ File Excel</h2>
+        <p class="auth-modal-desc">Tạo tài khoản học sinh hàng loạt và lưu trực tiếp lên Firebase Realtime Database</p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:0.85rem;">
+        <!-- Upload dropzone & Template download -->
+        <div style="background:var(--surface-elevated); border:2px dashed var(--border); border-radius:var(--radius-md); padding:1.25rem; text-align:center;">
+          <p style="margin:0 0 0.5rem 0; font-size:0.9rem; font-weight:600; color:var(--text-primary);">
+            Chọn file Excel (.xlsx, .xls) hoặc CSV danh sách học sinh:
+          </p>
+          <div style="display:flex; justify-content:center; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display:none;">
+            <button type="button" class="btn-primary" id="btn-trigger-file-select" style="padding:0.5rem 1.1rem; font-size:0.85rem;">
+              📁 Chọn Tệp Từ Máy Tính
+            </button>
+            <button type="button" class="btn-secondary" id="btn-modal-download-template" style="padding:0.5rem 0.9rem; font-size:0.85rem;">
+              📥 Tải File Mẫu Excel (.xlsx)
+            </button>
+          </div>
+          <p id="excel-file-name-display" style="margin:0.5rem 0 0 0; font-size:0.8rem; color:var(--text-muted); font-style:italic;">
+            Chưa có tệp nào được chọn.
+          </p>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="excel-preview-container" style="display:none; flex-direction:column; gap:0.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span id="excel-preview-summary" style="font-size:0.85rem; font-weight:700; color:var(--brand);">
+              Đã nhận diện: 0 học sinh hợp lệ
+            </span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">
+              Xem trước các dòng đầu
+            </span>
+          </div>
+          <div style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm);">
+            <table class="matrix-table" style="font-size:0.8rem; margin:0;">
+              <thead>
+                <tr>
+                  <th style="width:10%; text-align:center;">STT</th>
+                  <th style="width:25%;">Mã HS</th>
+                  <th style="width:35%;">Họ và tên</th>
+                  <th style="width:15%; text-align:center;">Lớp</th>
+                  <th style="width:15%;">Trường</th>
+                </tr>
+              </thead>
+              <tbody id="excel-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Progress and Status Feedback -->
+        <div id="excel-import-progress-box" style="display:none; flex-direction:column; gap:0.35rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+            <span id="excel-progress-text">Đang lưu vào Firebase...</span>
+            <span id="excel-progress-percent">0%</span>
+          </div>
+          <div style="width:100%; height:8px; background:var(--surface-inset); border-radius:4px; overflow:hidden;">
+            <div id="excel-progress-bar" style="width:0%; height:100%; background:var(--brand); transition:width 0.2s ease;"></div>
+          </div>
+        </div>
+
+        <div id="excel-import-error" class="auth-error-msg" style="display:none;"></div>
+        <div id="excel-import-success" style="display:none; padding:0.65rem 0.85rem; background:var(--brand-soft); color:var(--brand); border-radius:var(--radius-sm); font-size:0.85rem; font-weight:600;"></div>
+
+        <!-- Modal Action Buttons -->
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+          <button type="button" class="btn-secondary" id="btn-cancel-excel-import" style="padding:0.45rem 1rem;">
+            Đóng
+          </button>
+          <button type="button" class="btn-primary" id="btn-confirm-excel-import" disabled style="padding:0.45rem 1.25rem;">
+            🚀 Xác Nhận Nhập Lên Firebase
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
