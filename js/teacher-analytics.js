@@ -22,7 +22,8 @@ const TeacherAnalytics = (() => {
   const currentClassData = [...DEFAULT_CLASS_DATA];
 
   function addStudentToRoster(studentObj) {
-    const nextId = currentClassData.length > 0 ? Math.max(...currentClassData.map(s => s.id || 0)) + 1 : 1;
+    const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
+    const nextId = list.length > 0 ? Math.max(...list.map(s => s.id || 0)) + 1 : 1;
     const grade = studentObj.grade || '9A1';
     const newStudent = {
       id: nextId,
@@ -36,18 +37,22 @@ const TeacherAnalytics = (() => {
       classification: studentObj.classification || 'Phù hợp hoàn toàn',
       stream: studentObj.stream || 'Học tiếp THPT & Đại học'
     };
-    currentClassData.push(newStudent);
-    return currentClassData;
+    list.push(newStudent);
+    if (window.EduPathFirebase) {
+      window.EduPathFirebase.addStudent(newStudent);
+    }
+    return list;
   }
 
   function deleteStudentFromRoster(studentCode) {
-    if (!studentCode) return currentClassData;
+    const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
+    if (!studentCode) return list;
     const clean = studentCode.toUpperCase().trim();
-    const idx = currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === clean) || (s.id && `${s.grade || '9A1'}-${String(s.id).padStart(2, '0')}` === clean));
+    const idx = list.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === clean) || (s.id && `${s.grade || '9A1'}-${String(s.id).padStart(2, '0')}` === clean));
     if (idx >= 0) {
-      currentClassData.splice(idx, 1);
+      list.splice(idx, 1);
     }
-    return currentClassData;
+    return list;
   }
 
   function generateCSVContent(classList, className = '9A1') {

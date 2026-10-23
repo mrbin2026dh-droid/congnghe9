@@ -50,12 +50,12 @@
 - Consumes: Phiên đăng nhập từ `localStorage` hoặc Firebase Auth State.
 - Produces: `showAuthModal()`, `hideAuthModal()`, `handleStudentLogin(code)`, `handleTeacherLogin(code, pin)`, `handleLogout()`.
 
-- [ ] **Step 1: Viết test Playwright kiểm tra Modal đăng nhập, kiểm tra Topbar không còn 3 input chật chội và không bị cắt chữ các Tab**
-- [ ] **Step 2: Chạy test để xác nhận trạng thái (FAIL do chưa có Modal đăng nhập mới)**
-- [ ] **Step 3: Cập nhật `index.html` và `css/style.css` với Topbar thoáng sạch và Modal đăng nhập 2 phân hệ tinh gọn**
-- [ ] **Step 4: Cập nhật `js/app.js` xử lý mở Modal khi chưa đăng nhập, hiển thị thông tin tài khoản và đăng xuất**
-- [ ] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
-- [ ] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 1**
+- [x] **Step 1: Viết test Playwright kiểm tra Modal đăng nhập, kiểm tra Topbar không còn 3 input chật chội và không bị cắt chữ các Tab**
+- [x] **Step 2: Chạy test để xác nhận trạng thái (FAIL do chưa có Modal đăng nhập mới)**
+- [x] **Step 3: Cập nhật `index.html` và `css/style.css` với Topbar thoáng sạch và Modal đăng nhập 2 phân hệ tinh gọn**
+- [x] **Step 4: Cập nhật `js/app.js` xử lý mở Modal khi chưa đăng nhập, hiển thị thông tin tài khoản và đăng xuất**
+- [x] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
+- [x] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 1**
 
 ---
 
@@ -71,12 +71,12 @@
 - Consumes: Cấu hình `window.EduPathFirebaseConfig`.
 - Produces: `EduPathFirebase.getStudent(code)`, `EduPathFirebase.saveStudentProgress(code, data)`, `EduPathFirebase.onClassStudentsChange(className, callback)`, `EduPathFirebase.addStudent(student)`, `EduPathFirebase.updateStudent(code, data)`, `EduPathFirebase.deleteStudent(code)`.
 
-- [ ] **Step 1: Viết test kiểm tra các hàm CRUD của Firebase Engine (xử lý cả khi online và chế độ fallback an toàn)**
-- [ ] **Step 2: Chạy test để xác nhận FAIL (chưa có `js/firebase-config.js`)**
-- [ ] **Step 3: Triển khai `js/firebase-config.js` chuẩn hóa ES6, không hardcode, bảo đảm an toàn dữ liệu**
-- [ ] **Step 4: Viết tài liệu hướng dẫn `HUONG_DAN_TAO_FIREBASE_MIEN_PHI.md` chi tiết từng bước**
-- [ ] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
-- [ ] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 2**
+- [x] **Step 1: Viết test kiểm tra các hàm CRUD của Firebase Engine (xử lý cả khi online và chế độ fallback an toàn)**
+- [x] **Step 2: Chạy test để xác nhận FAIL (chưa có `js/firebase-config.js`)**
+- [x] **Step 3: Triển khai `js/firebase-config.js` chuẩn hóa ES6, không hardcode, bảo đảm an toàn dữ liệu**
+- [x] **Step 4: Viết tài liệu hướng dẫn `HUONG_DAN_TAO_FIREBASE_MIEN_PHI.md` chi tiết từng bước**
+- [x] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
+- [x] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 2**
 
 ---
 
@@ -92,12 +92,12 @@
 - Consumes: Quyền quản trị Giáo viên từ `app.userRole === 'teacher'`.
 - Produces: `addStudentAccount(code, name, grade, school)`, `editStudentAccount(code, newName, newGrade)`, `deleteStudentAccount(code)`.
 
-- [ ] **Step 1: Viết test Playwright kiểm tra quy trình Giáo viên Thêm, Sửa, Xóa học sinh thật trên bảng điều khiển**
-- [ ] **Step 2: Chạy test để xác nhận trạng thái cần triển khai**
-- [ ] **Step 3: Cập nhật giao diện Tab 5 trong `index.html` và `css/style.css` với phân khu Quản lý học sinh chuyên nghiệp**
-- [ ] **Step 4: Cập nhật logic trong `js/teacher-analytics.js` và `js/app.js` để thực hiện thao tác Thêm/Sửa/Xóa thời gian thực**
-- [ ] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
-- [ ] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 3**
+- [x] **Step 1: Viết test Playwright kiểm tra quy trình Giáo viên Thêm, Sửa, Xóa học sinh thật trên bảng điều khiển**
+- [x] **Step 2: Chạy test để xác nhận trạng thái cần triển khai**
+- [x] **Step 3: Cập nhật giao diện Tab 5 trong `index.html` và `css/style.css` với phân khu Quản lý học sinh chuyên nghiệp**
+- [x] **Step 4: Cập nhật logic trong `js/teacher-analytics.js` và `js/app.js` để thực hiện thao tác Thêm/Sửa/Xóa thời gian thực**
+- [x] **Step 5: Chạy lại test Playwright và xác nhận PASS 100%**
+- [x] **Step 6: Kiểm tra qua Alibaba OCR và commit Task 3**
 
 ---
 
@@ -112,11 +112,11 @@
 - Consumes: Thao tác của học sinh khi chọn đáp án Holland, chọn nghề và đánh giá 10 tiêu chí Bài 5.
 - Produces: Dữ liệu thời gian thực được đẩy lên Firebase và phản ánh ngay tức thì trên Bảng Giáo viên.
 
-- [ ] **Step 1: Viết test Dual-Context Playwright (mở song song 2 context: Học sinh làm bài $\rightarrow$ Giáo viên nhận dữ liệu live)**
-- [ ] **Step 2: Chạy test để xác nhận trạng thái**
-- [ ] **Step 3: Triển khai cơ chế đồng bộ tự động trong `js/app.js` và `js/teacher-analytics.js`**
-- [ ] **Step 4: Chạy lại test Dual-Context và xác nhận PASS 100%**
-- [ ] **Step 5: Kiểm tra qua Alibaba OCR và commit Task 4**
+- [x] **Step 1: Viết test Dual-Context Playwright (mở song song 2 context: Học sinh làm bài $\rightarrow$ Giáo viên nhận dữ liệu live)**
+- [x] **Step 2: Chạy test để xác nhận trạng thái**
+- [x] **Step 3: Triển khai cơ chế đồng bộ tự động trong `js/app.js` và `js/teacher-analytics.js`**
+- [x] **Step 4: Chạy lại test Dual-Context và xác nhận PASS 100%**
+- [x] **Step 5: Kiểm tra qua Alibaba OCR và commit Task 4**
 
 ---
 
@@ -126,8 +126,8 @@
 - Create: `tests/test_full_system_firebase_auth.py` (Kiểm thử toàn diện từ Đăng nhập $\rightarrow$ Học sinh làm bài $\rightarrow$ Giáo viên quản lý $\rightarrow$ Xuất CSV $\rightarrow$ Responsive $\rightarrow$ F12 Console)
 - Update: `README.md` (Bổ sung mục Hướng dẫn đăng nhập bằng mã và liên kết tài liệu Firebase)
 
-- [ ] **Step 1: Viết kịch bản kiểm thử toàn diện toàn bộ các chức năng**
-- [ ] **Step 2: Chạy kiểm thử trên Chromium thật**
-- [ ] **Step 3: Giám sát F12 DevTools: 0 Error, 0 Warning**
-- [ ] **Step 4: Kiểm duyệt toàn bộ mã qua Alibaba Open-Code-Review Pre-Commit Gatekeeper**
-- [ ] **Step 5: Commit và tổng kết bàn giao**
+- [x] **Step 1: Viết kịch bản kiểm thử toàn diện toàn bộ các chức năng**
+- [x] **Step 2: Chạy kiểm thử trên Chromium thật**
+- [x] **Step 3: Giám sát F12 DevTools: 0 Error, 0 Warning**
+- [x] **Step 4: Kiểm duyệt toàn bộ mã qua Alibaba Open-Code-Review Pre-Commit Gatekeeper**
+- [x] **Step 5: Commit và tổng kết bàn giao**

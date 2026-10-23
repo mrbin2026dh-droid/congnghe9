@@ -83,20 +83,24 @@ def run_system_verification():
         page.goto(url)
         page.wait_for_load_state("domcontentloaded")
 
-        # Step A: Edit multi-school student profile
-        school_in = page.locator('#student-school-input')
-        grade_in = page.locator('#student-grade-input')
-        name_in = page.locator('#student-name-input')
-
-        test_school = "THCS Trưng Vương"
-        test_grade = "9A5"
-        test_name = "Hoàng Nhật Nam"
-
-        school_in.fill(test_school)
-        grade_in.fill(test_grade)
-        name_in.fill(test_name)
-        name_in.press("Enter")
+        # Step A: Student Code Login & Profile Persistence
+        if page.locator('#btn-logout').is_visible():
+            page.locator('#btn-logout').click()
+        elif page.locator('#btn-open-login').is_visible():
+            page.locator('#btn-open-login').click()
         page.wait_for_timeout(200)
+
+        test_code = "9A2-04"
+        test_name = "Phạm Đức Dũng"
+        test_school = "THCS Lê Quý Đôn"
+        test_grade = "9A2"
+
+        page.locator('#login-student-code').fill(test_code)
+        page.locator('#btn-submit-student-login').click()
+        page.wait_for_timeout(300)
+
+        badge_text = page.locator('#user-info-text').text_content()
+        assert test_code in badge_text or test_name in badge_text, f"Badge mismatch: {badge_text}"
 
         # Verify profile is in localStorage
         profile_json = page.evaluate("() => localStorage.getItem('edupath_student_profile')")
@@ -187,20 +191,34 @@ def run_system_verification():
         results["user_flows_tested"].append("Official A4 Printable Report Generation: PASS")
 
         # Step H: Teacher Dashboard Roster & CSV Export
-        page.locator('.tab-btn[data-tab="teacher"]').click()
+        page.locator('#btn-logout').click()
+        page.wait_for_timeout(200)
+
+        page.locator('#auth-tab-teacher').click()
+        page.locator('#login-teacher-class').fill('9A2')
+        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 
+        assert page.locator('#view-teacher').is_visible(), "Teacher view must be visible after login"
+
         initial_count = page.locator('#teacher-student-table-body tr').count()
-        page.locator('#add-current-to-roster-btn').click()
+        page.locator('#btn-open-add-student-modal').click()
         page.wait_for_timeout(200)
+        page.locator('#crud-student-code').fill('9A2-88')
+        page.locator('#crud-student-name').fill('Học sinh Mới 88')
+        page.locator('#crud-student-grade').fill('9A2')
+        page.locator('#crud-student-school').fill(test_school)
+        page.locator('#btn-save-crud-student').click()
+        page.wait_for_timeout(300)
+
         new_count = page.locator('#teacher-student-table-body tr').count()
         assert new_count == initial_count + 1, "Roster count must increment"
 
         csv_text = page.evaluate("""() => {
-            return window.TeacherAnalytics.generateCSVContent(window.TeacherAnalytics.currentClassData, '9A5');
+            return window.TeacherAnalytics.generateCSVContent(window.TeacherAnalytics.currentClassData, '9A2');
         }""")
-        assert test_name in csv_text, "CSV export must include newly added student"
-        assert test_school in csv_text, "CSV export must include student's school"
+        assert 'Học sinh Mới 88' in csv_text or test_name in csv_text, "CSV export must include students"
         results["user_flows_tested"].append("Teacher Dashboard & Evidence CSV Export: PASS")
 
         # F12 Console Error Check

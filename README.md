@@ -43,9 +43,17 @@ Học sinh được nhập vai trò chuyện trực tiếp với 4 góc nhìn đ
 - Đánh giá mức độ phù hợp và tự động xếp loại: **Rất phù hợp (≥8/10)**, **Phù hợp (5–7/10)**, **Cần cân nhắc (<5/10)**.
 - **Xuất phiếu đánh giá chuẩn in A4**: Tích hợp nút in báo cáo chính thức có đầy đủ chữ ký học sinh và giáo viên hướng nghiệp.
 
-### 5. 👨‍🏫 Bảng Theo Dõi & Phân Tích Lớp Học Dành Cho Giáo Viên
-- **Bản đồ nhiệt Holland (RIASEC Heatmap)**: Trực quan hóa phân bố sở thích của toàn bộ học sinh trong lớp.
-- **Xuất bảng điểm CSV**: Một click tải file Excel/CSV phục vụ công tác báo cáo hướng nghiệp nhà trường.
+### 5. 👨‍🏫 Quản Trị Tài Khoản Học Sinh & Đồng Bộ Firebase Realtime
+- **Đăng nhập bằng Mã chuẩn sư phạm**:
+  - **Học sinh**: Đăng nhập bằng mã học sinh do giáo viên cấp (ví dụ: `9A1-01`), không cần ghi nhớ mật khẩu phức tạp; bảo mật và gắn liền với hồ sơ cá nhân.
+  - **Giáo viên**: Đăng nhập bằng Mã lớp và Mã bảo mật (PIN mặc định: `123456`) để mở khóa phân hệ quản trị.
+- **Quản lý học sinh toàn diện (CRUD)**: Giáo viên có thể thêm học sinh mới (tự động gợi ý mã theo định dạng `Lớp-STT`), chỉnh sửa thông tin họ tên, trường, lớp, hoặc xóa tài khoản có hộp thoại xác nhận an toàn.
+- **Đồng bộ thời gian thực 100% qua Firebase**:
+  - Kết nối trực tiếp cơ sở dữ liệu đám mây **Google Firebase Realtime Database (Gói Spark miễn phí vĩnh viễn)**.
+  - Khi học sinh làm bài ở phòng máy, màn hình giáo viên tự động cập nhật kết quả live mà không cần tải lại trang.
+  - Tích hợp **Cơ chế Dự phòng Thông minh (Offline Fallback)**: Tự động lưu trữ cục bộ khi mất mạng hoặc chưa cấu hình Firebase, đảm bảo hệ thống không bao giờ bị gián đoạn.
+  - Hướng dẫn thiết lập chi tiết 4 bước: xem tại [HUONG_DAN_TAO_FIREBASE_MIEN_PHI.md](HUONG_DAN_TAO_FIREBASE_MIEN_PHI.md).
+- **Xuất bảng điểm CSV (UTF-8 BOM)**: Tương thích hoàn toàn với Microsoft Excel, sẵn sàng nạp trực tiếp vào hệ thống Smas/VnEdu.
 
 ---
 
@@ -53,7 +61,8 @@ Học sinh được nhập vai trò chuyện trực tiếp với 4 góc nhìn đ
 
 | Hạng mục | Công nghệ sử dụng | Ưu điểm & Đáp ứng tiêu chuẩn |
 | :--- | :--- | :--- |
-| **Giao diện (Frontend)** | HTML5 Semantic, Modern CSS3 | Bố cục sân khấu Immersive Stage Layout, Responsive $1920\times 1080$, $1366\times 768$, Mobile/Tablet. |
+| **Giao diện (Frontend)** | HTML5 Semantic, Modern CSS3 | Bố cục sân khấu Immersive Stage Layout, Topbar tinh gọn không cắt chữ, Responsive $1920\times 1080$, $1366\times 768$, Mobile ($375\times 812$). |
+| **Cơ sở dữ liệu (Cloud & Local)** | Firebase Realtime Database v10 & LocalStorage Engine | Đồng bộ thời gian thực 2 chiều, phân quyền Học sinh / Giáo viên, 100% dữ liệu thật, không hardcode. |
 | **Kiểu chữ (Typography)** | Google Font **Be Vietnam Pro** | Chuẩn mực vàng cho hiển thị dấu tiếng Việt sắc nét trên mọi thiết bị. |
 | **Đồ họa Động** | SVG + GSAP (GreenSock) | Kết xuất sinh học mượt mà 60 FPS, không dùng ảnh nặng, dung lượng siêu nhẹ. |
 | **Khả năng tiếp cận** | WCAG AAA Contrast | Độ tương phản cao, phím bấm cảm ứng $\ge 44\text{px}$, chế độ Giao diện Sáng/Tối (*Dark/Light Mode*). |
@@ -65,15 +74,20 @@ Học sinh được nhập vai trò chuyện trực tiếp với 4 góc nhìn đ
 
 ### Dành cho Học sinh:
 1. Mở liên kết: [https://mrbin2026dh-droid.github.io/congnghe9/](https://mrbin2026dh-droid.github.io/congnghe9/)
-2. Nhập tên của em ở góc trên bên phải thanh điều hướng.
+2. Bấm nút **"Đăng nhập"** (hoặc mở hộp thoại đăng nhập) và nhập **Mã học sinh** do thầy/cô cấp (ví dụ: `9A1-01`).
 3. Vào tab **"Vườn Cây Nghề Nghiệp"**: Thử kéo các thanh rễ và quả ngọt để khám phá cảm giác cây cân bằng hoặc nghiêng đổ.
 4. Chuyển sang tab **"Trắc Nghiệm Holland"**: Trả lời trung thực các câu hỏi để nhận Mã 3 chữ cái đại diện cho phong cách bản thân.
 5. Vào **"Phòng Cố Vấn AI"**: Đặt câu hỏi thắc mắc về ngành học hoặc tâm sự với các chuyên gia.
 6. Hoàn thành **"Dự Án Bài 5 SGK"** và bấm in phiếu nộp cho thầy cô giáo!
 
 ### Dành cho Giáo viên:
-- Ứng dụng có thể trình chiếu trực tiếp trên máy chiếu/màn hình tương tác phòng học thông minh.
-- Sử dụng tab **"Bảng Giáo Viên"** để quan sát thống kê hướng nghiệp của lớp và bấm **"Xuất file CSV báo cáo"**.
+1. Bấm vào nút **"Đăng xuất"** hoặc **"Đăng nhập"** trên thanh điều hướng $\rightarrow$ Chọn tab **"Giáo viên"**.
+2. Nhập **Mã lớp** (ví dụ: `9A1`) và **Mã bảo mật PIN** (mặc định: `123456`) $\rightarrow$ Bấm **"Vào trang quản lý"**.
+3. Tab **"👨‍🏫 Bảng Giáo Viên"** sẽ hiển thị:
+   - Thêm học sinh mới hoặc cấp mã qua nút **"➕ Thêm Học Sinh"**.
+   - Chỉnh sửa hoặc xóa tài khoản học sinh trực tiếp trên từng dòng danh sách.
+   - Theo dõi biểu đồ phân bố RIASEC và tỷ lệ phân luồng cập nhật tự động khi học sinh hoàn thành các bước.
+   - Bấm **"📥 Xuất Danh Sách Điểm (CSV / Excel)"** để tải về báo cáo nộp nhà trường.
 
 ---
 

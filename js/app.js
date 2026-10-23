@@ -371,13 +371,19 @@ class EduPathApp {
     }
   }
 
-  handleStudentLogin(code) {
+  async handleStudentLogin(code) {
     const studentErr = document.getElementById('student-login-error');
     if (studentErr) studentErr.style.display = 'none';
 
-    // Look up student from TeacherAnalytics or default roster
-    const roster = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
-    const matched = roster.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+    // Look up student from EduPathFirebase or default roster across all classes
+    let matched = null;
+    if (window.EduPathFirebase) {
+      matched = await window.EduPathFirebase.getStudent(code);
+    }
+    if (!matched && window.TeacherAnalytics) {
+      const allRoster = window.TeacherAnalytics.DEFAULT_CLASS_DATA || window.TeacherAnalytics.currentClassData || [];
+      matched = allRoster.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+    }
 
     if (matched) {
       this.studentProfile.name = matched.name;
