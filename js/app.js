@@ -19,14 +19,16 @@ class EduPathApp {
     this.activeAgentId = 'psychologist';
 
     this.studentProfile = {
-      name: 'Nguyễn Văn An',
-      school: 'THCS Chu Văn An',
-      grade: '9A1',
+      name: '',
+      school: '',
+      grade: '',
+      studentCode: '',
       academicYear: '2025 – 2026',
-      code: 'RIE',
-      scores: { R: 42, I: 38, A: 25, S: 22, E: 35, C: 28 },
-      percentages: { R: 84, I: 76, A: 50, S: 44, E: 70, C: 56 },
-      targetMajorId: 'co-dien-tu',
+      code: '',
+      scores: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+      percentages: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+      targetMajorId: '',
+      targetMajorName: '',
       selfTraits: {},
       threeQuestions: {
         understandSelf: '',
@@ -35,8 +37,8 @@ class EduPathApp {
       }
     };
 
-    // Assessment matches (10 items boolean)
-    this.assessmentMatches = [true, true, true, true, false, true, true, true, true, true];
+    // Assessment matches (10 items boolean) - Clean initial state (none pre-checked)
+    this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
 
     this.treeAnimator = null;
     this.audioCtx = null;
@@ -138,25 +140,33 @@ class EduPathApp {
 
   syncProgressToFirebase() {
     if (!this.currentUser || this.currentUser.role !== 'student') return;
-    const studentCode = this.currentUser.code || this.studentProfile.studentCode || '9A1-01';
+    const studentCode = this.currentUser.code || this.studentProfile.studentCode;
+    if (!studentCode) return;
+
+    // Only sync if student actually has data (not blank initial state)
+    const hasHolland = Boolean(this.studentProfile.code && this.studentProfile.code.trim().length > 0);
+    const hasMatches = Boolean(this.assessmentMatches && this.assessmentMatches.some(m => m === true));
+    if (!hasHolland && !hasMatches && !this.studentProfile.targetMajorId) {
+      return; // Do not push unattempted fake progress to Firebase
+    }
 
     let targetMajorName = this.studentProfile.targetMajorName;
-    if (!targetMajorName && window.EduPathData && window.EduPathData.majors) {
-      const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId) || window.EduPathData.majors[0];
-      targetMajorName = targetMajor ? targetMajor.name : 'Kỹ thuật Cơ điện tử';
+    if (!targetMajorName && this.studentProfile.targetMajorId && window.EduPathData && window.EduPathData.majors) {
+      const targetMajor = window.EduPathData.majors.find(m => m.id === this.studentProfile.targetMajorId);
+      targetMajorName = targetMajor ? targetMajor.name : '';
     }
-    const result = window.ProjectAssessment ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : { totalScore: 8, classification: 'Phù hợp hoàn toàn' };
+    const result = hasMatches && window.ProjectAssessment ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : null;
     const isVocational = (this.studentProfile.code && this.studentProfile.code.startsWith('R'));
-    const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
+    const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : (hasHolland ? 'Học tiếp THPT & Đại học' : '');
 
     const payload = {
-      name: this.studentProfile.name || 'Học sinh',
-      school: this.studentProfile.school || 'THCS Chu Văn An',
-      grade: this.studentProfile.grade || '9A1',
-      code: this.studentProfile.code || 'RIE',
-      major: targetMajorName || 'Kỹ thuật Cơ điện tử',
-      projectScore: result.totalScore,
-      classification: result.classification,
+      name: this.studentProfile.name,
+      school: this.studentProfile.school,
+      grade: this.studentProfile.grade,
+      code: this.studentProfile.code || '',
+      major: targetMajorName || '',
+      projectScore: result ? result.totalScore : null,
+      classification: result ? result.classification : '',
       stream: stream,
       hollandScores: this.studentProfile.scores,
       hollandPercentages: this.studentProfile.percentages
@@ -488,7 +498,25 @@ class EduPathApp {
     this.currentUser = null;
     this.userRole = null;
     localStorage.removeItem('edupath_current_user');
+    localStorage.removeItem('edupath_student_profile');
+    localStorage.removeItem('edupath_assessment_matches');
+    this.studentProfile = {
+      name: '',
+      school: '',
+      grade: '',
+      studentCode: '',
+      academicYear: '2025 – 2026',
+      code: '',
+      scores: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+      percentages: { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 },
+      targetMajorId: '',
+      targetMajorName: '',
+      selfTraits: {},
+      threeQuestions: { understandSelf: '', understandCareer: '', careerPathPlan: '' }
+    };
+    this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
     this.syncAuthUI();
+    this.showAuthModal();
     this.playBeep(330, 'sine', 0.15);
   }
 
@@ -1565,11 +1593,12 @@ class EduPathApp {
         name,
         grade,
         school,
-        code: 'RIE',
-        major: 'Kỹ thuật Cơ điện tử',
-        projectScore: 8,
-        classification: 'Phù hợp hoàn toàn',
-        stream: 'THPT & Đại học Kỹ thuật'
+        code: '',
+        major: '',
+        projectScore: null,
+        classification: '',
+        stream: '',
+        createdAt: new Date().toISOString()
       };
       if (window.EduPathFirebase) {
         await window.EduPathFirebase.addStudent(newStudent);
@@ -1652,10 +1681,19 @@ class EduPathApp {
     const filterSelect = document.getElementById('teacher-class-filter-select');
     const currentFilter = (filterSelect && filterSelect.value) || '';
 
+    // Count students who have actually completed Holland survey
+    const assessedStudents = classData.filter(s => Boolean(s.code && s.code.trim().length > 0));
+
     if (heatmapTitleEl) {
-      heatmapTitleEl.textContent = currentFilter 
-        ? `📊 Bản Đồ Nhiệt RIASEC Cả Lớp (${currentFilter})` 
-        : `📊 Bản Đồ Nhiệt RIASEC Toàn Bộ Hệ Thống (${totalStudents} học sinh)`;
+      if (assessedStudents.length > 0) {
+        heatmapTitleEl.textContent = currentFilter 
+          ? `📊 Bản Đồ Nhiệt RIASEC Cả Lớp (${currentFilter} · ${assessedStudents.length}/${totalStudents} em đã làm bài)` 
+          : `📊 Bản Đồ Nhiệt RIASEC Toàn Bộ Hệ Thống (${assessedStudents.length}/${totalStudents} em đã làm bài)`;
+      } else {
+        heatmapTitleEl.textContent = currentFilter 
+          ? `📊 Bản Đồ Nhiệt RIASEC Cả Lớp (${currentFilter} · 0 em đã làm bài)` 
+          : `📊 Bản Đồ Nhiệt RIASEC Toàn Bộ Hệ Thống (0 em đã làm bài)`;
+      }
     }
 
     if (totalStudents === 0) {
@@ -1667,28 +1705,41 @@ class EduPathApp {
         recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> Chưa có dữ liệu học sinh trên hệ thống Firebase. Giáo viên hãy nhấn "➕ Thêm Học Sinh" để cấp tài khoản cho lớp.`);
       }
     } else {
-      // Calculate from ACTUAL student records
-      const vocationalCount = classData.filter(s => {
-        const streamStr = (s.stream || '').toLowerCase();
-        const codeStr = (s.code || '').toUpperCase();
-        return streamStr.includes('nghề') || streamStr.includes('cao đẳng') || streamStr.includes('trung cấp') || codeStr.startsWith('R');
-      }).length;
-      const thptCount = totalStudents - vocationalCount;
-      const thptPct = Math.round((thptCount / totalStudents) * 100);
-      const vocPct = 100 - thptPct;
+      // Calculate ONLY from students who have completed assessment or have assigned stream
+      const streamedStudents = classData.filter(s => Boolean(s.stream && s.stream.trim().length > 0));
+      const totalStreamed = streamedStudents.length;
 
-      if (thptPercentEl) thptPercentEl.textContent = `${thptPct}% (${thptCount} học sinh)`;
-      if (thptBarEl) thptBarEl.style.width = `${thptPct}%`;
-      if (vocPercentEl) vocPercentEl.textContent = `${vocPct}% (${vocationalCount} học sinh)`;
-      if (vocBarEl) vocBarEl.style.width = `${vocPct}%`;
+      if (totalStreamed === 0) {
+        if (thptPercentEl) thptPercentEl.textContent = '0% (0 học sinh)';
+        if (thptBarEl) thptBarEl.style.width = '0%';
+        if (vocPercentEl) vocPercentEl.textContent = '0% (0 học sinh)';
+        if (vocBarEl) vocBarEl.style.width = '0%';
+        if (recEl) {
+          recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> Đã tạo ${totalStudents} tài khoản học sinh trên Firebase. Học sinh chưa thực hiện khảo sát Holland hoặc dự án Bài 5 nên chưa có dữ liệu phân luồng. Hãy hướng dẫn các em đăng nhập để làm bài.`);
+        }
+      } else {
+        const vocationalCount = streamedStudents.filter(s => {
+          const streamStr = (s.stream || '').toLowerCase();
+          const codeStr = (s.code || '').toUpperCase();
+          return streamStr.includes('nghề') || streamStr.includes('cao đẳng') || streamStr.includes('trung cấp') || codeStr.startsWith('R');
+        }).length;
+        const thptCount = totalStreamed - vocationalCount;
+        const thptPct = Math.round((thptCount / totalStreamed) * 100);
+        const vocPct = 100 - thptPct;
 
-      if (recEl) {
-        if (vocationalCount > 0 && thptCount > 0) {
-          recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> ${vocPct}% học sinh (${vocationalCount} em) có thiên hướng kỹ thuật thực tế (R) phù hợp sớm định hướng vào mô hình Cao đẳng / Trung cấp Nghề 9+. ${thptPct}% học sinh (${thptCount} em) phù hợp tiếp tục học THPT và xét tuyển Đại học.`);
-        } else if (vocationalCount > 0) {
-          recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${vocationalCount} em) có thiên hướng kỹ thuật thực tế (R), khuyến nghị phân luồng sớm vào các trường đào tạo nghề 9+ kỹ thuật cao.`);
-        } else {
-          recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${thptCount} em) có xu hướng học thuật, phù hợp học tiếp THPT và xét tuyển Đại học.`);
+        if (thptPercentEl) thptPercentEl.textContent = `${thptPct}% (${thptCount} học sinh)`;
+        if (thptBarEl) thptBarEl.style.width = `${thptPct}%`;
+        if (vocPercentEl) vocPercentEl.textContent = `${vocPct}% (${vocationalCount} học sinh)`;
+        if (vocBarEl) vocBarEl.style.width = `${vocPct}%`;
+
+        if (recEl) {
+          if (vocationalCount > 0 && thptCount > 0) {
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> Trong số ${totalStreamed} em đã có kết quả: ${vocPct}% học sinh (${vocationalCount} em) có thiên hướng kỹ thuật thực tế (R) phù hợp mô hình Cao đẳng / Trung cấp Nghề 9+; ${thptPct}% học sinh (${thptCount} em) phù hợp tiếp tục học THPT và xét tuyển Đại học.`);
+          } else if (vocationalCount > 0) {
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${vocationalCount} em đã đánh giá) có thiên hướng kỹ thuật thực tế (R), khuyến nghị phân luồng sớm vào các trường đào tạo nghề 9+ kỹ thuật cao.`);
+          } else {
+            recEl.innerHTML = sanitize(`💡 <strong>Khuyến nghị Sư phạm:</strong> 100% học sinh (${thptCount} em đã đánh giá) có xu hướng học thuật, phù hợp học tiếp THPT và xét tuyển Đại học.`);
+          }
         }
       }
     }
@@ -1709,6 +1760,11 @@ class EduPathApp {
 
       classData.forEach((st, idx) => {
         const studentCode = st.studentCode || `HS-${idx + 1}`;
+        const hollandBadge = st.code ? `<span style="font-weight:800; color:var(--brand);">${st.code}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
+        const majorText = st.major ? st.major : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
+        const scoreText = typeof st.projectScore === 'number' ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
+        const streamText = st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = sanitize(`
           <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
@@ -1716,10 +1772,10 @@ class EduPathApp {
           <td>${st.school || 'Trường THCS'}</td>
           <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '9A1'}</span></td>
           <td><strong>${st.name || 'Học sinh'}</strong></td>
-          <td style="text-align:center;"><span style="font-weight:800; color:var(--brand);">${st.code || 'RIE'}</span></td>
-          <td>${st.major || 'Chưa chọn'}</td>
-          <td style="text-align:center;"><strong>${typeof st.projectScore === 'number' ? st.projectScore : 8}/10</strong></td>
-          <td><span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream || 'Học tiếp THPT'}</span></td>
+          <td style="text-align:center;">${hollandBadge}</td>
+          <td>${majorText}</td>
+          <td style="text-align:center;">${scoreText}</td>
+          <td>${streamText}</td>
           <td style="text-align:center; white-space:nowrap;">
             <button type="button" class="btn-table-action btn-table-edit" data-code="${studentCode}">Sửa</button>
             <button type="button" class="btn-table-action btn-table-delete" data-code="${studentCode}">Xóa</button>

@@ -16,18 +16,20 @@ const TeacherAnalytics = (() => {
     const newStudent = {
       id: nextId,
       studentCode: studentObj.studentCode || `${grade}-${String(nextId).padStart(2, '0')}`,
-      school: studentObj.school || 'THCS Chu Văn An',
+      school: studentObj.school || '',
       grade: grade,
-      name: studentObj.name || 'Học sinh',
-      code: studentObj.code || 'RIE',
-      major: studentObj.major || 'Kỹ thuật Cơ điện tử',
-      projectScore: typeof studentObj.projectScore === 'number' ? studentObj.projectScore : 8,
-      classification: studentObj.classification || 'Phù hợp hoàn toàn',
-      stream: studentObj.stream || 'Học tiếp THPT & Đại học'
+      name: studentObj.name || '',
+      code: studentObj.code || '',
+      major: studentObj.major || '',
+      projectScore: typeof studentObj.projectScore === 'number' ? studentObj.projectScore : null,
+      classification: studentObj.classification || '',
+      stream: studentObj.stream || ''
     };
-    list.push(newStudent);
-    if (window.EduPathFirebase) {
-      window.EduPathFirebase.addStudent(newStudent);
+    const existingIdx = list.findIndex(s => s.studentCode === newStudent.studentCode);
+    if (existingIdx >= 0) {
+      list[existingIdx] = newStudent;
+    } else {
+      list.push(newStudent);
     }
     return list;
   }
@@ -75,11 +77,13 @@ const TeacherAnalytics = (() => {
   }
   function computeDistribution(classList) {
     const counts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-    const total = classList ? classList.length : 0;
+    // Only count students who have taken Holland quiz (code is not empty)
+    const validStudents = (classList || []).filter(s => Boolean(s.code && s.code.trim().length > 0));
+    const total = validStudents.length;
 
     if (total > 0) {
-      classList.forEach(student => {
-        const primary = (student.code && student.code[0]) ? student.code[0].toUpperCase() : 'R';
+      validStudents.forEach(student => {
+        const primary = student.code[0].toUpperCase();
         if (counts[primary] !== undefined) {
           counts[primary] += 1;
         }
