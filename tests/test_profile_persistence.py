@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Test Suite: Multi-School Student Profile & Persistence Engine
-Verifies that student profile (School, Grade, Name) can be edited, saved to LocalStorage,
-retained on page reload, exported to JSON, and imported from JSON.
+Test Suite: Student Profile & Session Persistence Engine
+Verifies that student accounts (Mã học sinh, Trường, Lớp, Tên) persist across sessions,
+reload properly, and update the session UI correctly.
 """
 import os
 import json
@@ -25,51 +25,46 @@ def test_student_profile_persistence():
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
 
-        # Check that school, grade, and name inputs exist
-        school_input = page.locator('#student-school-input')
-        grade_input = page.locator('#student-grade-input')
-        name_input = page.locator('#student-name-input')
+        # Open login modal
+        if page.locator('#btn-logout').is_visible():
+            page.locator('#btn-logout').click()
+        elif page.locator('#btn-open-login').is_visible():
+            page.locator('#btn-open-login').click()
+        page.wait_for_timeout(200)
 
-        assert school_input.count() == 1, "School input must exist"
-        assert grade_input.count() == 1, "Grade input must exist"
-        assert name_input.count() == 1, "Name input must exist"
-
-        # Step 2: Fill in school, grade, name
-        test_school = "THCS Lê Quý Đôn"
-        test_grade = "9A2"
-        test_name = "Trần Thị Mai"
-
-        school_input.fill(test_school)
-        grade_input.fill(test_grade)
-        name_input.fill(test_name)
-
-        # Trigger change / blur events
-        name_input.press("Enter")
+        # Step 2: Fill in student code 9A2-04 (Phạm Đức Dũng)
+        student_code_in = page.locator('#login-student-code')
+        student_code_in.fill('9A2-04')
+        page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(300)
 
+        # Check badge updates with student code and name
+        user_info = page.locator('#user-info-text').text_content()
+        assert '9A2-04' in user_info or 'Phạm Đức Dũng' in user_info, f"Badge does not match: {user_info}"
+
         # Check that localStorage contains the saved profile
+        saved_user_raw = page.evaluate("() => localStorage.getItem('edupath_current_user')")
+        assert saved_user_raw is not None, "User session must be saved in localStorage"
+        saved_user = json.loads(saved_user_raw)
+        assert saved_user.get('code') == '9A2-04'
+
         saved_profile_raw = page.evaluate("() => localStorage.getItem('edupath_student_profile')")
         assert saved_profile_raw is not None, "Profile must be saved in localStorage"
         saved_profile = json.loads(saved_profile_raw)
-        assert saved_profile.get('name') == test_name
-        assert saved_profile.get('school') == test_school
-        assert saved_profile.get('grade') == test_grade
+        assert 'Phạm Đức Dũng' in saved_profile.get('name', '')
 
         # Step 3: Reload page and verify data persists
         page.reload()
         page.wait_for_load_state('domcontentloaded')
 
-        reloaded_school = page.locator('#student-school-input').input_value()
-        reloaded_grade = page.locator('#student-grade-input').input_value()
-        reloaded_name = page.locator('#student-name-input').input_value()
+        reloaded_info = page.locator('#user-info-text').text_content()
+        assert '9A2-04' in reloaded_info or 'Phạm Đức Dũng' in reloaded_info, f"Reloaded badge mismatch: {reloaded_info}"
 
-        assert reloaded_school == test_school, f"Expected {test_school}, got {reloaded_school}"
-        assert reloaded_grade == test_grade, f"Expected {test_grade}, got {reloaded_grade}"
-        assert reloaded_name == test_name, f"Expected {test_name}, got {reloaded_name}"
+        # Step 4: Logout check
+        page.locator('#btn-logout').click()
+        page.wait_for_timeout(200)
 
-        # Step 4: Check export & import functionality
-        assert page.locator('#export-profile-btn').count() == 1, "Export profile button must exist"
-        assert page.locator('#import-profile-btn').count() == 1, "Import profile button must exist"
+        assert page.locator('#auth-modal').is_visible() or page.locator('#btn-open-login').is_visible()
 
         browser.close()
         print("ALL PROFILE PERSISTENCE TESTS PASSED!")

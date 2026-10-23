@@ -37,18 +37,14 @@
         <button class="tab-btn" data-tab="teacher">👨‍🏫 Bảng Giáo Viên</button>
       </nav>
 
-      <div class="user-quick-profile" id="user-profile-bar">
-        <div class="profile-inputs-group">
-          <input type="text" id="student-school-input" title="Trường THCS của học sinh" placeholder="Trường THCS..." class="profile-input profile-school-input">
-          <input type="text" id="student-grade-input" title="Lớp học" placeholder="Lớp..." class="profile-input profile-grade-input">
-          <input type="text" id="student-name-input" title="Họ và tên học sinh" placeholder="Họ và tên..." class="profile-input profile-name-input">
+      <div class="user-session-bar" id="user-session-bar">
+        <div class="user-badge" id="logged-in-user-badge" style="display: none;">
+          <span class="user-role-tag" id="user-role-tag">Học sinh</span>
+          <span class="user-info-text" id="user-info-text">9A1-01 · Nguyễn Văn An</span>
+          <button class="btn-session-action btn-logout" id="btn-logout" title="Đăng xuất khỏi hệ thống">Đăng xuất</button>
         </div>
-        <div class="profile-actions-group">
-          <button class="btn-profile-action" id="export-profile-btn" title="Lưu hồ sơ và tải file JSON minh chứng">💾 Tải hồ sơ</button>
-          <button class="btn-profile-action" id="import-profile-btn" title="Mở file hồ sơ JSON đã lưu từ trước">📂 Nạp hồ sơ</button>
-          <input type="file" id="import-profile-file-input" accept=".json" style="display:none;">
-          <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
-        </div>
+        <button class="btn-session-action btn-login-open" id="btn-open-login">Đăng nhập</button>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
       </div>
     </header>
 
@@ -700,6 +696,49 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- ================= AUTHENTICATION MODAL ================= -->
+  <div class="auth-modal-overlay" id="auth-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <button type="button" class="auth-modal-close" id="btn-close-auth-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header">
+        <div class="auth-brand-badge">EDUPATH AI</div>
+        <h2 id="auth-modal-title" class="auth-modal-title">Cổng Đăng Nhập Hướng Nghiệp</h2>
+        <p class="auth-modal-desc">Đăng nhập bằng mã định danh do nhà trường hoặc giáo viên cấp</p>
+        
+        <div class="auth-role-tabs">
+          <button type="button" class="auth-tab-btn active" id="auth-tab-student" data-role="student">Học sinh</button>
+          <button type="button" class="auth-tab-btn" id="auth-tab-teacher" data-role="teacher">Giáo viên</button>
+        </div>
+      </div>
+
+      <!-- Student Login Form -->
+      <form class="auth-form" id="student-login-form">
+        <div class="form-group">
+          <label for="login-student-code">Mã học sinh</label>
+          <input type="text" id="login-student-code" class="auth-input" placeholder="Ví dụ: 9A1-01" autocomplete="off" required>
+          <span class="form-hint">Nhập mã học sinh do giáo viên bộ môn cấp</span>
+        </div>
+        <div class="auth-error-msg" id="student-login-error" style="display: none;"></div>
+        <button type="submit" class="btn-auth-submit" id="btn-submit-student-login">Vào học ngay</button>
+      </form>
+
+      <!-- Teacher Login Form -->
+      <form class="auth-form" id="teacher-login-form" style="display: none;">
+        <div class="form-group">
+          <label for="login-teacher-class">Mã lớp phụ trách</label>
+          <input type="text" id="login-teacher-class" class="auth-input" placeholder="Ví dụ: 9A1" autocomplete="off" required>
+        </div>
+        <div class="form-group">
+          <label for="login-teacher-pin">Mã bảo mật Giáo viên</label>
+          <input type="password" id="login-teacher-pin" class="auth-input" placeholder="Nhập mã PIN giáo viên" autocomplete="off" required>
+          <span class="form-hint">Mã mặc định quản lý lớp: 123456</span>
+        </div>
+        <div class="auth-error-msg" id="teacher-login-error" style="display: none;"></div>
+        <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Vào trang quản lý</button>
+      </form>
+    </div>
   </div>
 
   <!-- Script Modules Loaded in Strict Order -->

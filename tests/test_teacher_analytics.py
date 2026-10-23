@@ -24,6 +24,17 @@ def test_teacher_analytics():
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
 
+        # Switch to teacher mode via auth modal
+        if page.locator('#btn-logout').is_visible():
+            page.locator('#btn-logout').click()
+        elif page.locator('#btn-open-login').is_visible():
+            page.locator('#btn-open-login').click()
+        page.locator('#auth-tab-teacher').click()
+        page.locator('#login-teacher-class').fill('9A1')
+        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#btn-submit-teacher-login').click()
+        page.wait_for_timeout(300)
+
         # Navigate to Teacher Tab
         teacher_tab_btn = page.locator('.tab-btn[data-tab="teacher"]')
         teacher_tab_btn.click()

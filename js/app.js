@@ -40,6 +40,8 @@ class EduPathApp {
 
     this.treeAnimator = null;
     this.audioCtx = null;
+    this.currentUser = null;
+    this.userRole = null;
 
     this.loadProfileFromStorage();
     this.init();
@@ -48,6 +50,7 @@ class EduPathApp {
   init() {
     this.initAudio();
     this.initDOM();
+    this.initAuth();
     this.initTreeAnimator();
     this.initQuiz();
     this.initAIAgents();
@@ -89,12 +92,27 @@ class EduPathApp {
 
   loadProfileFromStorage() {
     try {
+      const rawUser = localStorage.getItem('edupath_current_user');
+      if (rawUser) {
+        this.currentUser = JSON.parse(rawUser);
+        this.userRole = this.currentUser ? this.currentUser.role : null;
+      }
       const raw = localStorage.getItem('edupath_student_profile');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           this.studentProfile = { ...this.studentProfile, ...parsed };
         }
+      }
+      if (!this.currentUser) {
+        this.currentUser = {
+          role: 'student',
+          code: '9A1-01',
+          name: this.studentProfile.name || 'Nguyễn Văn An',
+          grade: this.studentProfile.grade || '9A1',
+          school: this.studentProfile.school || 'THCS Chu Văn An'
+        };
+        this.userRole = 'student';
       }
       const rawMatches = localStorage.getItem('edupath_assessment_matches');
       if (rawMatches) {
@@ -110,6 +128,9 @@ class EduPathApp {
 
   saveProfileToStorage() {
     try {
+      if (this.currentUser) {
+        localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
+      }
       localStorage.setItem('edupath_student_profile', JSON.stringify(this.studentProfile));
       localStorage.setItem('edupath_assessment_matches', JSON.stringify(this.assessmentMatches));
     } catch (e) {
@@ -182,6 +203,213 @@ class EduPathApp {
     if (schoolInput) schoolInput.value = this.studentProfile.school || '';
     if (gradeInput) gradeInput.value = this.studentProfile.grade || '';
     if (nameInput) nameInput.value = this.studentProfile.name || '';
+    const infoText = document.getElementById('user-info-text');
+    if (infoText && this.currentUser) {
+      if (this.currentUser.role === 'teacher') {
+        infoText.textContent = `Lớp ${this.currentUser.classId || '9A1'}`;
+      } else {
+        infoText.textContent = `${this.currentUser.code || '9A1-01'} · ${this.studentProfile.name}`;
+      }
+    }
+  }
+
+  initAuth() {
+    const openLoginBtn = document.getElementById('btn-open-login');
+    const logoutBtn = document.getElementById('btn-logout');
+    const closeBtn = document.getElementById('btn-close-auth-modal');
+    const authModal = document.getElementById('auth-modal');
+    const tabStudent = document.getElementById('auth-tab-student');
+    const tabTeacher = document.getElementById('auth-tab-teacher');
+    const formStudent = document.getElementById('student-login-form');
+    const formTeacher = document.getElementById('teacher-login-form');
+    const studentCodeInput = document.getElementById('login-student-code');
+    const teacherClassInput = document.getElementById('login-teacher-class');
+    const teacherPinInput = document.getElementById('login-teacher-pin');
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.hideAuthModal());
+    }
+
+    if (authModal) {
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) this.hideAuthModal();
+      });
+    }
+
+    if (tabStudent && tabTeacher) {
+      tabStudent.addEventListener('click', () => {
+        tabStudent.classList.add('active');
+        tabTeacher.classList.remove('active');
+        if (formStudent) formStudent.style.display = 'flex';
+        if (formTeacher) formTeacher.style.display = 'none';
+      });
+
+      tabTeacher.addEventListener('click', () => {
+        tabTeacher.classList.add('active');
+        tabStudent.classList.remove('active');
+        if (formTeacher) formTeacher.style.display = 'flex';
+        if (formStudent) formStudent.style.display = 'none';
+      });
+    }
+
+    if (formStudent) {
+      formStudent.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const code = studentCodeInput ? studentCodeInput.value.trim().toUpperCase() : '';
+        if (!code) return;
+        this.handleStudentLogin(code);
+      });
+    }
+
+    if (formTeacher) {
+      formTeacher.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const classId = teacherClassInput ? teacherClassInput.value.trim().toUpperCase() : '';
+        const pin = teacherPinInput ? teacherPinInput.value.trim() : '';
+        if (!classId) return;
+        this.handleTeacherLogin(classId, pin);
+      });
+    }
+
+    if (openLoginBtn) {
+      openLoginBtn.addEventListener('click', () => this.showAuthModal());
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => this.handleLogout());
+    }
+
+    this.syncAuthUI();
+  }
+
+  showAuthModal() {
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) authModal.style.display = 'flex';
+  }
+
+  hideAuthModal() {
+    const authModal = document.getElementById('auth-modal');
+    if (authModal) authModal.style.display = 'none';
+  }
+
+  syncAuthUI() {
+    const userBadge = document.getElementById('logged-in-user-badge');
+    const roleTag = document.getElementById('user-role-tag');
+    const infoText = document.getElementById('user-info-text');
+    const openLoginBtn = document.getElementById('btn-open-login');
+    const teacherNavBtn = document.querySelector('.tab-btn[data-tab="teacher"]');
+
+    if (this.currentUser) {
+      if (userBadge) userBadge.style.display = 'inline-flex';
+      if (openLoginBtn) openLoginBtn.style.display = 'none';
+      this.hideAuthModal();
+
+      if (this.currentUser.role === 'teacher') {
+        if (roleTag) {
+          roleTag.textContent = 'Giáo viên';
+          roleTag.classList.add('teacher');
+        }
+        if (infoText) {
+          infoText.textContent = `Lớp ${this.currentUser.classId || '9A1'}`;
+        }
+        if (teacherNavBtn) {
+          teacherNavBtn.style.display = 'inline-flex';
+        }
+      } else {
+        // Student
+        if (roleTag) {
+          roleTag.textContent = 'Học sinh';
+          roleTag.classList.remove('teacher');
+        }
+        if (infoText) {
+          infoText.textContent = `${this.currentUser.code || '9A1-01'} · ${this.studentProfile.name}`;
+        }
+        if (teacherNavBtn) {
+          teacherNavBtn.style.display = 'none';
+        }
+        if (this.currentTab === 'teacher') {
+          this.switchTab('tree');
+        }
+      }
+    } else {
+      if (userBadge) userBadge.style.display = 'none';
+      if (openLoginBtn) openLoginBtn.style.display = 'inline-flex';
+      if (teacherNavBtn) teacherNavBtn.style.display = 'inline-flex';
+      this.showAuthModal();
+    }
+  }
+
+  handleStudentLogin(code) {
+    const studentErr = document.getElementById('student-login-error');
+    if (studentErr) studentErr.style.display = 'none';
+
+    // Look up student from TeacherAnalytics or default roster
+    const roster = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const matched = roster.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+
+    if (matched) {
+      this.studentProfile.name = matched.name;
+      this.studentProfile.school = matched.school;
+      this.studentProfile.grade = matched.grade;
+      this.studentProfile.code = matched.code || 'RIE';
+      this.studentProfile.studentCode = matched.studentCode || code;
+    } else {
+      const gradePart = code.includes('-') ? code.split('-')[0] : '9A1';
+      this.studentProfile.studentCode = code;
+      this.studentProfile.grade = gradePart;
+      if (!this.studentProfile.name || this.studentProfile.name === 'Nguyễn Văn An') {
+        this.studentProfile.name = `Học sinh ${code}`;
+      }
+    }
+
+    this.currentUser = {
+      role: 'student',
+      code: this.studentProfile.studentCode || code,
+      name: this.studentProfile.name,
+      grade: this.studentProfile.grade,
+      school: this.studentProfile.school
+    };
+    this.userRole = 'student';
+
+    localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
+    this.saveProfileToStorage();
+    this.syncAuthUI();
+    this.renderAssessmentView();
+    this.playBeep(660, 'sine', 0.15);
+  }
+
+  handleTeacherLogin(classId, pin) {
+    const teacherErr = document.getElementById('teacher-login-error');
+    if (pin !== '123456') {
+      if (teacherErr) {
+        teacherErr.textContent = 'Mã bảo mật giáo viên không chính xác (mặc định: 123456).';
+        teacherErr.style.display = 'block';
+      }
+      this.playBeep(220, 'sawtooth', 0.2);
+      return;
+    }
+
+    if (teacherErr) teacherErr.style.display = 'none';
+
+    this.currentUser = {
+      role: 'teacher',
+      classId: classId,
+      name: `Giáo viên ${classId}`
+    };
+    this.userRole = 'teacher';
+
+    localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
+    this.syncAuthUI();
+    this.switchTab('teacher');
+    this.playBeep(880, 'sine', 0.15);
+  }
+
+  handleLogout() {
+    this.currentUser = null;
+    this.userRole = null;
+    localStorage.removeItem('edupath_current_user');
+    this.syncAuthUI();
+    this.playBeep(330, 'sine', 0.15);
   }
 
   initDOM() {
@@ -311,6 +539,9 @@ class EduPathApp {
   }
 
   switchTab(tabId) {
+    if (tabId === 'teacher' && this.userRole === 'student') {
+      tabId = 'tree';
+    }
     this.currentTab = tabId;
 
     // Toggle Tab Buttons active state
