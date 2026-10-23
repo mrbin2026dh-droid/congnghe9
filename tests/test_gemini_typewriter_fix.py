@@ -37,11 +37,11 @@ def test_gemini_and_typewriter():
         options = page.eval_on_selector_all('#gemini-model-select option', 'opts => opts.map(o => ({ value: o.value, text: o.text, selected: o.selected }))')
         print("Available Gemini Models in Dropdown:", options)
         
-        # Verify gemini-2.5-flash is available and selected by default
-        has_25_flash = any(o['value'] == 'gemini-2.5-flash' for o in options)
-        assert has_25_flash, "gemini-2.5-flash must be present in model dropdown"
+        # Verify gemini-flash-lite-latest is available and selected by default
+        has_lite_latest = any(o['value'] == 'gemini-flash-lite-latest' for o in options)
+        assert has_lite_latest, "gemini-flash-lite-latest must be present in model dropdown"
         selected_option = next(o for o in options if o['selected'])
-        assert selected_option['value'] == 'gemini-2.5-flash', f"Expected default gemini-2.5-flash, got '{selected_option['value']}'"
+        assert selected_option['value'] == 'gemini-flash-lite-latest', f"Expected default gemini-flash-lite-latest, got '{selected_option['value']}'"
 
         # Verify auto-migration of legacy 'gemini-1.5-flash' and 'gemini-2.0-flash' in localStorage
         migration_check = page.evaluate("""() => {
@@ -55,10 +55,10 @@ def test_gemini_and_typewriter():
             return { res1, res2 };
         }""")
         print(f"Model Migration Check: {migration_check}")
-        assert migration_check['res1']['configured'] == 'gemini-2.5-flash', "Legacy gemini-1.5-flash must be auto-migrated to gemini-2.5-flash"
-        assert migration_check['res1']['saved'] == 'gemini-2.5-flash', "Saved model in localStorage must be updated"
-        assert migration_check['res2']['configured'] == 'gemini-2.5-flash', "Legacy gemini-2.0-flash must be auto-migrated to gemini-2.5-flash"
-        assert migration_check['res2']['saved'] == 'gemini-2.5-flash', "Saved model in localStorage must be updated"
+        assert migration_check['res1']['configured'] == 'gemini-flash-lite-latest', "Legacy gemini-1.5-flash must be auto-migrated"
+        assert migration_check['res1']['saved'] == 'gemini-flash-lite-latest', "Saved model in localStorage must be updated"
+        assert migration_check['res2']['configured'] == 'gemini-flash-lite-latest', "Legacy gemini-2.0-flash must be auto-migrated"
+        assert migration_check['res2']['saved'] == 'gemini-flash-lite-latest', "Saved model in localStorage must be updated"
 
         print("\n=== STEP 2: Log in as student and open AI Agents Room ===")
         page.locator('#login-student-code').fill('NH-9A1')

@@ -76,6 +76,7 @@ def test_unified_advisor():
         assert "nghệ thuật" in text1.lower() or "artistic" in text1.lower()
 
         print("\n=== STEP 3: Ask 'Vậy chọn nghề nào' ===")
+        page.wait_for_timeout(600)
         input_el.fill("Vậy chọn nghề nào")
         send_btn.click()
 

@@ -10,15 +10,13 @@
 const AIAgentsManager = (() => {
   const STORAGE_KEY_API = 'EDUPATH_GEMINI_API_KEY';
   const STORAGE_KEY_MODEL = 'EDUPATH_GEMINI_MODEL';
-  const DEFAULT_MODEL = 'gemini-2.5-flash';
+  const DEFAULT_MODEL = 'gemini-flash-lite-latest';
   const FALLBACK_MODELS = [
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
     'gemini-2.5-flash',
-    'gemini-2.5-pro',
-    'gemini-flash-latest',
-    'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash'
+    'gemma-4-31b-it'
   ];
 
   const MASTER_COUNSELOR = {
@@ -93,8 +91,16 @@ QUY TẮC HIỂN THỊ & ĐỊNH DẠNG BẮT BUỘC:
     try {
       const apiKey = (localStorage.getItem(STORAGE_KEY_API) || '').trim();
       let model = (localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_MODEL).trim();
-      // Tự động nâng cấp model nếu đang lưu 'gemini-1.5-flash' hoặc 'gemini-2.0-flash' bị lỗi 404 trên v1beta
-      if (model === 'gemini-1.5-flash' || model === 'gemini-2.0-flash') {
+      // Tự động nâng cấp model nếu đang lưu các model cũ không còn được Google hỗ trợ hoặc bị kẹt hạn ngạch 20 req
+      const deprecated = [
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-1.5-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-pro'
+      ];
+      if (deprecated.includes(model)) {
         model = DEFAULT_MODEL;
         localStorage.setItem(STORAGE_KEY_MODEL, model);
       }
@@ -244,9 +250,14 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
       if (!resp.ok) return [];
       const data = await resp.json();
       if (!data || !Array.isArray(data.models)) return [];
-      return data.models
-        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-        .map(m => m.name.replace(/^models\//, ''));
+    return data.models
+      .filter(m => Array.isArray(m.supportedGenerationMethods) && 
+                   m.supportedGenerationMethods.includes('generateContent') &&
+                   !m.name.includes('-tts') &&
+                   !m.name.includes('-image') &&
+                   !m.name.includes('-transcribe')
+      )
+      .map(m => m.name.replace(/^models\//, ''));
     } catch {
       return [];
     }
@@ -330,13 +341,12 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
     ].filter(Boolean);
     modelsToTry = Array.from(new Set(modelsToTry));
 
-    // Truy vấn danh sách model thực tế từ key nếu có
+    // Truy vấn danh sách model thực tế từ key nếu có (bổ sung phía sau)
     const onlineModels = await listAvailableModels(cleanKey);
     if (onlineModels.length > 0) {
       modelsToTry = Array.from(new Set([
-        ...onlineModels.filter(m => m.includes('flash')),
-        ...onlineModels,
-        ...modelsToTry
+        ...modelsToTry,
+        ...onlineModels
       ]));
     }
 
@@ -365,7 +375,18 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
         };
       } catch (err) {
         lastError = err;
-        if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('supported methods')))) {
+        const msg = (err.message || '').toLowerCase();
+        const isRecoverable = err.status === 404 || 
+                              err.status === 429 || 
+                              err.status === 503 ||
+                              msg.includes('not found') || 
+                              msg.includes('quota') || 
+                              msg.includes('rate') || 
+                              msg.includes('no longer available') || 
+                              msg.includes('demand') ||
+                              msg.includes('supported methods');
+        if (isRecoverable) {
+          console.warn(`[EduPath Gemini] Model '${m}' gặp sự cố (${err.message}). Tự động thử model tiếp theo...`);
           continue;
         } else {
           return { ok: false, error: `Lỗi kết nối: ${err.message}` };
@@ -410,11 +431,6 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
       contents: contents,
       systemInstruction: {
         parts: [{ text: fullSystemInstruction }]
-      },
-      generationConfig: {
-        temperature: 0.65,
-        maxOutputTokens: 2048,
-        thinkingConfig: { thinkingBudget: 0 }
       }
     };
 
@@ -431,13 +447,36 @@ QUY TẮC TƯ VẤN BẮT BUỘC (MASTER LOGIC):
 
     for (const modelCandidate of modelsToTry) {
       try {
-        replyText = await sendGenerateContentRequest(modelCandidate, config.apiKey, requestBody);
+        const genConfig = {
+          temperature: 0.65,
+          maxOutputTokens: 2048
+        };
+        // Chỉ gán thinkingBudget cho gemini-2.5-flash để không bị ngốn token vào suy nghĩ nội bộ
+        if (modelCandidate === 'gemini-2.5-flash') {
+          genConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
+        const modelRequestBody = {
+          ...requestBody,
+          generationConfig: genConfig
+        };
+
+        replyText = await sendGenerateContentRequest(modelCandidate, config.apiKey, modelRequestBody);
         successfulModel = modelCandidate;
         break;
       } catch (err) {
         lastError = err;
-        // Nếu là lỗi 404 hoặc model không tìm thấy, tự động chuyển tiếp model kế tiếp
-        if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('supported methods')))) {
+        const msg = (err.message || '').toLowerCase();
+        const isRecoverable = err.status === 404 || 
+                              err.status === 429 || 
+                              err.status === 503 ||
+                              msg.includes('not found') || 
+                              msg.includes('quota') || 
+                              msg.includes('rate') || 
+                              msg.includes('no longer available') || 
+                              msg.includes('demand') ||
+                              msg.includes('supported methods');
+        if (isRecoverable) {
           console.warn(`[EduPath Gemini] Model '${modelCandidate}' không khả dụng (${err.message}), tự động chuyển model dự phòng...`);
           continue;
         } else {
