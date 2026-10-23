@@ -497,6 +497,43 @@ html, body {
   transform: translateY(0);
 }
 
+/* Table Action Buttons for Teacher Management */
+.btn-table-action {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+}
+
+.btn-table-edit {
+  color: var(--brand);
+  border-color: rgba(16, 185, 129, 0.3);
+  margin-right: 0.25rem;
+}
+
+.btn-table-edit:hover {
+  background-color: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.btn-table-delete {
+  color: var(--accent-practical);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.btn-table-delete:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: var(--accent-practical);
+}
+
 .theme-toggle-btn {
   min-width: 44px;
   min-height: 44px;

@@ -1333,6 +1333,162 @@ class EduPathApp {
         this.addCurrentStudentToTeacherRoster();
       });
     }
+
+    const openAddBtn = document.getElementById('btn-open-add-student-modal');
+    if (openAddBtn) {
+      openAddBtn.addEventListener('click', () => this.openAddStudentModal());
+    }
+
+    const closeCrudBtn = document.getElementById('btn-close-crud-modal');
+    if (closeCrudBtn) {
+      closeCrudBtn.addEventListener('click', () => this.closeCrudModal());
+    }
+
+    const cancelCrudBtn = document.getElementById('btn-cancel-crud-student');
+    if (cancelCrudBtn) {
+      cancelCrudBtn.addEventListener('click', () => this.closeCrudModal());
+    }
+
+    const crudForm = document.getElementById('student-crud-form');
+    if (crudForm) {
+      crudForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.saveCrudStudent();
+      });
+    }
+  }
+
+  openAddStudentModal() {
+    const modal = document.getElementById('student-crud-modal');
+    const isEdit = document.getElementById('crud-is-edit');
+    const title = document.getElementById('crud-modal-title');
+    const codeIn = document.getElementById('crud-student-code');
+    const nameIn = document.getElementById('crud-student-name');
+    const gradeIn = document.getElementById('crud-student-grade');
+    const schoolIn = document.getElementById('crud-student-school');
+    const err = document.getElementById('crud-student-error');
+
+    if (err) err.style.display = 'none';
+    if (isEdit) isEdit.value = 'false';
+    if (title) title.textContent = 'Thêm Học Sinh Mới';
+    if (codeIn) {
+      codeIn.disabled = false;
+      const classData = TeacherAnalytics.currentClassData || [];
+      const currentClass = (this.currentUser && this.currentUser.classId) || '9A1';
+      const nextNum = classData.length + 1;
+      codeIn.value = `${currentClass}-${String(nextNum).padStart(2, '0')}`;
+    }
+    if (nameIn) nameIn.value = '';
+    if (gradeIn) gradeIn.value = (this.currentUser && this.currentUser.classId) || '9A1';
+    if (schoolIn) schoolIn.value = 'THCS Chu Văn An';
+
+    if (modal) modal.style.display = 'flex';
+  }
+
+  openEditStudentModal(code) {
+    const modal = document.getElementById('student-crud-modal');
+    const isEdit = document.getElementById('crud-is-edit');
+    const title = document.getElementById('crud-modal-title');
+    const codeIn = document.getElementById('crud-student-code');
+    const nameIn = document.getElementById('crud-student-name');
+    const gradeIn = document.getElementById('crud-student-grade');
+    const schoolIn = document.getElementById('crud-student-school');
+    const err = document.getElementById('crud-student-error');
+
+    const classData = TeacherAnalytics.currentClassData || [];
+    const st = classData.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+    if (!st) return;
+
+    if (err) err.style.display = 'none';
+    if (isEdit) isEdit.value = 'true';
+    if (title) title.textContent = 'Chỉnh Sửa Tài Khoản Học Sinh';
+    if (codeIn) {
+      codeIn.value = st.studentCode || code;
+      codeIn.disabled = true;
+    }
+    if (nameIn) nameIn.value = st.name || '';
+    if (gradeIn) gradeIn.value = st.grade || '9A1';
+    if (schoolIn) schoolIn.value = st.school || 'THCS Chu Văn An';
+
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeCrudModal() {
+    const modal = document.getElementById('student-crud-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async saveCrudStudent() {
+    const isEdit = document.getElementById('crud-is-edit').value === 'true';
+    const codeIn = document.getElementById('crud-student-code');
+    const nameIn = document.getElementById('crud-student-name');
+    const gradeIn = document.getElementById('crud-student-grade');
+    const schoolIn = document.getElementById('crud-student-school');
+    const err = document.getElementById('crud-student-error');
+
+    const studentCode = codeIn ? codeIn.value.trim().toUpperCase() : '';
+    const name = nameIn ? nameIn.value.trim() : '';
+    const grade = gradeIn ? gradeIn.value.trim().toUpperCase() : '9A1';
+    const school = schoolIn ? schoolIn.value.trim() : 'THCS Chu Văn An';
+
+    if (!studentCode || !name) {
+      if (err) {
+        err.textContent = 'Vui lòng nhập đầy đủ Mã học sinh và Họ và tên.';
+        err.style.display = 'block';
+      }
+      return;
+    }
+
+    if (isEdit) {
+      if (window.EduPathFirebase) {
+        await window.EduPathFirebase.updateStudent(studentCode, { name, grade, school });
+      }
+      const classData = TeacherAnalytics.currentClassData || [];
+      const st = classData.find(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+      if (st) {
+        st.name = name;
+        st.grade = grade;
+        st.school = school;
+      }
+    } else {
+      const newStudent = {
+        studentCode,
+        name,
+        grade,
+        school,
+        code: 'RIE',
+        major: 'Kỹ thuật Cơ điện tử',
+        projectScore: 8,
+        classification: 'Phù hợp hoàn toàn',
+        stream: 'THPT & Đại học Kỹ thuật'
+      };
+      if (window.EduPathFirebase) {
+        await window.EduPathFirebase.addStudent(newStudent);
+      }
+      TeacherAnalytics.addStudentToRoster(newStudent);
+    }
+
+    this.closeCrudModal();
+    this.renderTeacherHeatmap();
+    this.playBeep(700, 'sine', 0.15);
+  }
+
+  async confirmDeleteStudent(code) {
+    const ok = window.confirm(`Thầy/Cô có chắc chắn muốn xóa học sinh mã ${code} không?`);
+    if (!ok) return;
+
+    if (window.EduPathFirebase) {
+      await window.EduPathFirebase.deleteStudent(code);
+    }
+    if (TeacherAnalytics.deleteStudentFromRoster) {
+      TeacherAnalytics.deleteStudentFromRoster(code);
+    } else {
+      const idx = TeacherAnalytics.currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+      if (idx >= 0) TeacherAnalytics.currentClassData.splice(idx, 1);
+    }
+
+    this.renderTeacherHeatmap();
+    this.playBeep(400, 'sawtooth', 0.15);
   }
 
   addCurrentStudentToTeacherRoster() {
@@ -1342,6 +1498,7 @@ class EduPathApp {
     const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
 
     TeacherAnalytics.addStudentToRoster({
+      studentCode: this.studentProfile.studentCode || '9A1-01',
       school: this.studentProfile.school || 'THCS Chu Văn An',
       grade: this.studentProfile.grade || '9A1',
       name: this.studentProfile.name || 'Học sinh mới',
@@ -1369,18 +1526,39 @@ class EduPathApp {
     if (tbody) {
       tbody.textContent = '';
       classData.forEach((st, idx) => {
+        const studentCode = st.studentCode || (st.id ? `9A1-${String(st.id).padStart(2, '0')}` : '9A1-00');
         const tr = document.createElement('tr');
         tr.innerHTML = sanitize(`
           <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
+          <td style="text-align:center;"><code style="font-weight:700; color:var(--brand); background:var(--surface-elevated); padding:0.15rem 0.35rem; border-radius:4px; font-size:0.75rem;">${studentCode}</code></td>
           <td>${st.school || 'THCS Chu Văn An'}</td>
           <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '9A1'}</span></td>
           <td><strong>${st.name}</strong></td>
-          <td style="text-align:center;"><span style="font-weight:800; color:var(--brand);">${st.code}</span></td>
-          <td>${st.major}</td>
-          <td style="text-align:center;"><strong>${st.projectScore}/10</strong></td>
-          <td><span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span></td>
+          <td style="text-align:center;"><span style="font-weight:800; color:var(--brand);">${st.code || 'RIE'}</span></td>
+          <td>${st.major || 'Chưa chọn'}</td>
+          <td style="text-align:center;"><strong>${typeof st.projectScore === 'number' ? st.projectScore : 8}/10</strong></td>
+          <td><span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream || 'Học tiếp THPT'}</span></td>
+          <td style="text-align:center; white-space:nowrap;">
+            <button type="button" class="btn-table-action btn-table-edit" data-code="${studentCode}">Sửa</button>
+            <button type="button" class="btn-table-action btn-table-delete" data-code="${studentCode}">Xóa</button>
+          </td>
         `);
         tbody.appendChild(tr);
+      });
+
+      // Bind edit & delete buttons
+      tbody.querySelectorAll('.btn-table-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const code = e.currentTarget.getAttribute('data-code');
+          this.openEditStudentModal(code);
+        });
+      });
+
+      tbody.querySelectorAll('.btn-table-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const code = e.currentTarget.getAttribute('data-code');
+          this.confirmDeleteStudent(code);
+        });
       });
     }
   }

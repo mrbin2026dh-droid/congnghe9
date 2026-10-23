@@ -627,10 +627,13 @@
               <p class="card-subtitle">Bức tranh toàn cảnh về phân bố tính cách RIASEC và định hướng sau THCS</p>
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <button class="btn-primary" id="btn-open-add-student-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+                ➕ Thêm Học Sinh
+              </button>
               <button class="btn-secondary" id="add-current-to-roster-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Bài Làm Này Vào Lớp
               </button>
-              <button class="btn-primary" id="export-class-csv-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
+              <button class="btn-secondary" id="export-class-csv-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 📥 Xuất Danh Sách Điểm (CSV / Excel)
               </button>
             </div>
@@ -680,13 +683,15 @@
               <thead>
                 <tr>
                   <th style="width:4%; text-align:center;">STT</th>
-                  <th style="width:16%;">Trường THCS</th>
-                  <th style="width:7%; text-align:center;">Lớp</th>
-                  <th style="width:18%;">Họ và tên học sinh</th>
-                  <th style="width:9%; text-align:center;">Mã Holland</th>
-                  <th style="width:20%;">Ngành nghề phù hợp</th>
-                  <th style="width:8%; text-align:center;">Điểm Bài 5</th>
-                  <th style="width:18%;">Định hướng phân luồng</th>
+                  <th style="width:9%; text-align:center;">Mã HS</th>
+                  <th style="width:14%;">Trường THCS</th>
+                  <th style="width:6%; text-align:center;">Lớp</th>
+                  <th style="width:16%;">Họ và tên học sinh</th>
+                  <th style="width:8%; text-align:center;">Mã Holland</th>
+                  <th style="width:17%;">Ngành nghề phù hợp</th>
+                  <th style="width:7%; text-align:center;">Điểm Bài 5</th>
+                  <th style="width:11%;">Định hướng</th>
+                  <th style="width:8%; text-align:center;">Thao tác</th>
                 </tr>
               </thead>
               <tbody id="teacher-student-table-body"></tbody>
@@ -737,6 +742,43 @@
         </div>
         <div class="auth-error-msg" id="teacher-login-error" style="display: none;"></div>
         <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Vào trang quản lý</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= STUDENT CRUD MODAL ================= -->
+  <div class="auth-modal-overlay" id="student-crud-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="crud-modal-title">
+      <button type="button" class="auth-modal-close" id="btn-close-crud-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header">
+        <h2 id="crud-modal-title" class="auth-modal-title">Thông Tin Học Sinh</h2>
+        <p class="auth-modal-desc">Thêm mới hoặc cập nhật thông tin tài khoản học sinh</p>
+      </div>
+
+      <form class="auth-form" id="student-crud-form" onsubmit="return false;">
+        <input type="hidden" id="crud-is-edit" value="false">
+        <div class="form-group">
+          <label for="crud-student-code">Mã học sinh</label>
+          <input type="text" id="crud-student-code" class="auth-input" placeholder="Ví dụ: 9A1-15" required>
+          <span class="form-hint">Định dạng khuyến nghị: Lớp-STT (ví dụ: 9A1-15)</span>
+        </div>
+        <div class="form-group">
+          <label for="crud-student-name">Họ và tên</label>
+          <input type="text" id="crud-student-name" class="auth-input" placeholder="Ví dụ: Nguyễn Văn An" required>
+        </div>
+        <div class="form-group">
+          <label for="crud-student-grade">Lớp</label>
+          <input type="text" id="crud-student-grade" class="auth-input" placeholder="Ví dụ: 9A1" required>
+        </div>
+        <div class="form-group">
+          <label for="crud-student-school">Trường THCS</label>
+          <input type="text" id="crud-student-school" class="auth-input" placeholder="Ví dụ: THCS Chu Văn An" required>
+        </div>
+        <div class="auth-error-msg" id="crud-student-error" style="display: none;"></div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <button type="button" class="btn-session-action" id="btn-cancel-crud-student" style="flex: 1;">Hủy</button>
+          <button type="submit" class="btn-auth-submit" id="btn-save-crud-student" style="flex: 1; margin-top: 0;">Lưu thông tin</button>
+        </div>
       </form>
     </div>
   </div>

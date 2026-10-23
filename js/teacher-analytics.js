@@ -23,10 +23,12 @@ const TeacherAnalytics = (() => {
 
   function addStudentToRoster(studentObj) {
     const nextId = currentClassData.length > 0 ? Math.max(...currentClassData.map(s => s.id || 0)) + 1 : 1;
+    const grade = studentObj.grade || '9A1';
     const newStudent = {
       id: nextId,
+      studentCode: studentObj.studentCode || `${grade}-${String(nextId).padStart(2, '0')}`,
       school: studentObj.school || 'THCS Chu Văn An',
-      grade: studentObj.grade || '9A1',
+      grade: grade,
       name: studentObj.name || 'Học sinh',
       code: studentObj.code || 'RIE',
       major: studentObj.major || 'Kỹ thuật Cơ điện tử',
@@ -35,6 +37,16 @@ const TeacherAnalytics = (() => {
       stream: studentObj.stream || 'Học tiếp THPT & Đại học'
     };
     currentClassData.push(newStudent);
+    return currentClassData;
+  }
+
+  function deleteStudentFromRoster(studentCode) {
+    if (!studentCode) return currentClassData;
+    const clean = studentCode.toUpperCase().trim();
+    const idx = currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === clean) || (s.id && `${s.grade || '9A1'}-${String(s.id).padStart(2, '0')}` === clean));
+    if (idx >= 0) {
+      currentClassData.splice(idx, 1);
+    }
     return currentClassData;
   }
 
@@ -162,6 +174,7 @@ const TeacherAnalytics = (() => {
     DEFAULT_CLASS_DATA,
     currentClassData,
     addStudentToRoster,
+    deleteStudentFromRoster,
     generateCSVContent,
     computeDistribution,
     renderClassHeatmap,
