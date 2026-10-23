@@ -1,6 +1,7 @@
 /**
  * EduPath AI - Multi-Agent Roleplay Room (4 Specialized AI Persona Agents)
  * Realistic, context-aware pedagogical guidance based on student's Holland Code & SGK data.
+ * Zero-Guesswork: Real Student Profile, Real Market Data, No Fake RIA Defaults
  */
 'use strict';
 
@@ -49,13 +50,13 @@ const AIAgentsManager = (() => {
       id: 'market-analyst',
       name: 'ThS. Trần Nam',
       title: 'Nhà Phân tích Thị trường Lao động (Bài 3 SGK)',
-      avatar: '📈',
-      tag: 'Thị trường Việc làm & Lương',
-      greeting: 'Chào em! Mọi sự lựa chọn nghề nghiệp đều phải gắn liền với thực tiễn thị trường. Tôi sẽ cung cấp cho em các con số khách quan về nhu cầu tuyển dụng và mức lương.',
+      avatar: '📊',
+      tag: 'Xu hướng & Mức lương',
+      greeting: 'Chào em! Tôi theo sát thị trường lao động kỹ thuật, công nghệ tại Việt Nam (theo Bài 3 SGK). Đừng chọn nghề theo tin đồn, hãy chọn nghề dựa trên số liệu thực tế!',
       presetPrompts: [
-        'Tại Việt Nam, nhóm ngành kỹ thuật nào đang khát nhân lực chất lượng cao nhất?',
-        'Mức lương khởi điểm thực tế của cử nhân CNTT và thợ cơ khí lành nghề là bao nhiêu?',
-        'Tại sao thị trường lại thừa lao động phổ thông nhưng thiếu lao động kỹ thuật?'
+        'Ngành kĩ thuật nào đang khát nhân lực nhất tại Việt Nam?',
+        'Mức lương khởi điểm của sinh viên ngành Công nghệ thông tin là bao nhiêu?',
+        'Học nghề Điện dân dụng hay Cơ khí thì cơ hội việc làm tốt hơn?'
       ]
     }
   ];
@@ -67,13 +68,23 @@ const AIAgentsManager = (() => {
    * @param {Object} studentProfile - Hồ sơ { code, scores, name }
    */
   function generateAgentResponse(agentId, userMessage, studentProfile) {
-    const code = (studentProfile && studentProfile.code) || 'RIA';
+    const rawCode = (studentProfile && studentProfile.code) ? studentProfile.code.trim().toUpperCase() : '';
+    const hasValidSurvey = Boolean(rawCode && rawCode.length >= 3 && rawCode !== '---');
+    const code = hasValidSurvey ? rawCode : null;
     const name = (studentProfile && studentProfile.name) || 'em';
     const cleanMsg = (userMessage || '').toLowerCase();
 
+    // Trường hợp 7: Nếu học sinh chưa hoàn thành khảo sát, cố vấn không giả mạo mã RIA
+    if (!hasValidSurvey && (cleanMsg.includes('mã của em') || cleanMsg.includes('tính cách') || cleanMsg.includes('phù hợp nghề gì') || cleanMsg.includes('ngành nào'))) {
+      return `Chào ${name}! Hiện tại hồ sơ của em chưa có kết quả trắc nghiệm Holland RIASEC. Để thầy/cô có thể phân tích chính xác thiên hướng tính cách và tư vấn ngành nghề phù hợp nhất, em hãy chuyển sang tab **"Trắc Nghiệm Holland"** và hoàn thành khảo sát trước nhé!`;
+    }
+
+    const codeDisplay = code ? `(Mã Holland: ${code})` : '';
+
     if (agentId === 'psychologist') {
       if (cleanMsg.includes('bố mẹ') || cleanMsg.includes('gia đình') || cleanMsg.includes('áp lực')) {
-        return `Thầy rất hiểu cảm giác này của ${name}. Bố mẹ thúc giục thường xuất phát từ sự lo lắng cho tương lai của em, nhưng họ có thể chưa cập nhật xu hướng nghề nghiệp hiện đại. Em hãy dùng kết quả trắc nghiệm (${code}) và bảng Cây nghề nghiệp trong SGK để giải thích với bố mẹ: “Con hiểu bố mẹ lo cho con, nhưng con có thế mạnh ở nhóm ${code}, con tin mình sẽ hạnh phúc và kiên trì nhất khi được làm đúng sở trường.”`;
+        const adviceCode = code ? `kết quả trắc nghiệm (${code})` : 'bài khảo sát sở thích';
+        return `Thầy rất hiểu cảm giác này của ${name}. Bố mẹ thúc giục thường xuất phát từ sự lo lắng cho tương lai của em, nhưng họ có thể chưa cập nhật xu hướng nghề nghiệp hiện đại. Em hãy dùng ${adviceCode} và bảng Cây nghề nghiệp trong SGK để giải thích với bố mẹ: “Con hiểu bố mẹ lo cho con, nhưng con có thế mạnh ở thiên hướng này, con tin mình sẽ hạnh phúc và kiên trì nhất khi được làm đúng sở trường.”`;
       }
       if (cleanMsg.includes('con gái') || cleanMsg.includes('nữ')) {
         return `Định kiến “con gái không nên làm kĩ thuật” hoàn toàn lỗi thời rồi ${name} nhé! Trong ngành Công nghệ và Thiết kế, sự tỉ mỉ, kiên nhẫn và khả năng tổ chức của các bạn nữ lại là lợi thế cạnh tranh cực lớn. Rất nhiều kỹ sư kiểm thử phần mềm (QA), quản lý sản phẩm (Product Manager) và kiến trúc sư hàng đầu hiện nay là nữ giới.`;
@@ -81,7 +92,10 @@ const AIAgentsManager = (() => {
       if (cleanMsg.includes('toán') || cleanMsg.includes('học kém') || cleanMsg.includes('không giỏi')) {
         return `Kỹ thuật không chỉ có giải Toán trên giấy tờ đâu ${name}! Nhóm Realistic (Kỹ thuật) là nhóm của những người tư duy qua bàn tay và thao tác thực tế. Có những bạn không thích Toán trừu tượng nhưng lại đấu dây điện, lắp ráp vi mạch cực chuẩn. Điểm số trường học chỉ đo một phần năng lực của em thôi!`;
       }
-      return `Với mã Holland ${code}, em là người có sự kết hợp đặc biệt giữa tính hành động và tư duy thực tế. Lời khuyên của thầy dành cho ${name} là: Đừng chọn nghề chỉ vì người khác thấy nó “oai”, hãy chọn nghề mà khi thức dậy mỗi sáng, em cảm thấy hào hứng muốn bắt tay vào làm!`;
+      if (code) {
+        return `Với mã Holland ${code}, em là người có sự kết hợp đặc biệt giữa tính hành động và tư duy thực tế. Lời khuyên của thầy dành cho ${name} là: Đừng chọn nghề chỉ vì người khác thấy nó “oai”, hãy chọn nghề mà khi thức dậy mỗi sáng, em cảm thấy hào hứng muốn bắt tay vào làm!`;
+      }
+      return `Thầy luôn sẵn sàng lắng nghe tâm tư và mong muốn của ${name}. Em hãy chia sẻ thêm về những điều em thích làm nhất khi rảnh rỗi nhé!`;
     }
 
     if (agentId === 'tech-lead') {
@@ -89,7 +103,8 @@ const AIAgentsManager = (() => {
         return `🔥 **Thử thách thực tế dành cho ${name}:**\nGiả sử em đang vận hành một dây chuyền đóng gói tự động thì cánh tay robot đột ngột dừng lại và còi báo động kêu. Em sẽ làm gì trong 3 bước sau?\n1. Bấm nút dừng khẩn cấp (E-Stop) để đảm bảo an toàn tuyệt đối.\n2. Quan sát bảng mã lỗi trên màn hình điều khiển (PLC).\n3. Kiểm tra cảm biến vật cản trên băng chuyền.\n👉 *Một kỹ sư giỏi luôn đặt sự an toàn lên hàng đầu rồi mới truy vết nguyên nhân!*`;
       }
       if (cleanMsg.includes('ai') || cleanMsg.includes('trí tuệ nhân tạo')) {
-        return `Muốn làm việc trong ngành AI, em cần 3 chân kiềng: 1) Kỹ năng lập trình (Python, logic thuật toán); 2) Năng lực tư duy dữ liệu (hiểu bản chất số liệu); 3) Khả năng tự học liên tục vì công nghệ AI thay đổi từng tuần. Em đang có mã ${code}, hãy bắt đầu ngay từ những dự án nhỏ như lập trình trò chơi hoặc tự tạo một chatbot học tập!`;
+        const codeNote = code ? `Em đang có mã ${code}, ` : '';
+        return `Muốn làm việc trong ngành AI, em cần 3 chân kiềng: 1) Kỹ năng lập trình (Python, logic thuật toán); 2) Năng lực tư duy dữ liệu (hiểu bản chất số liệu); 3) Khả năng tự học liên tục vì công nghệ AI thay đổi từng tuần. ${codeNote}hãy bắt đầu ngay từ những dự án nhỏ như lập trình trò chơi hoặc tự tạo một chatbot học tập!`;
       }
       return `Trong giới kỹ thuật, nguyên tắc vàng là: “Thất bại sớm để hoàn thiện nhanh”. Khi viết một đoạn mã bị lỗi (Bug) hay cắm nhầm một con điện trở, đừng nản lòng — đó chính là lúc em đang học được nhiều nhất đấy ${name}!`;
     }
@@ -111,7 +126,7 @@ const AIAgentsManager = (() => {
       if (cleanMsg.includes('lương') || cleanMsg.includes('thu nhập')) {
         return `Về mức thu nhập thực tế năm 2026: Kỹ sư mới ra trường dao động từ 10 - 18 triệu đồng/tháng; Kỹ thuật viên tay nghề cao (tốt nghiệp cao đẳng nghề/hệ 9+) khởi điểm từ 8 - 14 triệu đồng/tháng. Sau 3-5 năm tích lũy kinh nghiệm và có ngoại ngữ, mức thu nhập có thể đạt 25 - 45 triệu đồng/tháng!`;
       }
-      return `Nghịch lý lớn nhất của thị trường lao động nước ta hiện nay là: Thừa lao động phổ thông (chưa qua đào tạo) nhưng lại cực kì khan hiếm lao động kỹ thuật lành nghề. Do đó, việc ${name} định hướng chuyên môn kỹ thuật ngay từ lớp 9 là một quyết định đi trước đón đầu rất sáng suốt!`;
+      return `Nghịch lý lớn nhất của thị trường lao động nước ta hiện nay là: Thừa lao động phổ thông (chưa qua đào tạo) nhưng lại cực kì khan hiếm lao động kỹ thuật lành nghề. Do đó, việc ${name} ${codeDisplay} định hướng chuyên môn kỹ thuật ngay từ lớp 9 là một quyết định đi trước đón đầu rất sáng suốt!`;
     }
 
     return `Tôi rất sẵn lòng đồng hành và lắng nghe câu hỏi tiếp theo của ${name}!`;

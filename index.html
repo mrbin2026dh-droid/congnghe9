@@ -472,14 +472,28 @@
 
           <!-- Quiz Result Card (Hidden by default) -->
           <div class="card-panel" id="quiz-result-card" style="display:none;">
-            <div class="card-panel-header">
+            <div class="card-panel-header" style="flex-wrap:wrap; gap:0.75rem;">
               <div>
                 <h2 class="card-title">🎉 Kết Quả Trắc Nghiệm Holland Của Bạn</h2>
                 <p class="card-subtitle">Giải mã 3 chữ cái đại diện cho phong cách nghề nghiệp vượt trội</p>
               </div>
-              <button class="btn-secondary" id="btn-retake-quiz" style="padding:0.4rem 0.85rem; font-size:0.8rem;">
-                🔄 Khảo Sát Lại
-              </button>
+              <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <div id="survey-history-wrapper" style="display:none; align-items:center; gap:0.35rem;">
+                  <label for="survey-attempt-select" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Lần khảo sát:</label>
+                  <select id="survey-attempt-select" style="font-size:0.8rem; padding:0.35rem 0.5rem; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);"></select>
+                </div>
+                <button class="btn-secondary" id="btn-retake-quiz" style="padding:0.4rem 0.85rem; font-size:0.8rem;">
+                  🔄 Khảo Sát Lại
+                </button>
+              </div>
+            </div>
+
+            <!-- Undifferentiated Alert Banner (Trường hợp 6) -->
+            <div id="quiz-undifferentiated-alert" style="display:none; margin:1rem 0; padding:1rem; border-radius:8px; background:var(--warning-soft); border-left:4px solid var(--warning); color:var(--text-primary); line-height:1.5;">
+              <h4 style="color:var(--warning); margin-bottom:0.35rem; font-size:0.95rem; font-weight:700;">⚠️ Chưa có nhóm sở thích nổi bật rõ rệt</h4>
+              <p style="font-size:0.88rem; margin:0;" id="quiz-undifferentiated-text">
+                Điểm số của bạn đồng đều ở cả 6 nhóm RIASEC. Kết quả không tạo kết luận mang tính chắc chắn từ thứ tự phá hòa tùy ý.
+              </p>
             </div>
 
             <div style="text-align:center; padding:1rem 0;">
@@ -812,7 +826,13 @@
         </div>
         <div class="form-group">
           <label for="crud-student-grade">Lớp</label>
-          <input type="text" id="crud-student-grade" class="auth-input" placeholder="Ví dụ: 9A1" required>
+          <input type="text" id="crud-student-grade" list="crud-grade-options" class="auth-input" placeholder="Ví dụ: 9A1" required>
+          <datalist id="crud-grade-options">
+            <option value="9A1">
+            <option value="9A2">
+            <option value="9B1">
+            <option value="9C">
+          </datalist>
         </div>
         <div class="form-group">
           <label for="crud-student-school">Trường THCS</label>

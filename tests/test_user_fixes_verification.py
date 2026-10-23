@@ -31,6 +31,21 @@ def test_user_fixes():
         # -------------------------------------------------------------
         # TEST 1: LOGIN AS NEW STUDENT & VERIFY 0% SLIDERS IN H1
         # -------------------------------------------------------------
+        page.evaluate("""async () => {
+            if (window.EduPathFirebase) {
+                await window.EduPathFirebase.addStudent({
+                    studentCode: 'NH-9A1',
+                    name: 'Nguyễn Văn A',
+                    grade: '9A1',
+                    school: 'THCS Nguyễn Huệ',
+                    code: '',
+                    major: '',
+                    projectScore: null,
+                    classification: '',
+                    stream: ''
+                });
+            }
+        }""")
         page.locator('#login-student-code').fill('NH-9A1')
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(400)

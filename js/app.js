@@ -165,11 +165,19 @@ class EduPathApp {
       grade: this.studentProfile.grade,
       code: this.studentProfile.code || '',
       major: targetMajorName || '',
+      targetMajorId: this.studentProfile.targetMajorId || '',
+      targetMajorName: targetMajorName || '',
       projectScore: result ? result.totalScore : null,
       classification: result ? result.classification : '',
       stream: stream,
       hollandScores: this.studentProfile.scores,
-      hollandPercentages: this.studentProfile.percentages
+      hollandPercentages: this.studentProfile.percentages,
+      assessmentMatches: this.assessmentMatches || [],
+      threeQuestions: this.studentProfile.threeQuestions || { understandSelf: '', understandCareer: '', careerPathPlan: '' },
+      selfTraits: this.studentProfile.selfTraits || {},
+      surveyHistory: this.studentProfile.surveyHistory || [],
+      activeAttemptId: this.studentProfile.activeAttemptId || '',
+      isUndifferentiated: Boolean(this.studentProfile.isUndifferentiated)
     };
 
     if (window.EduPathFirebase) {
@@ -427,9 +435,13 @@ class EduPathApp {
     this.studentProfile.studentCode = matched.studentCode || cleanCode;
     this.studentProfile.scores = matched.hollandScores || { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     this.studentProfile.percentages = matched.hollandPercentages || { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
-    this.studentProfile.targetMajorName = matched.major || '';
+    this.studentProfile.targetMajorId = matched.targetMajorId || '';
+    this.studentProfile.targetMajorName = matched.major || matched.targetMajorName || '';
+    this.studentProfile.surveyHistory = Array.isArray(matched.surveyHistory) ? matched.surveyHistory : [];
+    this.studentProfile.activeAttemptId = matched.activeAttemptId || (this.studentProfile.surveyHistory.length > 0 ? this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id : null);
+    this.studentProfile.isUndifferentiated = Boolean(matched.isUndifferentiated);
 
-    if (matched.assessmentMatches) {
+    if (Array.isArray(matched.assessmentMatches)) {
       this.assessmentMatches = matched.assessmentMatches;
     } else {
       this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
@@ -443,6 +455,10 @@ class EduPathApp {
       this.studentProfile.selfTraits = matched.selfTraits;
     } else {
       this.studentProfile.selfTraits = {};
+    }
+
+    if (this.studentProfile.surveyHistory.length > 0) {
+      this.renderSurveyAttemptSelector();
     }
 
     // Sync Tree State to Real Student Progress (0% if new)
@@ -531,12 +547,12 @@ class EduPathApp {
       if (this.teacherListenerUnsub) {
         this.teacherListenerUnsub();
       }
-      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange('', (students) => {
-        if (students && students.length > 0) {
-          TeacherAnalytics.currentClassData = students;
-          if (this.currentTab === 'teacher') {
-            this.renderTeacherHeatmap();
-          }
+      const classFilter = document.getElementById('teacher-class-filter-select');
+      const activeFilter = classFilter ? classFilter.value : '';
+      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(activeFilter, (students) => {
+        TeacherAnalytics.currentClassData = students || [];
+        if (this.currentTab === 'teacher') {
+          this.renderTeacherHeatmap();
         }
       });
     }
@@ -989,6 +1005,7 @@ class EduPathApp {
     this.quizAnswers = new Array(this.quizQuestions.length).fill(null);
     this.renderQuestionPalette();
     this.renderCurrentQuestion();
+    this.renderSurveyAttemptSelector();
 
     // Retake button
     const retakeBtn = document.getElementById('btn-retake-quiz');
@@ -1148,12 +1165,48 @@ class EduPathApp {
   }
 
   finalizeQuizResults() {
-    const filledAnswers = this.quizAnswers.map(a => (a === null ? 3 : a));
-    const results = HollandEngine.calculateScores(filledAnswers, this.quizQuestions);
+    // Trường hợp 7: Dữ liệu chưa hoàn thành -> CẤM tự động điền số 3, bắt buộc thông báo rõ
+    const unansweredIdx = this.quizAnswers.findIndex(a => a === null || a === undefined);
+    if (unansweredIdx !== -1) {
+      const answeredCount = this.quizAnswers.filter(a => a !== null && a !== undefined).length;
+      alert(`Vui lòng hoàn thành tất cả các câu hỏi trước khi xem kết quả (Bạn mới làm ${answeredCount}/${this.quizQuestions.length} câu, còn thiếu ${this.quizQuestions.length - answeredCount} câu).`);
+      this.currentQuestionIdx = unansweredIdx;
+      this.renderCurrentQuestion();
+      this.playBeep(220, 'sawtooth', 0.2);
+      return;
+    }
+
+    const results = HollandEngine.calculateScores(this.quizAnswers, this.quizQuestions);
+
+    // Trường hợp 8: Lưu lịch sử khảo sát để cập nhật động theo lần chọn
+    if (!Array.isArray(this.studentProfile.surveyHistory)) {
+      this.studentProfile.surveyHistory = [];
+    }
+    const attemptId = 'attempt_' + Date.now();
+    const attemptNum = this.studentProfile.surveyHistory.length + 1;
+    const modeLabel = this.quizMode === 'quick' ? 'Bản rút gọn (18 câu)' : 'Bản đầy đủ (60 câu)';
+    const dateStr = new Date().toLocaleString('vi-VN');
+    const displayCode = results.isUndifferentiated ? 'CHƯA PHÂN HÓA' : results.code;
+    const attempt = {
+      id: attemptId,
+      attemptNumber: attemptNum,
+      timestamp: dateStr,
+      label: `Lần ${attemptNum} (${modeLabel} - ${displayCode}) · ${dateStr}`,
+      mode: this.quizMode,
+      code: results.code,
+      isUndifferentiated: Boolean(results.isUndifferentiated),
+      undifferentiatedMessage: results.undifferentiatedMessage || '',
+      scores: { ...results.rawScores },
+      percentages: { ...results.percentages },
+      answers: [...this.quizAnswers]
+    };
+    this.studentProfile.surveyHistory.push(attempt);
+    this.studentProfile.activeAttemptId = attemptId;
 
     this.studentProfile.code = results.code;
     this.studentProfile.scores = results.rawScores;
     this.studentProfile.percentages = results.percentages;
+    this.studentProfile.isUndifferentiated = Boolean(results.isUndifferentiated);
     this.saveProfileToStorage();
 
     const activeCard = document.getElementById('quiz-active-card');
@@ -1162,8 +1215,28 @@ class EduPathApp {
     const resultBox = document.getElementById('quiz-result-card');
     if (resultBox) resultBox.style.display = 'block';
 
+    // Cập nhật bộ chọn lần khảo sát
+    this.renderSurveyAttemptSelector();
+
+    // Trường hợp 6: Hiển thị cảnh báo nếu 6 nhóm bằng nhau (không tạo kết luận chắc chắn)
+    const undiffAlert = document.getElementById('quiz-undifferentiated-alert');
+    const undiffText = document.getElementById('quiz-undifferentiated-text');
     const codeEl = document.getElementById('result-holland-code');
-    if (codeEl) codeEl.textContent = results.code;
+
+    if (results.isUndifferentiated) {
+      if (undiffAlert) undiffAlert.style.display = 'block';
+      if (undiffText) undiffText.textContent = results.undifferentiatedMessage;
+      if (codeEl) {
+        codeEl.textContent = 'CHƯA PHÂN HÓA';
+        codeEl.style.fontSize = '2.2rem';
+      }
+    } else {
+      if (undiffAlert) undiffAlert.style.display = 'none';
+      if (codeEl) {
+        codeEl.textContent = results.code;
+        codeEl.style.fontSize = '3.75rem';
+      }
+    }
 
     // Render Detailed 6-Category RIASEC Breakdown
     this.renderRIASECBreakdown(results);
@@ -1171,46 +1244,179 @@ class EduPathApp {
     // Render In-Depth Personality Insights & Conflict
     this.renderPersonalityInsights(results);
 
-    // Recommended Majors
-    const matchedMajors = HollandEngine.matchMajors(results.code, results.percentages);
-    const majorsContainer = document.getElementById('quiz-matched-majors-grid');
-    if (majorsContainer) {
-      const sanitize = window.sanitize;
-      majorsContainer.textContent = '';
-      matchedMajors.slice(0, 6).forEach(m => {
-        const div = document.createElement('div');
-        div.className = 'card-panel';
-        div.style.padding = '1rem';
-        div.innerHTML = sanitize(`
-          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.5rem; gap:0.5rem;">
-            <span style="font-weight:700; color:var(--text-primary); font-size:1.05rem; line-height:1.3;">${m.name}</span>
-            <span style="background:var(--brand-soft); color:var(--brand); font-weight:800; padding:0.25rem 0.55rem; border-radius:4px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;">${m.fitPercentage}% Hợp</span>
-          </div>
-          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem; line-height:1.45;">${m.description}</p>
-          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
-            <span class="badge-pill">🏷️ Hệ: <strong style="color:var(--text-primary); margin-left:0.2rem;">${m.level}</strong></span>
-            <span class="badge-pill">💰 Lương: <strong style="color:var(--text-primary); margin-left:0.2rem;">${m.avgSalary}</strong></span>
-          </div>
-          <button class="btn-primary" style="margin-top:auto; width:100%; font-size:0.85rem; min-height:42px; white-space:nowrap;" onclick="window.app.selectMajorForProject('${m.id}')">
-            Chọn Ngành Này Cho Bài 5 ➔
-          </button>
-        `);
-        majorsContainer.appendChild(div);
-      });
-    }
+    // Recommended Majors theo công thức mới
+    const matchedMajors = HollandEngine.matchMajors(results.code, results.percentages, {
+      isUndifferentiated: results.isUndifferentiated
+    });
+    this.renderMatchedMajors(matchedMajors);
 
     // Synchronize Tree roots with real test scores
     if (this.treeAnimator) {
-      this.treeAnimator.updateState({
-        rootInterest: results.percentages[results.code[0]] || 0,
-        rootAbility: results.percentages[results.code[1]] || 0,
-        rootPersonality: results.percentages[results.code[2]] || 0
-      });
+      if (results.isUndifferentiated) {
+        const val = results.percentages.R || 50;
+        this.treeAnimator.updateState({
+          rootInterest: val,
+          rootAbility: val,
+          rootPersonality: val,
+          rootValues: val,
+          fruitExpectation: val
+        });
+      } else {
+        this.treeAnimator.updateState({
+          rootInterest: results.percentages[results.code[0]] || 0,
+          rootAbility: results.percentages[results.code[1]] || 0,
+          rootPersonality: results.percentages[results.code[2]] || 0
+        });
+      }
       this.syncSlidersFromTreeState();
       this.updateTreeMetricsDisplay();
     }
 
     this.playBeep(880, 'triangle', 0.25);
+  }
+
+  renderMatchedMajors(matchedMajors) {
+    const majorsContainer = document.getElementById('quiz-matched-majors-grid');
+    if (!majorsContainer) return;
+    const sanitize = window.sanitize;
+    majorsContainer.textContent = '';
+
+    if (!Array.isArray(matchedMajors) || matchedMajors.length === 0) {
+      majorsContainer.innerHTML = sanitize(`
+        <div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:var(--text-muted);">
+          Chưa có ngành nghề phù hợp được hiển thị. Vui lòng hoàn thành bài trắc nghiệm Holland để nhận gợi ý!
+        </div>
+      `);
+      return;
+    }
+
+    matchedMajors.slice(0, 6).forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'card-panel';
+      div.style.padding = '1rem';
+      const fitLabel = m.exploratory ? `${m.fitPercentage}% (Tham khảo)` : `${m.fitPercentage}% Hợp`;
+      div.innerHTML = sanitize(`
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.5rem; gap:0.5rem;">
+          <span style="font-weight:700; color:var(--text-primary); font-size:1.05rem; line-height:1.3;">${m.name}</span>
+          <span style="background:var(--brand-soft); color:var(--brand); font-weight:800; padding:0.25rem 0.55rem; border-radius:4px; font-size:0.85rem; white-space:nowrap; flex-shrink:0;">${fitLabel}</span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.75rem; line-height:1.45;">${m.description}</p>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.78rem; color:var(--text-muted); margin-bottom:0.75rem;">
+          <span class="badge-pill">🏷️ Hệ: <strong style="color:var(--text-primary); margin-left:0.2rem;">${m.level}</strong></span>
+          <span class="badge-pill">💰 Lương: <strong style="color:var(--text-primary); margin-left:0.2rem;">${m.avgSalary}</strong></span>
+          <span class="badge-pill">📌 Mã: <strong style="color:var(--text-primary); margin-left:0.2rem;">${m.code}</strong></span>
+        </div>
+        <button class="btn-primary" style="margin-top:auto; width:100%; font-size:0.85rem; min-height:42px; white-space:nowrap;" onclick="window.app.selectMajorForProject('${m.id}')">
+          Chọn Ngành Này Cho Bài 5 ➔
+        </button>
+      `);
+      majorsContainer.appendChild(div);
+    });
+  }
+
+  renderSurveyAttemptSelector() {
+    const wrapper = document.getElementById('survey-history-wrapper');
+    const select = document.getElementById('survey-attempt-select');
+    if (!wrapper || !select) return;
+
+    const history = this.studentProfile.surveyHistory || [];
+    if (history.length === 0) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    wrapper.style.display = 'flex';
+    select.textContent = '';
+    history.forEach((att) => {
+      const opt = document.createElement('option');
+      opt.value = att.id;
+      opt.textContent = att.label || `Lần ${att.attemptNumber} (${att.code})`;
+      if (att.id === this.studentProfile.activeAttemptId) {
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    });
+
+    select.onchange = (e) => {
+      this.applySurveyAttempt(e.target.value);
+    };
+  }
+
+  applySurveyAttempt(attemptId) {
+    const history = this.studentProfile.surveyHistory || [];
+    const attempt = history.find(a => a.id === attemptId);
+    if (!attempt) return;
+
+    this.studentProfile.activeAttemptId = attempt.id;
+    this.studentProfile.code = attempt.code;
+    this.studentProfile.scores = attempt.scores;
+    this.studentProfile.percentages = attempt.percentages;
+    this.studentProfile.isUndifferentiated = Boolean(attempt.isUndifferentiated);
+
+    this.saveProfileToStorage();
+
+    // Cập nhật UI
+    const undiffAlert = document.getElementById('quiz-undifferentiated-alert');
+    const undiffText = document.getElementById('quiz-undifferentiated-text');
+    const codeEl = document.getElementById('result-holland-code');
+
+    if (attempt.isUndifferentiated) {
+      if (undiffAlert) undiffAlert.style.display = 'block';
+      if (undiffText) undiffText.textContent = attempt.undifferentiatedMessage || 'Chưa có nhóm nổi bật rõ rệt (Điểm cả 6 nhóm RIASEC đều bằng nhau). Kết quả không tạo kết luận mang tính chắc chắn từ thứ tự phá hòa tùy ý.';
+      if (codeEl) {
+        codeEl.textContent = 'CHƯA PHÂN HÓA';
+        codeEl.style.fontSize = '2.2rem';
+      }
+    } else {
+      if (undiffAlert) undiffAlert.style.display = 'none';
+      if (codeEl) {
+        codeEl.textContent = attempt.code;
+        codeEl.style.fontSize = '3.75rem';
+      }
+    }
+
+    const dummyResults = {
+      code: attempt.code,
+      top3: attempt.isUndifferentiated ? [] : [attempt.code[0], attempt.code[1], attempt.code[2]],
+      rawScores: attempt.scores,
+      percentages: attempt.percentages,
+      isUndifferentiated: attempt.isUndifferentiated,
+      undifferentiatedMessage: attempt.undifferentiatedMessage
+    };
+
+    this.renderRIASECBreakdown(dummyResults);
+    this.renderPersonalityInsights(dummyResults);
+
+    const matchedMajors = HollandEngine.matchMajors(attempt.code, attempt.percentages, {
+      isUndifferentiated: attempt.isUndifferentiated
+    });
+    this.renderMatchedMajors(matchedMajors);
+
+    // Đồng bộ Cây nghề nghiệp
+    if (this.treeAnimator) {
+      if (attempt.isUndifferentiated) {
+        const val = attempt.percentages.R || 50;
+        this.treeAnimator.updateState({
+          rootInterest: val,
+          rootAbility: val,
+          rootPersonality: val,
+          rootValues: val,
+          fruitExpectation: val
+        });
+      } else {
+        this.treeAnimator.updateState({
+          rootInterest: attempt.percentages[attempt.code[0]] || 0,
+          rootAbility: attempt.percentages[attempt.code[1]] || 0,
+          rootPersonality: attempt.percentages[attempt.code[2]] || 0
+        });
+      }
+      this.syncSlidersFromTreeState();
+      this.updateTreeMetricsDisplay();
+    }
+
+    // Đồng bộ Bài 5
+    this.renderAssessmentView();
+    this.playBeep(720);
   }
 
   renderRIASECBreakdown(results) {
@@ -1248,6 +1454,24 @@ class EduPathApp {
 
     if (detailsContainer) {
       detailsContainer.textContent = '';
+      if (results.isUndifferentiated || !results.top3 || results.top3.length < 3) {
+        const card = document.createElement('div');
+        card.className = 'personality-detail-card';
+        card.innerHTML = sanitize(`
+          <div class="personality-detail-header" style="color:var(--warning);">
+            <span>🔍 Phân Tích: Xu Hướng Đa Năng / Chưa Phân Hóa Rõ Rệt</span>
+          </div>
+          <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:0.4rem;">
+            Điểm số của em trải đều trên cả 6 nhóm tính cách RIASEC. Điều này phản ánh em có tiềm năng rộng mở hoặc chưa tập trung vào một lĩnh vực cụ thể.
+          </p>
+          <div style="font-size:0.825rem; line-height:1.5; color:var(--text-secondary);">
+            <div>💡 <strong>Khuyến nghị sư phạm:</strong> Không nên vội kết luận một mã nghề cố định. Em hãy tích cực tham gia các dự án thực hành, câu lạc bộ STEM, hoặc làm lại khảo sát khi có trải nghiệm mới.</div>
+          </div>
+        `);
+        detailsContainer.appendChild(card);
+        if (conflictContainer) conflictContainer.style.display = 'none';
+        return;
+      }
       const top1 = results.top3[0];
       const top2 = results.top3[1];
       const top3 = results.top3[2];
@@ -1656,15 +1880,51 @@ class EduPathApp {
       });
     }
 
+    // Auto-update student code prefix when grade changes in Add Student modal
+    const codeInput = document.getElementById('crud-student-code');
+    if (codeInput) {
+      codeInput.addEventListener('input', () => {
+        codeInput.dataset.auto = 'false';
+      });
+    }
+
+    const gradeInput = document.getElementById('crud-student-grade');
+    if (gradeInput) {
+      gradeInput.addEventListener('input', () => {
+        const isEdit = document.getElementById('crud-is-edit');
+        if (isEdit && isEdit.value === 'true') return;
+        const codeInput = document.getElementById('crud-student-code');
+        if (codeInput && codeInput.dataset.auto === 'false') return;
+        const newGrade = gradeInput.value.trim().toUpperCase();
+        if (!newGrade || newGrade.includes('TẤT CẢ') || newGrade.includes('TAT CA')) return;
+
+        const classData = TeacherAnalytics.currentClassData || [];
+        const matchingNums = classData
+          .filter(s => {
+            const g = (s.grade || '').toUpperCase();
+            const c = (s.studentCode || '').toUpperCase();
+            return g === newGrade || c.startsWith(newGrade + '-');
+          })
+          .map(s => {
+            const parts = (s.studentCode || '').split('-');
+            const lastNum = parts.length > 1 ? parseInt(parts[parts.length - 1], 10) : 0;
+            return isNaN(lastNum) ? 0 : lastNum;
+          });
+        const nextNum = matchingNums.length > 0 ? Math.max(...matchingNums) + 1 : 1;
+        if (codeInput) {
+          codeInput.value = `${newGrade}-${String(nextNum).padStart(2, '0')}`;
+        }
+      });
+    }
+
     // Realtime Sync Listener for Teacher Dashboard
     if (window.EduPathFirebase) {
-      const currentClass = (this.currentUser && this.currentUser.classId) || '9A1';
-      window.EduPathFirebase.onClassStudentsChange(currentClass, (students) => {
-        if (students && students.length > 0) {
-          TeacherAnalytics.currentClassData = students;
-          if (this.currentTab === 'teacher') {
-            this.renderTeacherHeatmap();
-          }
+      if (this.teacherListenerUnsub) this.teacherListenerUnsub();
+      const initialFilter = classFilter ? classFilter.value : '';
+      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(initialFilter, (students) => {
+        TeacherAnalytics.currentClassData = students || [];
+        if (this.currentTab === 'teacher') {
+          this.renderTeacherHeatmap();
         }
       });
     }
@@ -1683,16 +1943,34 @@ class EduPathApp {
     if (err) err.style.display = 'none';
     if (isEdit) isEdit.value = 'false';
     if (title) title.textContent = 'Thêm Học Sinh Mới';
+
+    // Determine target grade: never use 'Tất cả các lớp'
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const filterVal = filterSelect ? filterSelect.value.trim() : '';
+    const targetGrade = (filterVal && filterVal !== 'Tất cả các lớp') ? filterVal : '9A1';
+
+    if (gradeIn) gradeIn.value = targetGrade;
+    if (nameIn) nameIn.value = '';
+    if (schoolIn) schoolIn.value = 'THCS Chu Văn An';
+
     if (codeIn) {
       codeIn.disabled = false;
+      codeIn.dataset.auto = 'true';
       const classData = TeacherAnalytics.currentClassData || [];
-      const currentClass = (this.currentUser && this.currentUser.classId) || '9A1';
-      const nextNum = classData.length + 1;
-      codeIn.value = `${currentClass}-${String(nextNum).padStart(2, '0')}`;
+      const matchingNums = classData
+        .filter(s => {
+          const g = (s.grade || '').toUpperCase();
+          const c = (s.studentCode || '').toUpperCase();
+          return g === targetGrade.toUpperCase() || c.startsWith(targetGrade.toUpperCase() + '-');
+        })
+        .map(s => {
+          const parts = (s.studentCode || '').split('-');
+          const lastNum = parts.length > 1 ? parseInt(parts[parts.length - 1], 10) : 0;
+          return isNaN(lastNum) ? 0 : lastNum;
+        });
+      const nextNum = matchingNums.length > 0 ? Math.max(...matchingNums) + 1 : 1;
+      codeIn.value = `${targetGrade}-${String(nextNum).padStart(2, '0')}`;
     }
-    if (nameIn) nameIn.value = '';
-    if (gradeIn) gradeIn.value = (this.currentUser && this.currentUser.classId) || '9A1';
-    if (schoolIn) schoolIn.value = 'THCS Chu Văn An';
 
     if (modal) modal.style.display = 'flex';
   }
@@ -1737,11 +2015,14 @@ class EduPathApp {
     const gradeIn = document.getElementById('crud-student-grade');
     const schoolIn = document.getElementById('crud-student-school');
     const err = document.getElementById('crud-student-error');
+    const saveBtn = document.getElementById('btn-save-crud-student');
 
     const studentCode = codeIn ? codeIn.value.trim().toUpperCase() : '';
     const name = nameIn ? nameIn.value.trim() : '';
-    const grade = gradeIn ? gradeIn.value.trim().toUpperCase() : '9A1';
+    let grade = gradeIn ? gradeIn.value.trim().toUpperCase() : '9A1';
     const school = schoolIn ? schoolIn.value.trim() : 'THCS Chu Văn An';
+
+    if (err) err.style.display = 'none';
 
     if (!studentCode || !name) {
       if (err) {
@@ -1751,57 +2032,108 @@ class EduPathApp {
       return;
     }
 
-    if (isEdit) {
-      if (window.EduPathFirebase) {
-        await window.EduPathFirebase.updateStudent(studentCode, { name, grade, school });
+    if (grade.includes('TẤT CẢ') || grade.includes('TAT CA')) {
+      if (err) {
+        err.textContent = 'Lớp không hợp lệ. Vui lòng nhập tên lớp cụ thể (ví dụ: 9A1, 9A2...).';
+        err.style.display = 'block';
       }
-      const classData = TeacherAnalytics.currentClassData || [];
-      const st = classData.find(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
-      if (st) {
-        st.name = name;
-        st.grade = grade;
-        st.school = school;
-      }
-    } else {
-      const newStudent = {
-        studentCode,
-        name,
-        grade,
-        school,
-        code: '',
-        major: '',
-        projectScore: null,
-        classification: '',
-        stream: '',
-        createdAt: new Date().toISOString()
-      };
-      if (window.EduPathFirebase) {
-        await window.EduPathFirebase.addStudent(newStudent);
-      }
-      TeacherAnalytics.addStudentToRoster(newStudent);
+      return;
     }
 
-    this.closeCrudModal();
-    this.renderTeacherHeatmap();
-    this.playBeep(700, 'sine', 0.15);
+    if (studentCode.includes('TẤT CẢ') || studentCode.includes('TAT CA')) {
+      if (err) {
+        err.textContent = 'Mã học sinh không được chứa "Tất cả các lớp". Định dạng đúng: Lớp-STT (ví dụ: 9A1-01).';
+        err.style.display = 'block';
+      }
+      return;
+    }
+
+    const forbiddenKeyChars = /[.#$[\]/]/;
+    if (forbiddenKeyChars.test(studentCode)) {
+      if (err) {
+        err.textContent = 'Mã học sinh không được chứa các ký tự đặc biệt: . # $ [ ] /';
+        err.style.display = 'block';
+      }
+      return;
+    }
+
+    const classData = TeacherAnalytics.currentClassData || [];
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Đang lưu...';
+    }
+
+    try {
+      if (isEdit) {
+        if (window.EduPathFirebase) {
+          await window.EduPathFirebase.updateStudent(studentCode, { name, grade, school });
+        }
+        const st = classData.find(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+        if (st) {
+          st.name = name;
+          st.grade = grade;
+          st.school = school;
+        }
+      } else {
+        const existingIdx = classData.findIndex(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+        const newStudent = {
+          studentCode,
+          name,
+          grade,
+          school,
+          code: existingIdx >= 0 && classData[existingIdx].code ? classData[existingIdx].code : '',
+          major: existingIdx >= 0 && classData[existingIdx].major ? classData[existingIdx].major : '',
+          projectScore: (existingIdx >= 0 && typeof classData[existingIdx].projectScore === 'number') ? classData[existingIdx].projectScore : null,
+          classification: existingIdx >= 0 && classData[existingIdx].classification ? classData[existingIdx].classification : '',
+          stream: existingIdx >= 0 && classData[existingIdx].stream ? classData[existingIdx].stream : '',
+          createdAt: existingIdx >= 0 && classData[existingIdx].createdAt ? classData[existingIdx].createdAt : new Date().toISOString()
+        };
+        TeacherAnalytics.addStudentToRoster(newStudent);
+        if (window.EduPathFirebase) {
+          await window.EduPathFirebase.addStudent(newStudent);
+        }
+      }
+
+      this.closeCrudModal();
+      this.renderTeacherHeatmap();
+      this.playBeep(700, 'sine', 0.15);
+    } catch (saveErr) {
+      console.error('Lỗi khi lưu học sinh:', saveErr);
+      if (err) {
+        err.textContent = 'Lỗi lưu dữ liệu: ' + (saveErr.message || 'Không thể ghi lên Firebase.');
+        err.style.display = 'block';
+      }
+      this.playBeep(220, 'sawtooth', 0.2);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Lưu thông tin';
+      }
+    }
   }
 
   async confirmDeleteStudent(code) {
     const ok = window.confirm(`Thầy/Cô có chắc chắn muốn xóa học sinh mã ${code} không?`);
     if (!ok) return;
 
-    if (window.EduPathFirebase) {
-      await window.EduPathFirebase.deleteStudent(code);
-    }
-    if (TeacherAnalytics.deleteStudentFromRoster) {
-      TeacherAnalytics.deleteStudentFromRoster(code);
-    } else {
-      const idx = TeacherAnalytics.currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
-      if (idx >= 0) TeacherAnalytics.currentClassData.splice(idx, 1);
-    }
+    try {
+      if (window.EduPathFirebase) {
+        await window.EduPathFirebase.deleteStudent(code);
+      }
+      if (TeacherAnalytics.deleteStudentFromRoster) {
+        TeacherAnalytics.deleteStudentFromRoster(code);
+      } else {
+        const idx = TeacherAnalytics.currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+        if (idx >= 0) TeacherAnalytics.currentClassData.splice(idx, 1);
+      }
 
-    this.renderTeacherHeatmap();
-    this.playBeep(400, 'sawtooth', 0.15);
+      this.renderTeacherHeatmap();
+      this.playBeep(400, 'sawtooth', 0.15);
+    } catch (err) {
+      console.error('Lỗi xóa học sinh:', err);
+      alert('Lỗi xóa học sinh: ' + (err.message || 'Không thể xóa trên Firebase.'));
+    }
   }
 
   openChangePinModal() {
@@ -1915,7 +2247,7 @@ class EduPathApp {
       school: this.studentProfile.school || 'THCS Chu Văn An',
       grade: grade,
       name: `${this.studentProfile.name || 'Học sinh mới'} (${newCode})`,
-      code: this.studentProfile.code || 'RIE',
+      code: this.studentProfile.code || '',
       major: targetMajor.name,
       projectScore: result.totalScore,
       classification: result.classification,
@@ -2071,4 +2403,5 @@ class EduPathApp {
 // Bootstrap
 window.addEventListener('DOMContentLoaded', () => {
   window.app = new EduPathApp();
+  window.EduPath = window.app;
 });

@@ -832,10 +832,10 @@ const MAJORS_DATABASE = [
   {
     id: 'dien-dan-dung-cong-nghiep',
     name: 'Kỹ thuật Điện dân dụng & Công nghiệp (Mô hình 9+)',
-    code: 'RCS',
+    code: 'RIC',
     primaryType: 'R',
-    secondaryType: 'C',
-    tertiaryType: 'S',
+    secondaryType: 'I',
+    tertiaryType: 'C',
     level: 'Trung cấp nghề 9+ / Cao đẳng nghề',
     demandGrowth: '+12.5%',
     avgSalary: '9 - 16 triệu/tháng',
@@ -906,6 +906,32 @@ const MAJORS_DATABASE = [
     avgSalary: '9 - 18 triệu/tháng',
     description: 'Tiện, phay, bào, hàn, vận hành máy cắt kim loại CNC gia công chi tiết cơ khí.',
     suitability: 'Khỏe mạnh, bền bỉ, kiên trì, đam mê tạo ra các chi tiết kim loại tinh xảo.'
+  },
+  {
+    id: 'su-pham-ky-thuat-stem',
+    name: 'Sư phạm Công nghệ & Giáo dục STEM',
+    code: 'SEC',
+    primaryType: 'S',
+    secondaryType: 'E',
+    tertiaryType: 'C',
+    level: 'Đại học / Cao đẳng Sư phạm',
+    demandGrowth: '+14.0%',
+    avgSalary: '10 - 20 triệu/tháng',
+    description: 'Giảng dạy môn Công nghệ, STEM, hướng dẫn thực hành và truyền cảm hứng sáng tạo kỹ thuật cho học sinh.',
+    suitability: 'Yêu thích giao tiếp, truyền đạt kiến thức, kiên nhẫn và có tư duy tổ chức hoạt động giáo dục.'
+  },
+  {
+    id: 'chuyen-vien-ho-tro-ky-thuat',
+    name: 'Chuyên viên Hỗ trợ Kỹ thuật & Khách hàng Công nghệ (Technical Support)',
+    code: 'SCE',
+    primaryType: 'S',
+    secondaryType: 'C',
+    tertiaryType: 'E',
+    level: 'Cao đẳng / Đại học',
+    demandGrowth: '+15.5%',
+    avgSalary: '9 - 18 triệu/tháng',
+    description: 'Hỗ trợ, hướng dẫn và giải đáp thắc mắc cho người dùng về phần mềm, giải pháp số và thiết bị công nghệ.',
+    suitability: 'Thân thiện, thấu cảm, giao tiếp tốt, kiên nhẫn và cẩn thận trong xử lý yêu cầu người dùng.'
   }
 ];
 

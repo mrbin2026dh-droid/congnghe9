@@ -51,6 +51,29 @@ window.EduPathFirebase = (() => {
   // Fallback Local Storage Storage Key
   const STORAGE_KEY = 'edupath_synced_roster';
 
+  function normalizeClassId(classId) {
+    if (!classId) return '';
+    const trimmed = String(classId).trim();
+    if (trimmed === 'Tất cả các lớp' || trimmed === 'TAT CA CAC LOP') return '';
+    return trimmed.toUpperCase();
+  }
+
+  // Recursively sanitize objects for Firebase Realtime Database:
+  // Converts undefined to null, ensures clean JSON serializable data.
+  function sanitizeForFirebase(data) {
+    if (data === undefined) return null;
+    if (data === null || typeof data !== 'object') return data;
+    if (Array.isArray(data)) {
+      return data.map(item => sanitizeForFirebase(item));
+    }
+    const clean = {};
+    for (const key of Object.keys(data)) {
+      const val = data[key];
+      clean[key] = val === undefined ? null : sanitizeForFirebase(val);
+    }
+    return clean;
+  }
+
   function getLocalRoster() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -71,7 +94,7 @@ window.EduPathFirebase = (() => {
       broadcastChannel = new BroadcastChannel('edupath_realtime_sync');
       broadcastChannel.onmessage = (event) => {
         if (event && event.data && event.data.type === 'ROSTER_UPDATED') {
-          notifyLocalListeners(event.data.classId);
+          notifyLocalListeners();
         }
       };
     }
@@ -79,26 +102,28 @@ window.EduPathFirebase = (() => {
     console.debug('BroadcastChannel not available:', e);
   }
 
-  function saveLocalRoster(roster, classId) {
+  function saveLocalRoster(roster) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(roster));
       if (broadcastChannel) {
-        broadcastChannel.postMessage({ type: 'ROSTER_UPDATED', classId });
+        broadcastChannel.postMessage({ type: 'ROSTER_UPDATED' });
       }
     } catch (e) {
       console.warn('Lỗi ghi local roster:', e);
     }
   }
 
-  // Active listeners for realtime broadcast
+  // Active listeners for realtime broadcast - stores { classId, callback }
   const localListeners = [];
 
-  function notifyLocalListeners(classId) {
+  function notifyLocalListeners() {
     const roster = getLocalRoster();
-    const filtered = classId ? roster.filter(s => s.grade === classId || s.studentCode.startsWith(classId)) : roster;
-    localListeners.forEach(listener => {
+    localListeners.forEach(({ classId, callback }) => {
       try {
-        listener(filtered);
+        const filtered = classId 
+          ? roster.filter(s => (s.grade || '').toUpperCase() === classId || (s.studentCode || '').toUpperCase().startsWith(classId + '-')) 
+          : roster;
+        callback(filtered);
       } catch (err) {
         console.error('Lỗi khi kích hoạt listener địa phương:', err);
       }
@@ -142,38 +167,59 @@ window.EduPathFirebase = (() => {
       return found || null;
     },
 
-    getAllStudents: async (classId = '9A1') => {
+    getAllStudents: async (classId = '') => {
+      const normClass = normalizeClassId(classId);
+
       if (isFirebaseReady && dbInstance) {
         try {
           const snapshot = await dbInstance.ref('students').once('value');
           if (snapshot.exists()) {
             const data = snapshot.val();
             const list = Object.values(data);
-            return list.filter(s => !classId || s.grade === classId || (s.studentCode && s.studentCode.startsWith(classId)));
+            return list.filter(s => {
+              if (!normClass) return true;
+              const sGrade = (s.grade || '').toUpperCase();
+              const sCode = (s.studentCode || '').toUpperCase();
+              return sGrade === normClass || sCode.startsWith(normClass + '-');
+            });
           }
+          return [];
         } catch (err) {
           console.warn('Lỗi lấy danh sách từ Firebase, dùng fallback:', err);
         }
       }
 
       const roster = getLocalRoster();
-      return roster.filter(s => !classId || s.grade === classId || (s.studentCode && s.studentCode.startsWith(classId)));
+      return roster.filter(s => {
+        if (!normClass) return true;
+        const sGrade = (s.grade || '').toUpperCase();
+        const sCode = (s.studentCode || '').toUpperCase();
+        return sGrade === normClass || sCode.startsWith(normClass + '-');
+      });
     },
 
     addStudent: async (student) => {
       if (!student || !student.studentCode) return false;
       const cleanCode = student.studentCode.toUpperCase().trim();
+      const forbidden = /[.#$[\]/]/;
+      if (forbidden.test(cleanCode)) {
+        throw new Error('Mã học sinh không được chứa ký tự đặc biệt: . # $ [ ] /');
+      }
+
       const payload = {
         ...student,
         studentCode: cleanCode,
         updatedAt: new Date().toISOString()
       };
 
+      let firebaseError = null;
       if (isFirebaseReady && dbInstance) {
         try {
-          await dbInstance.ref(`students/${cleanCode}`).set(payload);
+          const cleanPayload = sanitizeForFirebase(payload);
+          await dbInstance.ref(`students/${cleanCode}`).set(cleanPayload);
         } catch (err) {
-          console.warn('Lỗi ghi Firebase:', err);
+          console.error('Lỗi ghi Firebase:', err);
+          firebaseError = err;
         }
       }
 
@@ -186,7 +232,14 @@ window.EduPathFirebase = (() => {
         roster.push(payload);
       }
       saveLocalRoster(roster);
-      notifyLocalListeners(payload.grade);
+      notifyLocalListeners();
+
+      if (firebaseError && typeof navigator !== 'undefined' && !navigator.onLine) {
+        return true;
+      }
+      if (firebaseError) {
+        throw firebaseError;
+      }
       return true;
     },
 
@@ -194,14 +247,17 @@ window.EduPathFirebase = (() => {
       if (!studentCode || !updateData) return false;
       const cleanCode = studentCode.toUpperCase().trim();
 
+      let firebaseError = null;
       if (isFirebaseReady && dbInstance) {
         try {
-          await dbInstance.ref(`students/${cleanCode}`).update({
+          const cleanUpdate = sanitizeForFirebase({
             ...updateData,
             updatedAt: new Date().toISOString()
           });
+          await dbInstance.ref(`students/${cleanCode}`).update(cleanUpdate);
         } catch (err) {
-          console.warn('Lỗi cập nhật Firebase:', err);
+          console.error('Lỗi cập nhật Firebase:', err);
+          firebaseError = err;
         }
       }
 
@@ -210,21 +266,29 @@ window.EduPathFirebase = (() => {
       if (idx >= 0) {
         roster[idx] = { ...roster[idx], ...updateData, updatedAt: new Date().toISOString() };
         saveLocalRoster(roster);
-        notifyLocalListeners(roster[idx].grade);
+        notifyLocalListeners();
+      }
+
+      if (firebaseError && typeof navigator !== 'undefined' && !navigator.onLine) {
         return true;
       }
-      return false;
+      if (firebaseError) {
+        throw firebaseError;
+      }
+      return true;
     },
 
     deleteStudent: async (studentCode) => {
       if (!studentCode) return false;
       const cleanCode = studentCode.toUpperCase().trim();
 
+      let firebaseError = null;
       if (isFirebaseReady && dbInstance) {
         try {
           await dbInstance.ref(`students/${cleanCode}`).remove();
         } catch (err) {
-          console.warn('Lỗi xóa trên Firebase:', err);
+          console.error('Lỗi xóa trên Firebase:', err);
+          firebaseError = err;
         }
       }
 
@@ -232,6 +296,13 @@ window.EduPathFirebase = (() => {
       const filtered = roster.filter(s => !s.studentCode || s.studentCode.toUpperCase() !== cleanCode);
       saveLocalRoster(filtered);
       notifyLocalListeners();
+
+      if (firebaseError && typeof navigator !== 'undefined' && !navigator.onLine) {
+        return true;
+      }
+      if (firebaseError) {
+        throw firebaseError;
+      }
       return true;
     },
 
@@ -239,14 +310,17 @@ window.EduPathFirebase = (() => {
       if (!studentCode || !progressData) return false;
       const cleanCode = studentCode.toUpperCase().trim();
 
+      let firebaseError = null;
       if (isFirebaseReady && dbInstance) {
         try {
-          await dbInstance.ref(`students/${cleanCode}`).update({
+          const cleanProgress = sanitizeForFirebase({
             ...progressData,
             lastProgressUpdate: new Date().toISOString()
           });
+          await dbInstance.ref(`students/${cleanCode}`).update(cleanProgress);
         } catch (err) {
-          console.warn('Lỗi cập nhật tiến độ Firebase:', err);
+          console.error('Lỗi cập nhật tiến độ Firebase:', err);
+          firebaseError = err;
         }
       }
 
@@ -255,14 +329,22 @@ window.EduPathFirebase = (() => {
       if (idx >= 0) {
         roster[idx] = { ...roster[idx], ...progressData, lastProgressUpdate: new Date().toISOString() };
         saveLocalRoster(roster);
-        notifyLocalListeners(roster[idx].grade);
+        notifyLocalListeners();
+      }
+
+      if (firebaseError && typeof navigator !== 'undefined' && !navigator.onLine) {
         return true;
       }
-      return false;
+      if (firebaseError) {
+        throw firebaseError;
+      }
+      return true;
     },
 
     onClassStudentsChange: (classId, callback) => {
       if (typeof callback !== 'function') return () => {};
+
+      const normClass = normalizeClassId(classId);
 
       if (isFirebaseReady && dbInstance) {
         const ref = dbInstance.ref('students');
@@ -270,7 +352,12 @@ window.EduPathFirebase = (() => {
           if (snapshot.exists()) {
             const data = snapshot.val();
             const list = Object.values(data);
-            const filtered = list.filter(s => !classId || s.grade === classId || (s.studentCode && s.studentCode.startsWith(classId)));
+            const filtered = list.filter(s => {
+              if (!normClass) return true;
+              const sGrade = (s.grade || '').toUpperCase();
+              const sCode = (s.studentCode || '').toUpperCase();
+              return sGrade === normClass || sCode.startsWith(normClass + '-');
+            });
             callback(filtered);
           } else {
             callback([]);
@@ -281,14 +368,18 @@ window.EduPathFirebase = (() => {
       }
 
       // Local listener fallback
-      localListeners.push(callback);
+      const listenerObj = { classId: normClass, callback };
+      localListeners.push(listenerObj);
+
       // Immediate first callback invocation
       const roster = getLocalRoster();
-      const filtered = classId ? roster.filter(s => s.grade === classId || (s.studentCode && s.studentCode.startsWith(classId))) : roster;
+      const filtered = normClass 
+        ? roster.filter(s => (s.grade || '').toUpperCase() === normClass || (s.studentCode || '').toUpperCase().startsWith(normClass + '-')) 
+        : roster;
       callback(filtered);
 
       return () => {
-        const index = localListeners.indexOf(callback);
+        const index = localListeners.indexOf(listenerObj);
         if (index >= 0) localListeners.splice(index, 1);
       };
     },

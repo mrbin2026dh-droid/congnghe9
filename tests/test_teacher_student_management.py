@@ -39,7 +39,7 @@ def test_teacher_student_management():
         page.locator('#auth-tab-teacher').click()
         page.locator('#login-teacher-pin').fill('123456')
         page.locator('#btn-submit-teacher-login').click()
-        page.wait_for_timeout(300)
+        page.wait_for_selector('#view-teacher', timeout=5000)
 
         # Confirm teacher tab is active
         assert page.locator('#view-teacher').is_visible(), "Teacher view should be visible"
@@ -61,7 +61,7 @@ def test_teacher_student_management():
         page.locator('#crud-student-school').fill('THCS Chu Văn An')
 
         page.locator('#btn-save-crud-student').click()
-        page.wait_for_timeout(300)
+        page.wait_for_selector('#student-crud-modal', state='hidden', timeout=5000)
 
         # Step 3: Check student is in table
         assert page.locator('#student-crud-modal').is_hidden(), "Modal must be closed after saving"
@@ -77,7 +77,7 @@ def test_teacher_student_management():
         assert crud_modal.is_visible(), "CRUD modal must open on edit"
         page.locator('#crud-student-name').fill('Trần Văn Đã Sửa')
         page.locator('#btn-save-crud-student').click()
-        page.wait_for_timeout(300)
+        page.wait_for_selector('#student-crud-modal', state='hidden', timeout=5000)
 
         table_text_after_edit = page.locator('#teacher-student-table-body').text_content()
         assert 'Trần Văn Đã Sửa' in table_text_after_edit, "Updated name must appear in table"
