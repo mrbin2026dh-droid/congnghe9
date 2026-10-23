@@ -6,18 +6,16 @@
 'use strict';
 
 // -------------------------------------------------------------
-// FIREBASE CONFIGURATION OBJECT
-// Giáo viên / Quản trị viên dán thông số cấu hình Firebase vào đây
-// Chi tiết xem tại tệp: HUONG_DAN_TAO_FIREBASE_MIEN_PHI.md
+// FIREBASE CONFIGURATION OBJECT (DỮ LIỆU THẬT TỪ GOOGLE CLOUD)
 // -------------------------------------------------------------
 window.EduPathFirebaseConfig = window.EduPathFirebaseConfig || {
-  apiKey: "AIzaSyYOUR_API_KEY_HERE",
-  authDomain: "edupath-ai-demo.firebaseapp.com",
-  databaseURL: "https://edupath-ai-demo-default-rtdb.firebaseio.com",
-  projectId: "edupath-ai-demo",
-  storageBucket: "edupath-ai-demo.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef1234567890"
+  apiKey: "AIzaSyApj4uZHUsiEyPqOdPuFD2pp3hfw0i7TGE",
+  authDomain: "edupath-ai-huongnghiep.firebaseapp.com",
+  databaseURL: "https://edupath-ai-huongnghiep-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "edupath-ai-huongnghiep",
+  storageBucket: "edupath-ai-huongnghiep.firebasestorage.app",
+  messagingSenderId: "137500941801",
+  appId: "1:137500941801:web:8576b9bf0d75d2e664bf78"
 };
 
 window.EduPathFirebase = (() => {
@@ -40,12 +38,31 @@ window.EduPathFirebase = (() => {
         dbInstance = window.firebase.database();
         isFirebaseReady = true;
         console.info('EduPath AI: Kết nối thành công Firebase Realtime Database.');
+        ensureFirebaseSeeded();
       } catch (err) {
         console.warn('EduPath AI: Khởi tạo Firebase thất bại, chuyển sang chế độ dự phòng:', err);
         isFirebaseReady = false;
       }
     } else {
       isFirebaseReady = false;
+    }
+  }
+
+  async function ensureFirebaseSeeded() {
+    if (!isFirebaseReady || !dbInstance) return;
+    try {
+      const snap = await dbInstance.ref('students').once('value');
+      if (!snap.exists() || !snap.val()) {
+        const seedRoster = getLocalRoster();
+        const obj = {};
+        seedRoster.forEach(s => {
+          obj[s.studentCode] = s;
+        });
+        await dbInstance.ref('students').set(obj);
+        console.info('EduPath AI: Khởi tạo danh sách học sinh ban đầu trên Firebase Cloud.');
+      }
+    } catch (e) {
+      console.warn('EduPath AI: Kiểm tra/khởi tạo seed Firebase thất bại:', e);
     }
   }
 

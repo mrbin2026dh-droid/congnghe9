@@ -438,6 +438,22 @@ class EduPathApp {
 
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.syncAuthUI();
+
+    // Re-attach live Firebase listener for the teacher's class
+    if (window.EduPathFirebase) {
+      if (this.teacherListenerUnsub) {
+        this.teacherListenerUnsub();
+      }
+      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(classId, (students) => {
+        if (students && students.length > 0) {
+          TeacherAnalytics.currentClassData = students;
+          if (this.currentTab === 'teacher') {
+            this.renderTeacherHeatmap();
+          }
+        }
+      });
+    }
+
     this.switchTab('teacher');
     this.playBeep(880, 'sine', 0.15);
   }
