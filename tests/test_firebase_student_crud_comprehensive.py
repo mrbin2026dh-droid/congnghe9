@@ -49,7 +49,7 @@ def test_firebase_student_crud():
             page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_selector('#view-teacher', timeout=5000)
 
@@ -161,7 +161,7 @@ def test_firebase_student_crud():
         page.wait_for_selector('#auth-modal', state='visible', timeout=3000)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_selector('#view-teacher', timeout=5000)
 

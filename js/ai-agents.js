@@ -112,7 +112,7 @@ PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng
   }
 
   /**
-   * Lưu cấu hình Gemini vào LocalStorage
+   * Lưu cấu hình Gemini vào LocalStorage và Cloud Firebase (nếu có kết nối)
    */
   function saveGeminiConfig(cfg) {
     try {
@@ -122,6 +122,10 @@ PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng
       if (cfg && typeof cfg.model === 'string' && cfg.model.trim()) {
         localStorage.setItem(STORAGE_KEY_MODEL, cfg.model.trim());
       }
+      // Đồng bộ an toàn lên Firebase settings để mọi máy học sinh trong phòng học đều nhận cấu hình của Giáo viên
+      if (window.EduPathFirebase && window.EduPathFirebase.setGeminiConfig) {
+        window.EduPathFirebase.setGeminiConfig(cfg);
+      }
       return true;
     } catch (err) {
       console.error('[EduPath Gemini] Lỗi khi lưu cấu hình:', err);
@@ -130,17 +134,41 @@ PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng
   }
 
   /**
-   * Xóa cấu hình Gemini khỏi LocalStorage
+   * Xóa cấu hình Gemini khỏi LocalStorage và Cloud Firebase
    */
   function clearGeminiConfig() {
     try {
       localStorage.removeItem(STORAGE_KEY_API);
       localStorage.removeItem(STORAGE_KEY_MODEL);
+      if (window.EduPathFirebase && window.EduPathFirebase.setGeminiConfig) {
+        window.EduPathFirebase.setGeminiConfig(null);
+      }
       return true;
     } catch (err) {
       console.error('[EduPath Gemini] Lỗi khi xóa cấu hình:', err);
       return false;
     }
+  }
+
+  /**
+   * Tự động đồng bộ cấu hình Gemini từ Firebase khi khởi động ứng dụng
+   */
+  async function syncGeminiConfigFromCloud() {
+    try {
+      if (window.EduPathFirebase && window.EduPathFirebase.getGeminiConfig) {
+        const cloudCfg = await window.EduPathFirebase.getGeminiConfig();
+        if (cloudCfg && cloudCfg.apiKey) {
+          localStorage.setItem(STORAGE_KEY_API, cloudCfg.apiKey);
+          if (cloudCfg.model) {
+            localStorage.setItem(STORAGE_KEY_MODEL, cloudCfg.model);
+          }
+          return cloudCfg;
+        }
+      }
+    } catch (err) {
+      console.warn('[EduPath Gemini] Không thể đồng bộ cấu hình từ Cloud:', err);
+    }
+    return null;
   }
 
   /**
@@ -426,6 +454,7 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
     getGeminiConfig,
     saveGeminiConfig,
     clearGeminiConfig,
+    syncGeminiConfigFromCloud,
     isGeminiActive,
     testGeminiConnection,
     callGeminiAPI,

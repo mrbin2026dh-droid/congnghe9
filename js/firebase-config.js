@@ -395,7 +395,7 @@ window.EduPathFirebase = (() => {
           console.warn('Lỗi đọc teacherPin từ Firebase:', e);
         }
       }
-      return localStorage.getItem('edupath_teacher_pin') || '123456';
+      return localStorage.getItem('edupath_teacher_pin') || '2026';
     },
 
     setTeacherPin: async (newPin) => {
@@ -410,6 +410,46 @@ window.EduPathFirebase = (() => {
         }
       }
       return true;
+    },
+
+    getGeminiConfig: async () => {
+      if (isFirebaseReady && dbInstance) {
+        try {
+          const snapshot = await dbInstance.ref('settings/geminiConfig').once('value');
+          if (snapshot.exists()) {
+            const val = snapshot.val();
+            if (val && typeof val === 'object' && val.apiKey) {
+              return {
+                apiKey: String(val.apiKey).trim(),
+                model: String(val.model || 'gemini-1.5-flash').trim()
+              };
+            }
+          }
+        } catch (e) {
+          console.warn('Lỗi đọc geminiConfig từ Firebase:', e);
+        }
+      }
+      return null;
+    },
+
+    setGeminiConfig: async (cfg) => {
+      if (isFirebaseReady && dbInstance) {
+        try {
+          if (!cfg || !cfg.apiKey) {
+            await dbInstance.ref('settings/geminiConfig').remove();
+          } else {
+            await dbInstance.ref('settings/geminiConfig').set({
+              apiKey: String(cfg.apiKey).trim(),
+              model: String(cfg.model || 'gemini-1.5-flash').trim(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+          return true;
+        } catch (e) {
+          console.warn('Lỗi ghi geminiConfig lên Firebase:', e);
+        }
+      }
+      return false;
     }
   };
 })();

@@ -85,7 +85,7 @@ def test_auth_modal_and_clean_topbar():
 
         # 6. Test Teacher Login (PIN only)
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 

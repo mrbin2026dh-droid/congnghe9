@@ -36,7 +36,7 @@ def test_realtime_sync_dual_context():
             page_teacher.wait_for_timeout(200)
 
         page_teacher.locator('#auth-tab-teacher').click()
-        page_teacher.locator('#login-teacher-pin').fill('123456')
+        page_teacher.locator('#login-teacher-pin').fill('2026')
         page_teacher.locator('#btn-submit-teacher-login').click()
         page_teacher.wait_for_timeout(300)
 

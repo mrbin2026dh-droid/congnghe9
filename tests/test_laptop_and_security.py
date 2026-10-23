@@ -95,12 +95,12 @@ def test_laptop_and_security():
 
         # Verify NO PIN hint text exists in teacher form
         teacher_form_text = page.locator('#teacher-login-form').text_content()
-        assert "123456" not in teacher_form_text, "Default password hint '123456' must be removed from login modal"
+        assert "123456" not in teacher_form_text and "2026" not in teacher_form_text, "Default password hint must be removed from login modal"
         pin_placeholder = page.locator('#login-teacher-pin').get_attribute('placeholder') or ''
-        assert "123456" not in pin_placeholder, "Default password hint must be removed from input placeholder"
+        assert "123456" not in pin_placeholder and "2026" not in pin_placeholder, "Default password hint must be removed from input placeholder"
 
         # Login as teacher
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(400)
 
@@ -128,7 +128,7 @@ def test_laptop_and_security():
         assert "không chính xác" in err_msg.text_content(), "Error message must state PIN is incorrect"
 
         # Test successful change
-        page.locator('#change-pin-current').fill('123456')
+        page.locator('#change-pin-current').fill('2026')
         page.locator('#change-pin-new').fill('888888')
         page.locator('#change-pin-confirm').fill('888888')
         page.locator('#btn-submit-change-pin').click()
@@ -138,8 +138,8 @@ def test_laptop_and_security():
         assert success_msg.is_visible(), "Success message must appear on successful PIN change"
         page.wait_for_timeout(1000)
 
-        # Restore PIN back to 123456 for test stability
-        page.evaluate("async () => { await window.EduPathFirebase.setTeacherPin('123456'); }")
+        # Restore PIN back to 2026 for test stability
+        page.evaluate("async () => { await window.EduPathFirebase.setTeacherPin('2026'); }")
 
         print("[PASS] TEST 3: Teacher security verified, password hint removed, and Change PIN feature working.")
 

@@ -534,7 +534,8 @@
               <span id="gemini-status-badge" class="agent-mode-badge" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.75rem; border-radius:var(--radius-full); font-size:0.8rem; font-weight:600; background:var(--surface-elevated); border:1px solid var(--border); color:var(--text-secondary);">
                 🛡️ Chuyên Gia SGK (Ngoại Tuyến)
               </span>
-              <button type="button" class="btn-secondary" id="btn-open-gemini-config" style="padding:0.4rem 0.75rem; font-size:0.825rem; display:inline-flex; align-items:center; gap:0.35rem;">
+              <!-- Nút Cài đặt Gemini chỉ hiển thị cho Giáo viên, mặc định ẩn hoàn toàn ở giao diện học sinh -->
+              <button type="button" class="btn-secondary" id="btn-open-gemini-config" style="display:none; padding:0.4rem 0.75rem; font-size:0.825rem; align-items:center; gap:0.35rem;">
                 ⚙️ Cài Đặt Gemini API
               </button>
               <button type="button" class="btn-secondary" id="btn-clear-chat-history" style="padding:0.4rem 0.75rem; font-size:0.825rem; display:inline-flex; align-items:center; gap:0.35rem;" title="Làm mới cuộc trò chuyện với tác tử hiện tại">
@@ -671,6 +672,9 @@
               <button class="btn-secondary" id="export-class-csv-btn" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 📥 Xuất Danh Sách Điểm (CSV / Excel)
               </button>
+              <button class="btn-secondary" id="teacher-btn-open-gemini-config" style="padding:0.4rem 0.75rem; font-size:0.8rem; display:inline-flex; align-items:center; gap:0.35rem;" title="Cấu hình Google Gemini AI cho toàn bộ hệ thống">
+                ⚡ Cấu Hình Gemini AI
+              </button>
               <button class="btn-secondary" id="btn-open-change-pin-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 🔐 Đổi Mã PIN
               </button>
@@ -805,8 +809,8 @@
 
         <div class="form-group">
           <label for="change-pin-new">Mã PIN mới</label>
-          <input type="password" id="change-pin-new" class="auth-input" placeholder="Nhập mã PIN mới (tối thiểu 6 ký tự)" autocomplete="off" required>
-          <span class="form-hint">Mã PIN bảo mật tối thiểu 6 ký tự</span>
+          <input type="password" id="change-pin-new" class="auth-input" placeholder="Nhập mã PIN mới (tối thiểu 4 ký tự)" autocomplete="off" required>
+          <span class="form-hint">Mã PIN bảo mật tối thiểu 4 ký tự</span>
         </div>
 
         <div class="form-group">

@@ -415,6 +415,9 @@ class EduPathApp {
         if (this.currentTab !== 'teacher') {
           this.switchTab('teacher');
         }
+        // Giáo viên có quyền cấu hình Gemini API
+        const geminiBtn = document.getElementById('btn-open-gemini-config');
+        if (geminiBtn) geminiBtn.style.display = 'inline-flex';
       } else {
         // Student role
         if (roleTag) {
@@ -434,6 +437,11 @@ class EduPathApp {
         if (this.currentTab === 'teacher') {
           this.switchTab('tree');
         }
+        // BẢO MẬT: Xóa / ẩn hoàn toàn nút cấu hình Gemini ở giao diện học sinh
+        const geminiBtn = document.getElementById('btn-open-gemini-config');
+        if (geminiBtn) geminiBtn.style.display = 'none';
+        const configModal = document.getElementById('gemini-config-modal');
+        if (configModal) configModal.style.display = 'none';
       }
     } else {
       if (userBadge) userBadge.style.display = 'none';
@@ -441,6 +449,10 @@ class EduPathApp {
       if (tabNav) {
         tabNav.style.display = 'none';
       }
+      const geminiBtn = document.getElementById('btn-open-gemini-config');
+      if (geminiBtn) geminiBtn.style.display = 'none';
+      const configModal = document.getElementById('gemini-config-modal');
+      if (configModal) configModal.style.display = 'none';
       this.showAuthModal();
     }
   }
@@ -562,11 +574,11 @@ class EduPathApp {
       return;
     }
 
-    let activePin = '123456';
+    let activePin = '2026';
     if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
       activePin = await window.EduPathFirebase.getTeacherPin();
     } else {
-      activePin = localStorage.getItem('edupath_teacher_pin') || '123456';
+      activePin = localStorage.getItem('edupath_teacher_pin') || '2026';
     }
 
     if (pin.trim() !== String(activePin).trim()) {
@@ -1668,8 +1680,9 @@ class EduPathApp {
       });
     }
 
-    // Gemini Config Modal Hooks
+    // Gemini Config Modal Hooks (Bảo mật: Chỉ Giáo viên có quyền mở)
     const openConfigBtn = document.getElementById('btn-open-gemini-config');
+    const teacherOpenConfigBtn = document.getElementById('teacher-btn-open-gemini-config');
     const configModal = document.getElementById('gemini-config-modal');
     const closeConfigBtn = document.getElementById('btn-close-gemini-modal');
     const keyInput = document.getElementById('gemini-api-key-input');
@@ -1680,13 +1693,31 @@ class EduPathApp {
     const clearConfigBtn = document.getElementById('btn-clear-gemini-config');
     const configMsg = document.getElementById('gemini-config-msg');
 
-    if (openConfigBtn && configModal) {
-      openConfigBtn.addEventListener('click', () => {
-        const cfg = AIAgentsManager.getGeminiConfig();
-        if (keyInput) keyInput.value = cfg.apiKey;
-        if (modelSelect) modelSelect.value = cfg.model;
-        if (configMsg) configMsg.style.display = 'none';
-        configModal.style.display = 'flex';
+    const openConfigHandler = () => {
+      if (!this.currentUser || this.currentUser.role !== 'teacher') {
+        alert('Chỉ tài khoản Giáo viên quản trị mới có quyền cấu hình Google Gemini AI.');
+        return;
+      }
+      const cfg = AIAgentsManager.getGeminiConfig();
+      if (keyInput) keyInput.value = cfg.apiKey;
+      if (modelSelect) modelSelect.value = cfg.model;
+      if (configMsg) configMsg.style.display = 'none';
+      if (configModal) configModal.style.display = 'flex';
+    };
+
+    if (openConfigBtn) {
+      openConfigBtn.addEventListener('click', openConfigHandler);
+    }
+    if (teacherOpenConfigBtn) {
+      teacherOpenConfigBtn.addEventListener('click', openConfigHandler);
+    }
+
+    // Tự động đồng bộ cấu hình Gemini từ Cloud nếu có
+    if (AIAgentsManager.syncGeminiConfigFromCloud) {
+      AIAgentsManager.syncGeminiConfigFromCloud().then(() => {
+        this.updateGeminiStatusBadge();
+      }).catch((e) => {
+        console.warn('Sync cloud gemini config warning:', e);
       });
     }
 
@@ -2525,11 +2556,11 @@ class EduPathApp {
       return;
     }
 
-    let activePin = '123456';
+    let activePin = '2026';
     if (window.EduPathFirebase && window.EduPathFirebase.getTeacherPin) {
       activePin = await window.EduPathFirebase.getTeacherPin();
     } else {
-      activePin = localStorage.getItem('edupath_teacher_pin') || '123456';
+      activePin = localStorage.getItem('edupath_teacher_pin') || '2026';
     }
 
     if (currentPin !== String(activePin).trim()) {
@@ -2540,9 +2571,9 @@ class EduPathApp {
       return;
     }
 
-    if (newPin.length < 6) {
+    if (newPin.length < 4) {
       if (errBox) {
-        errBox.textContent = 'Mã PIN mới phải có tối thiểu 6 ký tự.';
+        errBox.textContent = 'Mã PIN mới phải có tối thiểu 4 ký tự.';
         errBox.style.display = 'block';
       }
       return;

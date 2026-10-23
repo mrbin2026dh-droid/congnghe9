@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Verification Test Suite: Google Gemini AI Hybrid Multi-Agent Integration
+Verification Test Suite: Google Gemini AI Hybrid Multi-Agent Integration & Security Access Control
 Tests:
-1. UI Controls & Configuration Modal (Open, Close, Key Visibility Toggle, Validation)
-2. Local Storage Persistence & Realtime Status Badge Update (Live vs Fallback)
-3. Connection Ping Mock & Response Feedback
-4. Multi-Persona Dialogue & Context-Aware Prompt Injection (TS. Minh Tâm, KS. Hoàng Bách, Cô Thanh Mai, ThS. Trần Nam)
-5. Multi-Turn Chat History Retention across Persona Switches
-6. Intercepted Live Gemini API Generation via Playwright Route
-7. Seamless Auto-Fallback to Local SGK Expert Engine on Network / HTTP 429 Quota Error
-8. Zero Console Errors
+1. Student Role Security: Config button is DELETED/HIDDEN in student interface.
+2. Teacher Role Authentication: Teacher logs in with PIN '2026' and accesses Gemini Config.
+3. Config Modal UI & Key Management (Visibility Toggle, Validation, Connection Ping).
+4. Cloud/LocalStorage Persistence & Realtime Status Badge Update.
+5. Student Live Gemini Dialogue with Injected Holland Context (TS. Minh Tâm, KS. Hoàng Bách).
+6. Multi-Turn Conversation History Retention across Persona Switches.
+7. Seamless Auto-Fallback to Local SGK Expert on HTTP 429 Quota Error.
+8. Zero Console Runtime Errors.
 """
 import sys
 import os
@@ -38,8 +38,6 @@ def test_gemini_hybrid_agents():
         def handle_gemini_route(route):
             request = route.request
             post_data = request.post_data_json or {}
-            headers = request.headers
-            url_str = request.url
 
             # Test connection ping
             if 'Ping test connection' in str(post_data) or 'kiểm tra kết nối' in str(post_data):
@@ -98,8 +96,10 @@ def test_gemini_hybrid_agents():
 
         page.goto(url)
         page.wait_for_load_state('domcontentloaded')
+        page.evaluate("() => { localStorage.removeItem('EDUPATH_GEMINI_API_KEY'); localStorage.removeItem('EDUPATH_GEMINI_MODEL'); if (window.app) window.app.updateGeminiStatusBadge(); }")
+        page.wait_for_timeout(200)
 
-        print("\n=== STEP 1: Log in as student NH-9A1 and open Multi-Agent Room ===")
+        print("\n=== STEP 1: Verify Student Interface - Config Button is DELETED / HIDDEN ===")
         page.locator('#login-student-code').fill('NH-9A1')
         page.locator('#btn-submit-student-login').click()
         page.wait_for_timeout(400)
@@ -111,17 +111,42 @@ def test_gemini_hybrid_agents():
         badge_text = page.locator('#gemini-status-badge').inner_text()
         print(f"Initial Status Badge: {badge_text}")
         assert "Chuyên Gia SGK (Ngoại Tuyến)" in badge_text, "Badge should initially indicate local SGK offline mode."
-        print("[PASS] Initial status badge correctly shows local SGK offline mode.")
 
-        print("\n=== STEP 2: Verify Gemini Config Modal UI & Key Management ===")
-        # Open Modal
-        page.locator('#btn-open-gemini-config').click()
+        # Security check: #btn-open-gemini-config MUST NOT be visible for student
+        is_config_btn_visible = page.locator('#btn-open-gemini-config').is_visible()
+        print(f"Is Gemini Config button visible to student: {is_config_btn_visible}")
+        assert not is_config_btn_visible, "SECURITY VIOLATION: Gemini config button must be hidden/deleted for students!"
+        print("[PASS] Gemini config button is completely hidden from student view.")
+
+        print("\n=== STEP 2: Log in as Teacher with PIN '2026' and Configure Gemini AI ===")
+        # Logout student
+        page.locator('#btn-logout').click()
+        page.wait_for_timeout(300)
+
+        # Login as Teacher using PIN 2026
+        page.locator('#auth-tab-teacher').click()
         page.wait_for_timeout(200)
+        page.locator('#login-teacher-pin').fill('2026')
+        page.locator('#btn-submit-teacher-login').click()
+        page.wait_for_timeout(500)
 
+        # Verify Teacher Dashboard is active
+        teacher_view = page.locator('#view-teacher')
+        assert teacher_view.is_visible(), "Teacher Dashboard must be visible after logging in with PIN 2026."
+        print("[PASS] Teacher login with PIN '2026' succeeded.")
+
+        # Click Teacher Gemini Config Button
+        teacher_config_btn = page.locator('#teacher-btn-open-gemini-config')
+        assert teacher_config_btn.is_visible(), "Teacher Dashboard must have '⚡ Cấu Hình Gemini AI' button."
+        teacher_config_btn.click()
+        page.wait_for_timeout(300)
+
+        # Verify Modal opened
         modal_display = page.evaluate("() => document.getElementById('gemini-config-modal').style.display")
-        assert modal_display == 'flex', "Gemini config modal should display as flex."
+        assert modal_display == 'flex', "Gemini config modal must open for teacher."
+        print("[PASS] Gemini config modal successfully opened from Teacher Dashboard.")
 
-        # Key visibility toggle
+        # Test key visibility toggle
         key_input = page.locator('#gemini-api-key-input')
         assert key_input.get_attribute('type') == 'password'
         page.locator('#btn-toggle-key-visibility').click()
@@ -151,14 +176,32 @@ def test_gemini_hybrid_agents():
         page.locator('#gemini-model-select').select_option('gemini-2.0-flash')
         page.locator('#btn-save-gemini-config').click()
         page.wait_for_timeout(1000)
+        print("[PASS] Teacher saved Gemini configuration to system.")
 
-        # Verify badge updated
+        print("\n=== STEP 3: Student Re-login - Uses Live Gemini Without Seeing Config Button ===")
+        # Logout teacher
+        page.locator('#btn-logout').click()
+        page.wait_for_timeout(300)
+
+        # Student logs in
+        page.locator('#auth-tab-student').click()
+        page.wait_for_timeout(200)
+        page.locator('#login-student-code').fill('NH-9A1')
+        page.locator('#btn-submit-student-login').click()
+        page.wait_for_timeout(400)
+
+        # Switch to Multi-Agent Room tab
+        page.locator('.tab-btn[data-tab="agents"]').click()
+        page.wait_for_timeout(300)
+
+        # Verify badge is LIVE Gemini
         badge_text_updated = page.locator('#gemini-status-badge').inner_text()
-        print(f"Updated Status Badge: {badge_text_updated}")
+        print(f"Student Status Badge: {badge_text_updated}")
         assert "Gemini AI Live (gemini-2.0-flash)" in badge_text_updated
-        print("[PASS] Status badge dynamically updated to live Gemini mode.")
+        # Ensure config button is STILL hidden for student
+        assert not page.locator('#btn-open-gemini-config').is_visible()
+        print("[PASS] Student has live Gemini active, and config button remains 100% hidden.")
 
-        print("\n=== STEP 3: Test Live Gemini Generation via Multi-Agent Chat ===")
         # Chat with psychologist using Gemini
         page.locator('#chat-input-text').fill('Thầy có thể chia sẻ lời khuyên về nghề kĩ thuật không?')
         page.locator('#chat-send-btn').click()
@@ -168,7 +211,7 @@ def test_gemini_hybrid_agents():
         last_bubble = page.locator('.chat-bubble.agent').last
         bubble_html = last_bubble.inner_html()
         assert "Gemini AI (gemini-2.0-flash)" in bubble_html
-        print("[PASS] Live Gemini response received with correct live badge.")
+        print("[PASS] Live Gemini response received with correct live badge in student chat.")
 
         print("\n=== STEP 4: Test Automatic Fallback to Local SGK Expert on 429 Quota Error ===")
         # Trigger simulated 429 quota error
@@ -215,19 +258,6 @@ def test_gemini_hybrid_agents():
         assert "TS. Minh Tâm" in cleared_chat
         print("[PASS] Clear chat history resets current agent chat to greeting.")
 
-        print("\n=== STEP 6: Test Reverting to Offline Mode via Modal Clear Key ===")
-        page.locator('#btn-open-gemini-config').click()
-        page.wait_for_timeout(200)
-        page.locator('#btn-clear-gemini-config').click()
-        page.wait_for_timeout(300)
-
-        badge_final = page.locator('#gemini-status-badge').inner_text()
-        print(f"Final Badge Text: {badge_final}")
-        assert "Chuyên Gia SGK (Ngoại Tuyến)" in badge_final
-        page.locator('#btn-close-gemini-modal').click()
-        page.wait_for_timeout(200)
-        print("[PASS] Resetting key cleanly reverts to local offline mode.")
-
         # Check console errors (ignoring the simulated 429 network response from the fallback test)
         js_errors = [e for e in console_errors if '429' not in e]
         print(f"\nCaptured JS Runtime Errors: {len(js_errors)}")
@@ -241,5 +271,5 @@ def test_gemini_hybrid_agents():
 if __name__ == '__main__':
     test_gemini_hybrid_agents()
     print("\n=======================================================")
-    print("🎉 ALL GEMINI HYBRID MULTI-AGENT TESTS PASSED (100%)!")
+    print("🎉 ALL GEMINI ACCESS CONTROL & PIN TESTS PASSED (100%)!")
     print("=======================================================")

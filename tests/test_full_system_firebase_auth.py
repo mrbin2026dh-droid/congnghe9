@@ -93,7 +93,7 @@ def test_full_system_firebase_auth():
         page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_timeout(300)
 

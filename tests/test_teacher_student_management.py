@@ -37,7 +37,7 @@ def test_teacher_student_management():
             page.wait_for_timeout(200)
 
         page.locator('#auth-tab-teacher').click()
-        page.locator('#login-teacher-pin').fill('123456')
+        page.locator('#login-teacher-pin').fill('2026')
         page.locator('#btn-submit-teacher-login').click()
         page.wait_for_selector('#view-teacher', timeout=5000)
 
