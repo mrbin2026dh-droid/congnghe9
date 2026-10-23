@@ -506,7 +506,7 @@ class EduPathApp {
 
     if (!matched) {
       if (studentErr) {
-        studentErr.textContent = `Mã học sinh "${code}" không tồn tại trên hệ thống Firebase. Vui lòng liên hệ giáo viên để được cấp tài khoản.`;
+        studentErr.textContent = `Mã học sinh "${code}" không tồn tại trên hệ thống. Vui lòng liên hệ giáo viên để được cấp tài khoản.`;
         studentErr.style.display = 'block';
       }
       this.playBeep(220, 'sawtooth', 0.2);
@@ -2660,6 +2660,42 @@ class EduPathApp {
       });
     }
 
+    // Teacher Statistics & Report Modal bindings
+    const openStatsBtn = document.getElementById('btn-open-teacher-stats-modal');
+    if (openStatsBtn) {
+      openStatsBtn.addEventListener('click', () => this.openTeacherStatsModal());
+    }
+
+    const closeStatsBtn = document.getElementById('btn-close-teacher-stats-modal');
+    if (closeStatsBtn) {
+      closeStatsBtn.addEventListener('click', () => this.closeTeacherStatsModal());
+    }
+
+    const closeStatsBottomBtn = document.getElementById('btn-close-teacher-stats-bottom');
+    if (closeStatsBottomBtn) {
+      closeStatsBottomBtn.addEventListener('click', () => this.closeTeacherStatsModal());
+    }
+
+    const exportStatsExcelBtn = document.getElementById('btn-export-stats-excel');
+    if (exportStatsExcelBtn) {
+      exportStatsExcelBtn.addEventListener('click', () => this.handleExportStatsExcel());
+    }
+
+    const exportStatsPdfBtn = document.getElementById('btn-export-stats-pdf');
+    if (exportStatsPdfBtn) {
+      exportStatsPdfBtn.addEventListener('click', () => this.handleExportStatsPdf());
+    }
+
+    const statsSearchInput = document.getElementById('stats-table-search');
+    if (statsSearchInput) {
+      statsSearchInput.addEventListener('input', () => this.filterStatsModalTable());
+    }
+
+    const statsFilterStatus = document.getElementById('stats-table-filter-status');
+    if (statsFilterStatus) {
+      statsFilterStatus.addEventListener('change', () => this.filterStatsModalTable());
+    }
+
     const classFilter = document.getElementById('teacher-class-filter-select');
     if (classFilter) {
       classFilter.addEventListener('change', (e) => {
@@ -3424,6 +3460,204 @@ class EduPathApp {
         errBox.style.display = 'block';
       }
     }
+  }
+
+  openTeacherStatsModal() {
+    const modal = document.getElementById('teacher-stats-modal');
+    if (!modal) return;
+
+    const classData = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const selectedClass = (filterSelect && filterSelect.value) ? filterSelect.value.trim() : '';
+
+    this.currentStatsData = TeacherAnalytics.computeClassStatistics(classData, selectedClass);
+    this.renderTeacherStatsModal(this.currentStatsData);
+
+    const searchInput = document.getElementById('stats-table-search');
+    if (searchInput) searchInput.value = '';
+    const statusSelect = document.getElementById('stats-table-filter-status');
+    if (statusSelect) statusSelect.value = 'all';
+
+    modal.style.display = 'flex';
+    this.playBeep(660, 'sine', 0.15);
+  }
+
+  closeTeacherStatsModal() {
+    const modal = document.getElementById('teacher-stats-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  renderTeacherStatsModal(stats) {
+    if (!stats) return;
+    const sanitize = window.sanitize;
+
+    const classBadge = document.getElementById('stats-target-class-badge');
+    if (classBadge) {
+      classBadge.textContent = stats.className || 'Toàn trường';
+    }
+
+    const schoolBadge = document.getElementById('stats-target-school-badge');
+    if (schoolBadge) {
+      schoolBadge.textContent = stats.schoolName || 'Trường THCS';
+    }
+
+    const timeBadge = document.getElementById('stats-generated-time');
+    if (timeBadge) {
+      const now = new Date();
+      timeBadge.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} - ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    }
+
+    // KPI cards
+    const totalEl = document.getElementById('stats-kpi-total');
+    if (totalEl) totalEl.textContent = String(stats.total);
+
+    const completedEl = document.getElementById('stats-kpi-completed');
+    if (completedEl) completedEl.textContent = String(stats.completed);
+    const completedRateEl = document.getElementById('stats-kpi-completed-rate');
+    if (completedRateEl) completedRateEl.textContent = `(${stats.completedRate}%)`;
+
+    const pendingEl = document.getElementById('stats-kpi-pending');
+    if (pendingEl) pendingEl.textContent = String(stats.pending);
+    const pendingRateEl = document.getElementById('stats-kpi-pending-rate');
+    if (pendingRateEl) pendingRateEl.textContent = `(${stats.pendingRate}%)`;
+
+    const streamingEl = document.getElementById('stats-kpi-streaming');
+    if (streamingEl) {
+      streamingEl.textContent = `THPT: ${stats.thptCount} (${stats.thptRate}%) · Nghề 9+: ${stats.vocationalCount} (${stats.vocationalRate}%)`;
+    }
+
+    // RIASEC Breakdown
+    const dominantEl = document.getElementById('stats-riasec-dominant');
+    if (dominantEl) {
+      dominantEl.textContent = `Nhóm chủ đạo: ${stats.dominantLabel}`;
+    }
+
+    const riasecGrid = document.getElementById('stats-riasec-grid');
+    if (riasecGrid) {
+      const keys = ['R', 'I', 'A', 'S', 'E', 'C'];
+      const colors = {
+        R: '#2563eb',
+        I: '#0891b2',
+        A: '#d946ef',
+        S: '#10b981',
+        E: '#f59e0b',
+        C: '#64748b'
+      };
+      const riasecHTML = keys.map(k => {
+        const count = stats.riasecCounts[k] || 0;
+        const pct = stats.riasecPercentages[k] || 0;
+        const label = stats.riasecLabels[k] || k;
+        const color = colors[k] || '#333';
+        const isDominant = k === stats.dominantRiasec && count > 0;
+        return `
+          <div style="background:var(--surface-elevated); border:1px solid ${isDominant ? color : 'var(--border)'}; border-radius:var(--radius-sm); padding:0.55rem; text-align:center; position:relative;">
+            ${isDominant ? `<span style="position:absolute; top:-7px; right:6px; font-size:0.65rem; background:${color}; color:#fff; padding:1px 5px; border-radius:4px; font-weight:700;">Top 1</span>` : ''}
+            <div style="font-size:1.15rem; font-weight:800; color:${color};">${k}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${label}</div>
+            <div style="font-size:0.95rem; font-weight:700; color:var(--text-primary); margin-top:4px;">${pct}%</div>
+            <div style="font-size:0.72rem; color:var(--text-muted);">${count} HS</div>
+          </div>
+        `;
+      }).join('');
+      riasecGrid.innerHTML = sanitize(riasecHTML);
+    }
+
+    // Pedagogical note
+    const notesEl = document.getElementById('stats-pedagogical-notes');
+    if (notesEl) {
+      if (stats.completed === 0) {
+        notesEl.textContent = `Lớp ${stats.className} hiện có ${stats.total} học sinh nhưng chưa có em nào hoàn thành bài trắc nghiệm Holland RIASEC. Giáo viên chủ nhiệm cần nhắc nhở các em đăng nhập làm bài để có đầy đủ số liệu phân luồng.`;
+      } else if (stats.pending > 0) {
+        notesEl.textContent = `Đã có ${stats.completed}/${stats.total} học sinh hoàn thành khảo sát (${stats.completedRate}%). Xu hướng nhóm nghề nổi trội nhất của lớp là nhóm ${stats.dominantLabel}. Nhà trường và phụ huynh nên tập trung tư vấn cho ${stats.pending} học sinh còn lại và định hướng nguyện vọng lớp 10 sát với kết quả.`;
+      } else {
+        notesEl.textContent = `100% học sinh lớp ${stats.className} (${stats.total} em) đã hoàn tất khảo sát. Dữ liệu phân luồng đạt độ chính xác cao nhất: ${stats.thptCount} em (${stats.thptRate}%) định hướng THPT và ${stats.vocationalCount} em (${stats.vocationalRate}%) định hướng trường nghề 9+. Báo cáo đã đủ điều kiện nộp BGH nhà trường.`;
+      }
+    }
+
+    // Render Table
+    this.renderStatsTableRows(stats.studentRows);
+  }
+
+  renderStatsTableRows(studentRows) {
+    const tbody = document.getElementById('stats-roster-tbody');
+    const countEl = document.getElementById('stats-table-count');
+    if (!tbody) return;
+    const sanitize = window.sanitize;
+
+    if (!studentRows || studentRows.length === 0) {
+      tbody.innerHTML = sanitize('<tr><td colspan="8" style="text-align:center; padding:1.25rem; color:var(--text-muted);">Không tìm thấy học sinh nào phù hợp bộ lọc.</td></tr>');
+      if (countEl) countEl.textContent = '0';
+      return;
+    }
+
+    if (countEl) countEl.textContent = String(studentRows.length);
+
+    const rowsHTML = studentRows.map(st => {
+      const statusBadge = st.hasSurvey
+        ? `<span style="background:rgba(16,185,129,0.15); color:#059669; border:1px solid rgba(16,185,129,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-weight:700; font-size:0.75rem;">🟢 Hoàn thành</span>`
+        : `<span style="background:rgba(245,158,11,0.15); color:#d97706; border:1px solid rgba(245,158,11,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">🟡 Chưa làm</span>`;
+
+      const codeBadge = st.hasSurvey
+        ? `<span style="font-weight:800; color:var(--brand);">${st.code}</span>`
+        : `<span style="color:var(--text-muted);">---</span>`;
+
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:600;">${st.stt}</td>
+          <td style="font-weight:700; color:var(--text-primary);">${st.studentCode}</td>
+          <td style="font-weight:600;">${st.name}</td>
+          <td style="text-align:center;">${st.grade}</td>
+          <td style="text-align:center;">${statusBadge}</td>
+          <td style="text-align:center;">${codeBadge}</td>
+          <td style="font-size:0.76rem; color:var(--text-secondary);">${st.major}</td>
+          <td style="font-size:0.78rem; font-weight:600;">${st.stream}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.innerHTML = sanitize(rowsHTML);
+  }
+
+  filterStatsModalTable() {
+    if (!this.currentStatsData || !this.currentStatsData.studentRows) return;
+    const searchInput = document.getElementById('stats-table-search');
+    const statusSelect = document.getElementById('stats-table-filter-status');
+
+    const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const status = statusSelect ? statusSelect.value : 'all';
+
+    const filtered = this.currentStatsData.studentRows.filter(st => {
+      const matchKeyword = !keyword ||
+        st.name.toLowerCase().includes(keyword) ||
+        st.studentCode.toLowerCase().includes(keyword) ||
+        st.code.toLowerCase().includes(keyword);
+
+      let matchStatus = true;
+      if (status === 'completed') matchStatus = st.hasSurvey;
+      if (status === 'pending') matchStatus = !st.hasSurvey;
+
+      return matchKeyword && matchStatus;
+    });
+
+    this.renderStatsTableRows(filtered);
+  }
+
+  handleExportStatsExcel() {
+    const classData = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const selectedClass = (filterSelect && filterSelect.value) ? filterSelect.value.trim() : '';
+    TeacherAnalytics.exportComprehensiveExcel(classData, selectedClass);
+    this.playBeep(880, 'sine', 0.2);
+  }
+
+  handleExportStatsPdf() {
+    const classData = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const selectedClass = (filterSelect && filterSelect.value) ? filterSelect.value.trim() : '';
+    TeacherAnalytics.printStatsReport(classData, selectedClass);
+    this.playBeep(720, 'triangle', 0.2);
   }
 
   renderTeacherHeatmap() {

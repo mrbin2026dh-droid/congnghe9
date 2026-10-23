@@ -62,9 +62,9 @@ def test_auth_modal_and_clean_topbar():
                 page.locator('#btn-open-login').click()
             page.wait_for_timeout(200)
 
-        student_code_input.fill('NH-9A1')
+        student_code_input.fill('9C-01')
         page.locator('#btn-submit-student-login').click()
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(800)
 
         # Check user badge is displayed
         user_badge = page.locator('#logged-in-user-badge')

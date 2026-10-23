@@ -437,6 +437,590 @@ const TeacherAnalytics = (() => {
   }
 
   /**
+   * Tính toán toàn diện số liệu thống kê khảo sát và phân luồng
+   * @param {Array} classList
+   * @param {string} [className]
+   * @returns {Object}
+   */
+  function computeClassStatistics(classList, className = '') {
+    const list = Array.isArray(classList) && classList.length > 0
+      ? classList
+      : ((window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData || []);
+
+    const total = list.length;
+    let completed = 0;
+    let pending = 0;
+    let thptCount = 0;
+    let vocationalCount = 0;
+    let otherStreamCount = 0;
+    let totalScore = 0;
+    let scoredStudents = 0;
+
+    const riasecCounts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+    const riasecLabels = {
+      R: 'Kỹ thuật',
+      I: 'Nghiên cứu',
+      A: 'Nghệ thuật',
+      S: 'Xã hội',
+      E: 'Quản lý',
+      C: 'Nghiệp vụ'
+    };
+
+    const studentRows = list.map((st, idx) => {
+      const code = (st.code || '').trim().toUpperCase();
+      const hasSurvey = code.length > 0;
+      if (hasSurvey) {
+        completed += 1;
+        const primary = code[0];
+        if (riasecCounts[primary] !== undefined) {
+          riasecCounts[primary] += 1;
+        }
+      } else {
+        pending += 1;
+      }
+
+      // Check stream
+      const stream = (st.stream || '').trim();
+      const streamLower = stream.toLowerCase();
+      let normalizedStream = 'Chưa xác định';
+      if (streamLower.includes('thpt') || streamLower.includes('phổ thông')) {
+        thptCount += 1;
+        normalizedStream = 'Tiếp tục học THPT';
+      } else if (streamLower.includes('nghề') || streamLower.includes('9+') || streamLower.includes('trung cấp') || streamLower.includes('học nghề')) {
+        vocationalCount += 1;
+        normalizedStream = 'Giáo dục nghề nghiệp (9+)';
+      } else if (hasSurvey) {
+        otherStreamCount += 1;
+        normalizedStream = stream || 'Đang cân nhắc';
+      }
+
+      // Project score
+      if (typeof st.projectScore === 'number' && !isNaN(st.projectScore)) {
+        totalScore += st.projectScore;
+        scoredStudents += 1;
+      }
+
+      return {
+        stt: idx + 1,
+        studentCode: st.studentCode || (st.id ? `${st.grade || 'HS'}-${String(st.id).padStart(2, '0')}` : `HS-${idx + 1}`),
+        name: st.name || 'Học sinh',
+        grade: st.grade || className || '---',
+        school: st.school || 'Trường THCS',
+        code: code || '---',
+        hasSurvey,
+        statusText: hasSurvey ? 'Đã hoàn thành' : 'Chưa khảo sát',
+        major: st.major || (hasSurvey ? 'Đang cập nhật' : 'Chưa khảo sát'),
+        projectScore: typeof st.projectScore === 'number' ? st.projectScore : null,
+        classification: st.classification || (hasSurvey ? 'Phù hợp' : '---'),
+        stream: normalizedStream
+      };
+    });
+
+    const completedRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const pendingRate = total > 0 ? (100 - completedRate) : 0;
+    const thptRate = total > 0 ? Math.round((thptCount / total) * 100) : 0;
+    const vocationalRate = total > 0 ? Math.round((vocationalCount / total) * 100) : 0;
+
+    const riasecPercentages = {};
+    for (const k in riasecCounts) {
+      riasecPercentages[k] = completed > 0 ? Math.round((riasecCounts[k] / completed) * 100) : 0;
+    }
+
+    // Determine dominant RIASEC
+    let maxRiasecKey = 'R';
+    let maxRiasecVal = -1;
+    for (const k of ['R', 'I', 'A', 'S', 'E', 'C']) {
+      if (riasecCounts[k] > maxRiasecVal) {
+        maxRiasecVal = riasecCounts[k];
+        maxRiasecKey = k;
+      }
+    }
+    const dominantLabel = maxRiasecVal > 0 ? `${maxRiasecKey} (${riasecLabels[maxRiasecKey]}) - ${riasecPercentages[maxRiasecKey]}%` : 'Chưa có dữ liệu';
+
+    const avgScore = scoredStudents > 0 ? (totalScore / scoredStudents).toFixed(1) : null;
+
+    return {
+      total,
+      completed,
+      pending,
+      completedRate,
+      pendingRate,
+      thptCount,
+      thptRate,
+      vocationalCount,
+      vocationalRate,
+      otherStreamCount,
+      riasecCounts,
+      riasecPercentages,
+      riasecLabels,
+      dominantRiasec: maxRiasecKey,
+      dominantLabel,
+      avgScore,
+      scoredStudents,
+      studentRows,
+      className: className || (studentRows[0] && studentRows[0].grade) || 'Khối 9',
+      schoolName: (studentRows[0] && studentRows[0].school) || 'Trường THCS'
+    };
+  }
+
+  /**
+   * Xuất báo cáo thống kê toàn diện ra file Excel (.xlsx hoặc .csv fallback)
+   */
+  function exportComprehensiveExcel(classList, className = '', schoolName = '') {
+    const stats = computeClassStatistics(classList, className);
+    const targetSchool = schoolName || stats.schoolName || 'Trường THCS';
+    const targetClass = className || stats.className || 'Toàn trường';
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    if (typeof window.XLSX !== 'undefined') {
+      const aoa = [
+        ['SỞ GIÁO DỤC VÀ ĐÀO TẠO', '', '', 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'],
+        [targetSchool.toUpperCase(), '', '', 'Độc lập - Tự do - Hạnh phúc'],
+        [''],
+        ['BÁO CÁO THỐNG KÊ KẾT QUẢ KHẢO SÁT HƯỚNG NGHIỆP & PHÂN LUỒNG HỌC SINH'],
+        [`Lớp: ${targetClass} | Năm học: 2025 - 2026 | Ngày xuất báo cáo: ${dateStr} (${timeStr})`],
+        [''],
+        ['I. THỐNG KÊ TỔNG QUAN'],
+        ['Chỉ tiêu đánh giá', 'Số lượng (HS)', 'Tỷ lệ (%)', 'Ghi chú'],
+        ['Tổng số học sinh', stats.total, '100%', 'Sĩ số chính thức trong danh sách'],
+        ['Đã hoàn thành khảo sát Holland', stats.completed, `${stats.completedRate}%`, 'Đã xác định mã nghề và nhóm ngành'],
+        ['Chưa hoàn thành khảo sát', stats.pending, `${stats.pendingRate}%`, 'Cần giáo viên/phụ huynh đôn đốc hoàn thành'],
+        ['Định hướng tiếp tục học THPT', stats.thptCount, `${stats.thptRate}%`, 'Học sinh có nguyện vọng/phù hợp THPT công lập/tư thục'],
+        ['Định hướng Giáo dục nghề nghiệp (9+)', stats.vocationalCount, `${stats.vocationalRate}%`, 'Học nghề hoặc vừa học văn hóa vừa học trung cấp nghề'],
+        [''],
+        ['II. PHÂN BỐ XU HƯỚNG NGHỀ NGHIỆP HOLLAND (RIASEC)'],
+        ['Mã nhóm', 'Tên nhóm nghề nghiệp', 'Số lượng (HS)', 'Tỷ lệ (%)', 'Lĩnh vực nghề tiêu biểu'],
+        ['R', 'Kỹ thuật (Realistic)', stats.riasecCounts.R, `${stats.riasecPercentages.R}%`, 'Cơ khí, Ô tô, Điện tử, Xây dựng, Nông lâm nghiệp'],
+        ['I', 'Nghiên cứu (Investigative)', stats.riasecCounts.I, `${stats.riasecPercentages.I}%`, 'Khoa học tự nhiên, Công nghệ thông tin, Y dược, Nghiên cứu'],
+        ['A', 'Nghệ thuật (Artistic)', stats.riasecCounts.A, `${stats.riasecPercentages.A}%`, 'Thiết kế đồ họa, Kiến trúc, Truyền thông, Âm nhạc, Sáng tạo'],
+        ['S', 'Xã hội (Social)', stats.riasecCounts.S, `${stats.riasecPercentages.S}%`, 'Sư phạm, Y tế điều dưỡng, Tâm lý học, Du lịch, Dịch vụ xã hội'],
+        ['E', 'Quản lý (Enterprising)', stats.riasecCounts.E, `${stats.riasecPercentages.E}%`, 'Quản trị kinh doanh, Khởi nghiệp, Marketing, Tài chính, Pháp luật'],
+        ['C', 'Nghiệp vụ (Conventional)', stats.riasecCounts.C, `${stats.riasecPercentages.C}%`, 'Kế toán, Thống kê, Quản trị văn phòng, Ngân hàng, Lưu trữ'],
+        [''],
+        ['III. BẢNG CHI TIẾT KẾT QUẢ TỪNG HỌC SINH'],
+        [
+          'STT',
+          'Mã học sinh',
+          'Họ và tên',
+          'Lớp',
+          'Trường THCS',
+          'Trạng thái',
+          'Mã Holland',
+          'Ngành nghề đề xuất',
+          'Điểm Bài 5',
+          'Xếp loại',
+          'Định hướng phân luồng'
+        ]
+      ];
+
+      stats.studentRows.forEach(st => {
+        aoa.push([
+          st.stt,
+          st.studentCode,
+          st.name,
+          st.grade,
+          st.school,
+          st.statusText,
+          st.code,
+          st.major,
+          st.projectScore !== null ? st.projectScore : '',
+          st.classification,
+          st.stream
+        ]);
+      });
+
+      aoa.push(['']);
+      aoa.push(['', '', 'XÁC NHẬN CỦA BAN GIÁM HIỆU', '', '', '', '', 'NGƯỜI LẬP BÁO CÁO']);
+      aoa.push(['', '', '(Ký, ghi rõ họ tên và đóng dấu)', '', '', '', '', '(Ký và ghi rõ họ tên)']);
+
+      const ws = window.XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [
+        { wch: 6 },
+        { wch: 14 },
+        { wch: 26 },
+        { wch: 10 },
+        { wch: 24 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 32 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 28 }
+      ];
+
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, 'BaoCaoThongKe');
+      const cleanClass = targetClass.replace(/\s+/g, '_');
+      window.XLSX.writeFile(wb, `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_EduPath.xlsx`);
+    } else {
+      let csv = '\uFEFF';
+      csv += `"BÁO CÁO THỐNG KÊ KẾT QUẢ KHẢO SÁT HƯỚNG NGHIỆP & PHÂN LUỒNG HỌC SINH"\n`;
+      csv += `"Trường: ${targetSchool} - Lớp: ${targetClass} - Ngày xuất: ${dateStr}"\n\n`;
+      csv += `"I. THỐNG KÊ TỔNG QUAN"\n`;
+      csv += `"Tổng số học sinh",${stats.total},"100%"\n`;
+      csv += `"Đã hoàn thành khảo sát",${stats.completed},"${stats.completedRate}%"\n`;
+      csv += `"Chưa hoàn thành",${stats.pending},"${stats.pendingRate}%"\n`;
+      csv += `"Định hướng THPT",${stats.thptCount},"${stats.thptRate}%"\n`;
+      csv += `"Định hướng Giáo dục nghề nghiệp (9+)",${stats.vocationalCount},"${stats.vocationalRate}%"\n\n`;
+      csv += `"II. BẢNG CHI TIẾT TỪNG HỌC SINH"\n`;
+      csv += `"STT","Mã HS","Họ và tên","Lớp","Trường","Trạng thái","Mã Holland","Ngành nghề đề xuất","Điểm Bài 5","Xếp loại","Định hướng phân luồng"\n`;
+
+      stats.studentRows.forEach(st => {
+        csv += `${st.stt},"${st.studentCode}","${st.name}","${st.grade}","${st.school}","${st.statusText}","${st.code}","${st.major}",${st.projectScore !== null ? st.projectScore : '""'},"${st.classification}","${st.stream}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanClass = targetClass.replace(/\s+/g, '_');
+      link.download = `Bao_Cao_Thong_Ke_Huong_Nghiep_${cleanClass}_EduPath.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /**
+   * Tạo chuỗi HTML bản in báo cáo A4 chuẩn biểu mẫu quản lý giáo dục
+   */
+  function generatePrintableHTMLReport(classList, className = '', schoolName = '') {
+    const stats = computeClassStatistics(classList, className);
+    const targetSchool = schoolName || stats.schoolName || 'Trường THCS';
+    const targetClass = className || stats.className || 'Toàn trường';
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    let studentTrs = '';
+    stats.studentRows.forEach(st => {
+      const statusClass = st.hasSurvey ? 'status-done' : 'status-pending';
+      const scoreDisplay = st.projectScore !== null ? st.projectScore : '---';
+      studentTrs += `
+        <tr>
+          <td class="text-center">${st.stt}</td>
+          <td class="text-center font-bold">${st.studentCode}</td>
+          <td>${st.name}</td>
+          <td class="text-center">${st.grade}</td>
+          <td class="text-center ${statusClass}">${st.statusText}</td>
+          <td class="text-center font-bold">${st.code}</td>
+          <td>${st.major}</td>
+          <td class="text-center">${scoreDisplay}</td>
+          <td>${st.stream}</td>
+        </tr>`;
+    });
+
+    return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Báo Cáo Thống Kê Khảo Sát Hướng Nghiệp & Phân Luồng - ${targetClass}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm 14mm 12mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 11pt;
+      line-height: 1.35;
+      color: #000000;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+    .header-table td {
+      vertical-align: top;
+      border: none;
+      padding: 0 4px;
+    }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: bold; }
+    .uppercase { text-transform: uppercase; }
+    .title-box {
+      text-align: center;
+      margin: 14px 0 16px 0;
+    }
+    .doc-title {
+      font-size: 14pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 0 0 4px 0;
+    }
+    .doc-subtitle {
+      font-size: 10.5pt;
+      font-style: italic;
+    }
+    .section-title {
+      font-size: 11.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 14px 0 6px 0;
+      border-bottom: 1px solid #333;
+      padding-bottom: 2px;
+    }
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+    table.report-table th, table.report-table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+      font-size: 10pt;
+    }
+    table.report-table th {
+      background-color: #f1f5f9;
+      font-weight: bold;
+      text-align: center;
+    }
+    .status-done {
+      color: #047857;
+      font-weight: bold;
+    }
+    .status-pending {
+      color: #b45309;
+      font-style: italic;
+    }
+    .sig-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      page-break-inside: avoid;
+    }
+    .sig-table td {
+      border: none;
+      vertical-align: top;
+      text-align: center;
+      width: 50%;
+      padding: 0 10px;
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tr { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Table -->
+  <table class="header-table">
+    <tr>
+      <td style="width: 48%; text-align: center;">
+        <div style="font-size: 10pt;">PHÒNG GIÁO DỤC VÀ ĐÀO TẠO</div>
+        <div class="font-bold uppercase" style="font-size: 10.5pt;">${targetSchool}</div>
+        <div style="width: 100px; height: 1px; background: #000; margin: 3px auto 0 auto;"></div>
+      </td>
+      <td style="width: 52%; text-align: center;">
+        <div class="font-bold" style="font-size: 10.5pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+        <div class="font-bold" style="font-size: 10.5pt; text-decoration: underline;">Độc lập - Tự do - Hạnh phúc</div>
+        <div style="font-size: 9.5pt; font-style: italic; margin-top: 4px;">Ngày ${dateStr}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Title -->
+  <div class="title-box">
+    <div class="doc-title">BÁO CÁO THỐNG KÊ KẾT QUẢ KHẢO SÁT HƯỚNG NGHIỆP<br>& ĐỊNH HƯỚNG PHÂN LUỒNG HỌC SINH LỚP 9</div>
+    <div class="doc-subtitle">Căn cứ Chương trình GDPT môn Công nghệ 9 & Đề án Giáo dục Hướng nghiệp - Phân luồng</div>
+    <div style="font-weight: bold; margin-top: 4px; font-size: 11pt;">LỚP: ${targetClass} &nbsp;|&nbsp; NĂM HỌC 2025 - 2026</div>
+  </div>
+
+  <!-- I. Thống kê tổng quan -->
+  <div class="section-title">I. KẾT QUẢ THỐNG KÊ CHUNG</div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th style="width: 40%;">Chỉ tiêu thống kê</th>
+        <th style="width: 20%;">Số lượng (Học sinh)</th>
+        <th style="width: 20%;">Tỷ lệ (%)</th>
+        <th style="width: 20%;">Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="font-bold">Tổng sĩ số học sinh</td>
+        <td class="text-center font-bold">${stats.total}</td>
+        <td class="text-center font-bold">100%</td>
+        <td>Danh sách chính thức</td>
+      </tr>
+      <tr>
+        <td>Đã hoàn thành bài khảo sát Holland RIASEC</td>
+        <td class="text-center status-done">${stats.completed}</td>
+        <td class="text-center status-done">${stats.completedRate}%</td>
+        <td>Đã có kết quả mã nghề</td>
+      </tr>
+      <tr>
+        <td>Chưa thực hiện khảo sát</td>
+        <td class="text-center status-pending">${stats.pending}</td>
+        <td class="text-center status-pending">${stats.pendingRate}%</td>
+        <td>Đang đôn đốc làm bài</td>
+      </tr>
+      <tr>
+        <td>Định hướng tiếp tục học THPT</td>
+        <td class="text-center font-bold">${stats.thptCount}</td>
+        <td class="text-center font-bold">${stats.thptRate}%</td>
+        <td>Nguyện vọng THPT</td>
+      </tr>
+      <tr>
+        <td>Định hướng Giáo dục nghề nghiệp (9+)</td>
+        <td class="text-center font-bold">${stats.vocationalCount}</td>
+        <td class="text-center font-bold">${stats.vocationalRate}%</td>
+        <td>Học nghề kết hợp văn hóa</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- II. Phân bố RIASEC -->
+  <div class="section-title">II. PHÂN BỐ XU HƯỚNG NGHỀ NGHIỆP HOLLAND (RIASEC)</div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th style="width: 10%;">Mã</th>
+        <th style="width: 28%;">Nhóm nghề</th>
+        <th style="width: 16%;">Số lượng (HS)</th>
+        <th style="width: 16%;">Tỷ lệ (%)</th>
+        <th style="width: 30%;">Ngành nghề tiêu biểu</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="text-center font-bold">R</td>
+        <td>Kỹ thuật (Realistic)</td>
+        <td class="text-center">${stats.riasecCounts.R}</td>
+        <td class="text-center">${stats.riasecPercentages.R}%</td>
+        <td>Cơ khí, Điện tử, Xây dựng, Nông lâm</td>
+      </tr>
+      <tr>
+        <td class="text-center font-bold">I</td>
+        <td>Nghiên cứu (Investigative)</td>
+        <td class="text-center">${stats.riasecCounts.I}</td>
+        <td class="text-center">${stats.riasecPercentages.I}%</td>
+        <td>Khoa học, CNTT, Y dược, Công nghệ</td>
+      </tr>
+      <tr>
+        <td class="text-center font-bold">A</td>
+        <td>Nghệ thuật (Artistic)</td>
+        <td class="text-center">${stats.riasecCounts.A}</td>
+        <td class="text-center">${stats.riasecPercentages.A}%</td>
+        <td>Thiết kế, Mỹ thuật, Truyền thông, Âm nhạc</td>
+      </tr>
+      <tr>
+        <td class="text-center font-bold">S</td>
+        <td>Xã hội (Social)</td>
+        <td class="text-center">${stats.riasecCounts.S}</td>
+        <td class="text-center">${stats.riasecPercentages.S}%</td>
+        <td>Sư phạm, Y tế, Tâm lý, Dịch vụ xã hội</td>
+      </tr>
+      <tr>
+        <td class="text-center font-bold">E</td>
+        <td>Quản lý (Enterprising)</td>
+        <td class="text-center">${stats.riasecCounts.E}</td>
+        <td class="text-center">${stats.riasecPercentages.E}%</td>
+        <td>Kinh doanh, Quản trị, Marketing, Luật</td>
+      </tr>
+      <tr>
+        <td class="text-center font-bold">C</td>
+        <td>Nghiệp vụ (Conventional)</td>
+        <td class="text-center">${stats.riasecCounts.C}</td>
+        <td class="text-center">${stats.riasecPercentages.C}%</td>
+        <td>Kế toán, Văn phòng, Ngân hàng, Thống kê</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- III. Danh sách chi tiết học sinh -->
+  <div class="section-title">III. BẢNG DANH SÁCH CHI TIẾT HỌC SINH</div>
+  <table class="report-table">
+    <thead>
+      <tr>
+        <th style="width: 5%;">STT</th>
+        <th style="width: 11%;">Mã HS</th>
+        <th style="width: 22%;">Họ và tên</th>
+        <th style="width: 7%;">Lớp</th>
+        <th style="width: 14%;">Trạng thái</th>
+        <th style="width: 10%;">Mã nghề</th>
+        <th style="width: 16%;">Ngành đề xuất</th>
+        <th style="width: 15%;">Phân luồng</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${studentTrs}
+    </tbody>
+  </table>
+
+  <!-- IV. Khuyến nghị sư phạm -->
+  <div class="section-title">IV. ĐÁNH GIÁ VÀ KHUYẾN NGHỊ SƯ PHẠM</div>
+  <div style="font-size: 10pt; line-height: 1.45; text-align: justify; margin-bottom: 16px;">
+    1. <strong>Đánh giá chung:</strong> Đa số học sinh lớp ${targetClass} đã tích cực tham gia khảo sát nghề nghiệp theo mô hình chuẩn Holland RIASEC. Kết quả phản ánh rõ nét sở thích, xu hướng nổi trội và sự phù hợp với mục tiêu đào tạo của môn Công nghệ 9.<br>
+    2. <strong>Khuyến nghị Ban Giám Hiệu & Phụ Huynh:</strong> Nhà trường và gia đình cần phối hợp tổ chức các buổi tư vấn chuyên sâu, định hướng học sinh đăng ký đúng nguyện vọng lớp 10 THPT hoặc trường nghề theo mô hình 9+ phù hợp với năng lực học tập thực tế và nhu cầu của thị trường lao động.
+  </div>
+
+  <!-- Signatures -->
+  <table class="sig-table">
+    <tr>
+      <td>
+        <div class="font-bold uppercase" style="font-size: 10.5pt;">BAN GIÁM HIỆU NHÀ TRƯỜNG</div>
+        <div style="font-size: 9.5pt; font-style: italic;">(Ký, ghi rõ họ tên và đóng dấu)</div>
+        <div style="height: 60px;"></div>
+      </td>
+      <td>
+        <div class="font-bold uppercase" style="font-size: 10.5pt;">GIÁO VIÊN CHỦ NHIỆM / PHỤ TRÁCH</div>
+        <div style="font-size: 9.5pt; font-style: italic;">(Ký và ghi rõ họ tên)</div>
+        <div style="height: 60px;"></div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  /**
+   * Kích hoạt in báo cáo qua iframe ảo an toàn tuyệt đối (Không dùng document.write)
+   */
+  function printStatsReport(classList, className = '', schoolName = '') {
+    const htmlContent = generatePrintableHTMLReport(classList, className, schoolName);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('title', 'EduPath Print Report Frame');
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          }
+        } catch (err) {
+          console.warn('Lỗi khi kích hoạt lệnh in:', err);
+        } finally {
+          setTimeout(() => {
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
+          }, 1200);
+        }
+      }, 350);
+    };
+
+    iframe.srcdoc = htmlContent;
+  }
+
+  /**
    * Xuất danh sách học sinh ra file CSV để nhập điểm vào Smas/VnEdu
    */
   return {
@@ -451,7 +1035,11 @@ const TeacherAnalytics = (() => {
     downloadExcelTemplate,
     parseExcelFile,
     extractStudentsFromRows,
-    parseCSVText
+    parseCSVText,
+    computeClassStatistics,
+    exportComprehensiveExcel,
+    generatePrintableHTMLReport,
+    printStatsReport
   };
 })();
 
