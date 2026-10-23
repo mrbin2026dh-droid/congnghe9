@@ -765,6 +765,55 @@
             </div>
           </div>
 
+          <!-- Smart Search & Filter Toolbar with Statistics -->
+          <div class="teacher-roster-toolbar" id="teacher-roster-toolbar" style="margin-bottom:1rem; padding:1rem 1.25rem; background:var(--surface-card); border:1px solid var(--border); border-radius:var(--radius-md); display:flex; flex-direction:column; gap:0.85rem; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <!-- Statistics Bar & Reminder Actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+              <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;" id="teacher-stats-summary-pills">
+                <span class="toolbar-stat-pill" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.75rem; border-radius:var(--radius-sm); font-size:0.85rem; font-weight:700; background:var(--surface-elevated); color:var(--text-primary); border:1px solid var(--border);">
+                  📋 <span>Tổng số: <strong id="teacher-stat-total" style="color:var(--brand);">0</strong> HS</span>
+                </span>
+                <span class="toolbar-stat-pill clickable" id="pill-filter-completed" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.75rem; border-radius:var(--radius-sm); font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); cursor:pointer;" title="Bấm để lọc nhanh danh sách học sinh đã hoàn thành khảo sát">
+                  🟢 <span>Đã khảo sát: <strong id="teacher-stat-completed">0</strong> HS (<span id="teacher-stat-completed-pct">0%</span>)</span>
+                </span>
+                <span class="toolbar-stat-pill clickable" id="pill-filter-pending" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.75rem; border-radius:var(--radius-sm); font-size:0.85rem; font-weight:700; background:rgba(239,68,68,0.12); color:#dc2626; border:1px solid rgba(239,68,68,0.3); cursor:pointer;" title="Bấm để lọc nhanh danh sách học sinh chưa khảo sát để nhắc nhở">
+                  🔴 <span>Chưa khảo sát: <strong id="teacher-stat-pending">0</strong> HS (<span id="teacher-stat-pending-pct">0%</span>)</span>
+                </span>
+                <span style="font-size:0.825rem; color:var(--text-muted); font-weight:600;" id="teacher-search-result-count">
+                  (Hiển thị: <strong>0</strong>/0 HS)
+                </span>
+              </div>
+
+              <!-- Quick Action to Copy Unassessed List -->
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button type="button" class="btn-secondary" id="btn-copy-unassessed-list" style="padding:0.4rem 0.75rem; font-size:0.8rem; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; border-color:rgba(239,68,68,0.4); color:#dc2626; background:rgba(239,68,68,0.06); cursor:pointer;" title="Sao chép họ tên các học sinh chưa làm bài để giáo viên dán vào nhóm Zalo lớp nhắc nhở">
+                  📢 <span>Sao chép DS chưa làm</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Input and Status Filter Buttons -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+              <div style="position:relative; flex:1; min-width:280px; max-width:520px;">
+                <input type="text" id="teacher-student-search-input" placeholder="🔍 Tìm theo họ tên, mã HS, ngành nghề..." style="width:100%; padding:0.5rem 2.2rem 0.5rem 0.85rem; font-size:0.875rem; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface-inset); color:var(--text-primary); outline:none; transition:border-color 0.2s;" autocomplete="off">
+                <button type="button" id="btn-clear-teacher-search" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); font-size:1rem; cursor:pointer; padding:2px 6px;" title="Xóa từ khóa tìm kiếm">✕</button>
+              </div>
+
+              <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;" id="teacher-status-filter-group">
+                <span style="font-size:0.8rem; color:var(--text-muted); font-weight:600; margin-right:0.2rem;">Lọc trạng thái:</span>
+                <button type="button" class="status-filter-tab active" data-status="all" id="filter-tab-all" style="padding:0.4rem 0.8rem; font-size:0.8rem; font-weight:700; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--brand); color:#fff; cursor:pointer;">
+                  Tất cả
+                </button>
+                <button type="button" class="status-filter-tab" data-status="completed" id="filter-tab-completed" style="padding:0.4rem 0.8rem; font-size:0.8rem; font-weight:700; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface-card); color:#059669; cursor:pointer;">
+                  🟢 Đã khảo sát
+                </button>
+                <button type="button" class="status-filter-tab" data-status="pending" id="filter-tab-pending" style="padding:0.4rem 0.8rem; font-size:0.8rem; font-weight:700; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface-card); color:#dc2626; cursor:pointer;">
+                  🔴 Chưa khảo sát (Nhắc nhở)
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Student Roster Table -->
           <div class="matrix-table-wrapper">
             <table class="matrix-table">

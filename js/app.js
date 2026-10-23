@@ -53,6 +53,8 @@ class TeenVocaApp {
     this.currentUser = null;
     this.selectedTeacherStudentCode = null;
     this.userRole = null;
+    this.teacherSearchKeyword = '';
+    this.teacherStatusFilter = 'all';
 
     this.loadProfileFromStorage();
     this.init();
@@ -113,6 +115,64 @@ class TeenVocaApp {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  normalizeVietnamese(str) {
+    return String(str || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .toLowerCase()
+      .trim();
+  }
+
+  copyUnassessedStudentsList() {
+    const classData = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const pendingStudents = classData.filter(st => {
+      const c = (st.code || '').trim().toUpperCase();
+      return !(c.length >= 3 && c !== '---' && /^[RIASEC]{3}$/.test(c) && !st.isUndifferentiated);
+    });
+
+    if (pendingStudents.length === 0) {
+      this.showToast('🎉 Tuyệt vời! Toàn bộ học sinh trong danh sách đã hoàn thành bài khảo sát.', 'info');
+      return;
+    }
+
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const className = (filterSelect && filterSelect.value) ? `lớp ${filterSelect.value}` : 'các lớp';
+
+    let text = `📢 NHẮC NHỞ HOÀN THÀNH BÀI KHẢO SÁT HƯỚNG NGHIỆP TEENVOCA AI (${className.toUpperCase()})\n`;
+    text += `Hiện còn ${pendingStudents.length} học sinh chưa hoàn thành bài trắc nghiệm Holland RIASEC:\n`;
+    pendingStudents.forEach((st, idx) => {
+      text += `${idx + 1}. [${st.studentCode}] ${st.name || 'Học sinh'} (Lớp ${st.grade || '---'})\n`;
+    });
+    text += `\nKính nhờ quý phụ huynh và các em học sinh đăng nhập vào hệ thống TeenVoca AI để hoàn thành sớm nhằm nhận kết quả phân luồng và ngành nghề phù hợp!`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.showToast(`📋 Đã sao chép danh sách ${pendingStudents.length} học sinh chưa khảo sát vào Clipboard!`, 'info');
+      }).catch(() => {
+        this.fallbackCopyText(text, pendingStudents.length);
+      });
+    } else {
+      this.fallbackCopyText(text, pendingStudents.length);
+    }
+  }
+
+  fallbackCopyText(text, count) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      this.showToast(`📋 Đã sao chép danh sách ${count} học sinh chưa khảo sát vào Clipboard!`, 'info');
+    } catch {
+      this.showToast('Không thể sao chép tự động. Vui lòng thử lại.', 'error');
+    }
+    document.body.removeChild(ta);
   }
 
   formatAgentText(text) {
@@ -2856,6 +2916,77 @@ class TeenVocaApp {
       });
     }
 
+    // Thanh tìm kiếm và bộ lọc học sinh thông minh của Giáo viên
+    const teacherSearchInput = document.getElementById('teacher-student-search-input');
+    const teacherClearSearchBtn = document.getElementById('btn-clear-teacher-search');
+    if (teacherSearchInput) {
+      teacherSearchInput.addEventListener('input', (e) => {
+        this.teacherSearchKeyword = e.target.value;
+        if (teacherClearSearchBtn) {
+          teacherClearSearchBtn.style.display = this.teacherSearchKeyword ? 'block' : 'none';
+        }
+        this.renderTeacherHeatmap();
+      });
+    }
+
+    if (teacherClearSearchBtn) {
+      teacherClearSearchBtn.addEventListener('click', () => {
+        if (teacherSearchInput) {
+          teacherSearchInput.value = '';
+          this.teacherSearchKeyword = '';
+          teacherClearSearchBtn.style.display = 'none';
+          teacherSearchInput.focus();
+          this.renderTeacherHeatmap();
+        }
+      });
+    }
+
+    const statusFilterGroup = document.getElementById('teacher-status-filter-group');
+    if (statusFilterGroup) {
+      statusFilterGroup.querySelectorAll('.status-filter-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          const target = e.currentTarget;
+          const status = target.getAttribute('data-status');
+          this.teacherStatusFilter = status;
+          statusFilterGroup.querySelectorAll('.status-filter-tab').forEach(t => {
+            t.classList.remove('active');
+            t.style.background = 'var(--surface-card)';
+            const s = t.getAttribute('data-status');
+            t.style.color = s === 'completed' ? '#059669' : (s === 'pending' ? '#dc2626' : 'var(--text-primary)');
+          });
+          target.classList.add('active');
+          target.style.background = status === 'completed' ? '#059669' : (status === 'pending' ? '#dc2626' : 'var(--brand)');
+          target.style.color = '#fff';
+          this.renderTeacherHeatmap();
+        });
+      });
+    }
+
+    // Nhấp vào pill thống kê trên đầu để lọc nhanh
+    const pillCompleted = document.getElementById('pill-filter-completed');
+    if (pillCompleted) {
+      pillCompleted.addEventListener('click', () => {
+        const tab = document.getElementById('filter-tab-completed');
+        if (tab) tab.click();
+      });
+    }
+
+    const pillPending = document.getElementById('pill-filter-pending');
+    if (pillPending) {
+      pillPending.addEventListener('click', () => {
+        const tab = document.getElementById('filter-tab-pending');
+        if (tab) tab.click();
+      });
+    }
+
+    // Nút sao chép danh sách học sinh chưa làm bài để nhắc nhở
+    const btnCopyUnassessed = document.getElementById('btn-copy-unassessed-list');
+    if (btnCopyUnassessed) {
+      btnCopyUnassessed.addEventListener('click', () => {
+        this.copyUnassessedStudentsList();
+      });
+    }
+
     // Auto-update student code prefix when grade changes in Add Student modal
     const codeInput = document.getElementById('crud-student-code');
     if (codeInput) {
@@ -3393,6 +3524,10 @@ class TeenVocaApp {
     }
   }
 
+  showToast(msg, type = 'success') {
+    this.showToastNotification(msg, type);
+  }
+
   showToastNotification(msg, type = 'success') {
     let container = document.getElementById('teenvoca-toast-container') || document.getElementById('edupath-toast-container');
     if (!container) {
@@ -3403,6 +3538,7 @@ class TeenVocaApp {
       document.body.appendChild(container);
     }
     const toast = document.createElement('div');
+    toast.className = 'teenvoca-toast toast';
     const isError = type === 'error';
     const bg = isError ? '#ef4444' : 'linear-gradient(135deg, #10b981, #059669)';
     toast.style.cssText = `background:${bg}; color:#ffffff; padding:0.65rem 1.1rem; border-radius:8px; font-size:0.85rem; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,0.2); display:flex; align-items:center; gap:0.5rem; pointer-events:auto; transition:all 0.3s ease;`;
@@ -3973,21 +4109,82 @@ class TeenVocaApp {
     }
     }
 
+    // Thống kê số lượng học sinh đã khảo sát / chưa khảo sát
+    const assessedList = classData.filter(st => {
+      const rawCode = (st.code || '').trim().toUpperCase();
+      return rawCode.length >= 3 && rawCode !== '---' && /^[RIASEC]{3}$/.test(rawCode) && !st.isUndifferentiated;
+    });
+    const unassessedList = classData.filter(st => {
+      const rawCode = (st.code || '').trim().toUpperCase();
+      return !(rawCode.length >= 3 && rawCode !== '---' && /^[RIASEC]{3}$/.test(rawCode) && !st.isUndifferentiated);
+    });
+    const totalCount = classData.length;
+    const completedCount = assessedList.length;
+    const pendingCount = unassessedList.length;
+    const completedPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const pendingPct = totalCount > 0 ? (100 - completedPct) : 0;
+
+    const statTotalEl = document.getElementById('teacher-stat-total');
+    const statCompEl = document.getElementById('teacher-stat-completed');
+    const statCompPctEl = document.getElementById('teacher-stat-completed-pct');
+    const statPendEl = document.getElementById('teacher-stat-pending');
+    const statPendPctEl = document.getElementById('teacher-stat-pending-pct');
+    if (statTotalEl) statTotalEl.textContent = totalCount;
+    if (statCompEl) statCompEl.textContent = completedCount;
+    if (statCompPctEl) statCompPctEl.textContent = `${completedPct}%`;
+    if (statPendEl) statPendEl.textContent = pendingCount;
+    if (statPendPctEl) statPendPctEl.textContent = `${pendingPct}%`;
+
+    // Lọc danh sách theo trạng thái khảo sát và từ khóa tìm kiếm thông minh
+    let displayList = classData;
+    if (this.teacherStatusFilter === 'completed') {
+      displayList = assessedList;
+    } else if (this.teacherStatusFilter === 'pending') {
+      displayList = unassessedList;
+    }
+
+    const kw = this.normalizeVietnamese(this.teacherSearchKeyword);
+    if (kw) {
+      displayList = displayList.filter(st => {
+        const nameNorm = this.normalizeVietnamese(st.name || '');
+        const codeNorm = this.normalizeVietnamese(st.studentCode || '');
+        const schoolNorm = this.normalizeVietnamese(st.school || '');
+        const gradeNorm = this.normalizeVietnamese(st.grade || '');
+        const hollandNorm = this.normalizeVietnamese(st.code || '');
+        const majorNorm = this.normalizeVietnamese(st.major || '');
+        const streamNorm = this.normalizeVietnamese(st.stream || '');
+        return nameNorm.includes(kw) || codeNorm.includes(kw) || schoolNorm.includes(kw) || gradeNorm.includes(kw) || hollandNorm.includes(kw) || majorNorm.includes(kw) || streamNorm.includes(kw);
+      });
+    }
+
+    const countEl = document.getElementById('teacher-search-result-count');
+    if (countEl) {
+      countEl.innerHTML = sanitize(`(Hiển thị: <strong>${displayList.length}</strong>/${totalCount} HS)`);
+    }
+
     const tbody = document.getElementById('teacher-student-table-body');
     if (tbody) {
       tbody.textContent = '';
-      if (classData.length === 0) {
+      if (displayList.length === 0) {
         const emptyTr = document.createElement('tr');
-        emptyTr.innerHTML = sanitize(`
-          <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
-            Chưa có học sinh nào trên Firebase. Hãy nhấn <strong>"➕ Thêm Học Sinh"</strong> để cấp tài khoản.
-          </td>
-        `);
+        if (classData.length === 0) {
+          emptyTr.innerHTML = sanitize(`
+            <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
+              Chưa có học sinh nào trên Firebase. Hãy nhấn <strong>"➕ Thêm Học Sinh"</strong> để cấp tài khoản.
+            </td>
+          `);
+        } else {
+          emptyTr.innerHTML = sanitize(`
+            <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
+              🔍 Không tìm thấy học sinh nào phù hợp với bộ lọc (Từ khóa: <em>"${this.teacherSearchKeyword || '---'}"</em>, Trạng thái: <em>${this.teacherStatusFilter === 'completed' ? 'Đã khảo sát' : (this.teacherStatusFilter === 'pending' ? 'Chưa khảo sát' : 'Tất cả')}</em>).
+            </td>
+          `);
+        }
         tbody.appendChild(emptyTr);
         return;
       }
 
-      classData.forEach((st, idx) => {
+      displayList.forEach((st, idx) => {
         const studentCode = st.studentCode || `HS-${idx + 1}`;
         const rawCode = (st.code || '').trim().toUpperCase();
         const hasValidHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && /^[RIASEC]{3}$/.test(rawCode) && !st.isUndifferentiated);
