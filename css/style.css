@@ -205,8 +205,73 @@ html, body {
 .user-quick-profile {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.profile-inputs-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.profile-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.profile-input:focus {
+  border-color: var(--brand);
+}
+
+.profile-school-input {
+  width: 140px;
+}
+
+.profile-grade-input {
+  width: 60px;
+}
+
+.profile-name-input {
+  width: 125px;
+}
+
+.profile-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-profile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  min-height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-profile-action:hover {
+  background-color: var(--brand-soft);
+  color: var(--brand);
+  border-color: var(--brand);
 }
 
 .theme-toggle-btn {

@@ -37,9 +37,18 @@
         <button class="tab-btn" data-tab="teacher">👨‍🏫 Bảng Giáo Viên</button>
       </nav>
 
-      <div class="user-quick-profile">
-        <input type="text" id="student-name-input" title="Tên học sinh" placeholder="Tên học sinh..." style="padding:0.4rem 0.65rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.85rem; font-weight:600; width:130px;">
-        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
+      <div class="user-quick-profile" id="user-profile-bar">
+        <div class="profile-inputs-group">
+          <input type="text" id="student-school-input" title="Trường THCS của học sinh" placeholder="Trường THCS..." class="profile-input profile-school-input">
+          <input type="text" id="student-grade-input" title="Lớp học" placeholder="Lớp..." class="profile-input profile-grade-input">
+          <input type="text" id="student-name-input" title="Họ và tên học sinh" placeholder="Họ và tên..." class="profile-input profile-name-input">
+        </div>
+        <div class="profile-actions-group">
+          <button class="btn-profile-action" id="export-profile-btn" title="Lưu hồ sơ và tải file JSON minh chứng">💾 Tải hồ sơ</button>
+          <button class="btn-profile-action" id="import-profile-btn" title="Mở file hồ sơ JSON đã lưu từ trước">📂 Nạp hồ sơ</button>
+          <input type="file" id="import-profile-file-input" accept=".json" style="display:none;">
+          <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
+        </div>
       </div>
     </header>
 

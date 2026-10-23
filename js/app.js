@@ -20,11 +20,19 @@ class EduPathApp {
 
     this.studentProfile = {
       name: 'Nguyễn Văn An',
+      school: 'THCS Chu Văn An',
       grade: '9A1',
+      academicYear: '2025 – 2026',
       code: 'RIE',
       scores: { R: 42, I: 38, A: 25, S: 22, E: 35, C: 28 },
       percentages: { R: 84, I: 76, A: 50, S: 44, E: 70, C: 56 },
-      targetMajorId: 'co-dien-tu'
+      targetMajorId: 'co-dien-tu',
+      selfTraits: {},
+      threeQuestions: {
+        understandSelf: '',
+        understandCareer: '',
+        careerPathPlan: ''
+      }
     };
 
     // Assessment matches (10 items boolean)
@@ -33,6 +41,7 @@ class EduPathApp {
     this.treeAnimator = null;
     this.audioCtx = null;
 
+    this.loadProfileFromStorage();
     this.init();
   }
 
@@ -78,6 +87,103 @@ class EduPathApp {
     }
   }
 
+  loadProfileFromStorage() {
+    try {
+      const raw = localStorage.getItem('edupath_student_profile');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          this.studentProfile = { ...this.studentProfile, ...parsed };
+        }
+      }
+      const rawMatches = localStorage.getItem('edupath_assessment_matches');
+      if (rawMatches) {
+        const parsedMatches = JSON.parse(rawMatches);
+        if (Array.isArray(parsedMatches) && parsedMatches.length === 10) {
+          this.assessmentMatches = parsedMatches;
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi khi nạp hồ sơ từ localStorage:', e);
+    }
+  }
+
+  saveProfileToStorage() {
+    try {
+      localStorage.setItem('edupath_student_profile', JSON.stringify(this.studentProfile));
+      localStorage.setItem('edupath_assessment_matches', JSON.stringify(this.assessmentMatches));
+    } catch (e) {
+      console.warn('Lỗi khi lưu hồ sơ vào localStorage:', e);
+    }
+  }
+
+  exportProfileJSON() {
+    this.saveProfileToStorage();
+    const bundle = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      studentProfile: this.studentProfile,
+      assessmentMatches: this.assessmentMatches,
+      quizAnswers: this.quizAnswers,
+      quizMode: this.quizMode
+    };
+    const jsonStr = JSON.stringify(bundle, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (this.studentProfile.name || 'hoc-sinh').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9-]/g, '_');
+    a.href = url;
+    a.download = `edupath_hoso_${safeName}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.playBeep(780);
+  }
+
+  importProfileJSON(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data && data.studentProfile) {
+          this.studentProfile = { ...this.studentProfile, ...data.studentProfile };
+          if (Array.isArray(data.assessmentMatches) && data.assessmentMatches.length === 10) {
+            this.assessmentMatches = data.assessmentMatches;
+          }
+          if (Array.isArray(data.quizAnswers)) {
+            this.quizAnswers = data.quizAnswers;
+          }
+          if (data.quizMode) {
+            this.quizMode = data.quizMode;
+          }
+          this.saveProfileToStorage();
+          this.syncProfileDOM();
+          this.renderAssessmentView();
+          if (this.currentTab === 'teacher') {
+            this.renderTeacherHeatmap();
+          }
+          this.playBeep(880, 'triangle', 0.2);
+        } else {
+          console.warn('Tệp JSON không đúng định dạng hồ sơ EduPath AI.');
+        }
+      } catch (err) {
+        console.error('Lỗi phân tích file hồ sơ:', err);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  syncProfileDOM() {
+    const schoolInput = document.getElementById('student-school-input');
+    const gradeInput = document.getElementById('student-grade-input');
+    const nameInput = document.getElementById('student-name-input');
+    if (schoolInput) schoolInput.value = this.studentProfile.school || '';
+    if (gradeInput) gradeInput.value = this.studentProfile.grade || '';
+    if (nameInput) nameInput.value = this.studentProfile.name || '';
+  }
+
   initDOM() {
     // Theme toggle
     const themeBtn = document.getElementById('theme-toggle-btn');
@@ -91,13 +197,57 @@ class EduPathApp {
       });
     }
 
-    // Student profile edit
+    // Student profile edit & automatic sync
+    this.syncProfileDOM();
+
+    const schoolInput = document.getElementById('student-school-input');
+    if (schoolInput) {
+      const updateSchool = (e) => {
+        this.studentProfile.school = e.target.value.trim() || 'Trường THCS';
+        this.saveProfileToStorage();
+        this.renderAssessmentView();
+      };
+      schoolInput.addEventListener('input', updateSchool);
+      schoolInput.addEventListener('change', updateSchool);
+    }
+
+    const gradeInput = document.getElementById('student-grade-input');
+    if (gradeInput) {
+      const updateGrade = (e) => {
+        this.studentProfile.grade = e.target.value.trim() || '9A1';
+        this.saveProfileToStorage();
+        this.renderAssessmentView();
+      };
+      gradeInput.addEventListener('input', updateGrade);
+      gradeInput.addEventListener('change', updateGrade);
+    }
+
     const nameInput = document.getElementById('student-name-input');
     if (nameInput) {
-      nameInput.value = this.studentProfile.name;
-      nameInput.addEventListener('change', (e) => {
+      const updateName = (e) => {
         this.studentProfile.name = e.target.value.trim() || 'Học sinh';
+        this.saveProfileToStorage();
         this.renderAssessmentView();
+      };
+      nameInput.addEventListener('input', updateName);
+      nameInput.addEventListener('change', updateName);
+    }
+
+    // Export & Import Profile buttons
+    const exportBtn = document.getElementById('export-profile-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => this.exportProfileJSON());
+    }
+
+    const importBtn = document.getElementById('import-profile-btn');
+    const importFileInput = document.getElementById('import-profile-file-input');
+    if (importBtn && importFileInput) {
+      importBtn.addEventListener('click', () => importFileInput.click());
+      importFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          this.importProfileJSON(e.target.files[0]);
+          e.target.value = '';
+        }
       });
     }
   }
