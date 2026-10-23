@@ -91,14 +91,14 @@ def run_system_verification():
             page.locator('#btn-open-login').click()
             page.wait_for_timeout(200)
 
-        test_code = "NH-9A1"
-        test_name = "Nguyễn Văn A"
-        test_school = "THCS Nguyễn Huệ"
-        test_grade = "9A1"
+        test_code = "9B1-01"
+        test_name = "Hoàng Kim Ngân"
+        test_school = "THCS Chu Văn An"
+        test_grade = "9B1"
 
         page.locator('#login-student-code').fill(test_code)
         page.locator('#btn-submit-student-login').click()
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(600)
 
         badge_text = page.locator('#user-info-text').text_content()
         assert test_code in badge_text or test_name in badge_text, f"Badge mismatch: {badge_text}"

@@ -128,7 +128,7 @@ const ProjectAssessment = (() => {
     const rawSchool = studentData.school || studentUser.school || 'Trường THCS';
     const schoolName = rawSchool.toUpperCase().startsWith('THCS') ? rawSchool.toUpperCase() : `THCS ${rawSchool.toUpperCase()}`;
     const studentName = studentData.name || studentUser.name || 'Học sinh';
-    const gradeName = studentData.grade || studentUser.grade || '9A1';
+    const gradeName = studentData.grade || studentUser.grade || '---';
     const academicYear = studentData.academicYear || '2025 – 2026';
     const hollandCode = (studentData.code && studentData.code.trim().length > 0) ? studentData.code : 'Chưa làm khảo sát';
     const majorName = (targetMajor && targetMajor.name) ? targetMajor.name : 'Chưa lựa chọn ngành nghề';

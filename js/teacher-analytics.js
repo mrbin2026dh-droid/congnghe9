@@ -12,7 +12,7 @@ const TeacherAnalytics = (() => {
   function addStudentToRoster(studentObj) {
     const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
     const nextId = list.length > 0 ? Math.max(...list.map(s => s.id || 0)) + 1 : 1;
-    const grade = studentObj.grade || '9A1';
+    const grade = studentObj.grade || (studentObj.studentCode && studentObj.studentCode.includes('-') ? studentObj.studentCode.split('-')[0].trim() : 'Chưa phân lớp');
     const newStudent = {
       id: nextId,
       studentCode: studentObj.studentCode || `${grade}-${String(nextId).padStart(2, '0')}`,
@@ -38,20 +38,20 @@ const TeacherAnalytics = (() => {
     const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
     if (!studentCode) return list;
     const clean = studentCode.toUpperCase().trim();
-    const idx = list.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === clean) || (s.id && `${s.grade || '9A1'}-${String(s.id).padStart(2, '0')}` === clean));
+    const idx = list.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === clean) || (s.id && `${s.grade || 'HS'}-${String(s.id).padStart(2, '0')}` === clean));
     if (idx >= 0) {
       list.splice(idx, 1);
     }
     return list;
   }
 
-  function generateCSVContent(classList, className = '9A1') {
+  function generateCSVContent(classList, className = '') {
     let csv = '\uFEFF'; // UTF-8 BOM for Microsoft Excel
     csv += 'STT,Trường THCS,Lớp,Họ và tên,Mã Holland,Ngành nghề phù hợp,Điểm Bài 5,Xếp loại SGK,Định hướng phân luồng\n';
 
     classList.forEach((st, idx) => {
-      const school = (st.school || 'THCS Chu Văn An').replace(/"/g, '""');
-      const grade = (st.grade || className).replace(/"/g, '""');
+      const school = (st.school || 'Trường THCS').replace(/"/g, '""');
+      const grade = (st.grade || className || '---').replace(/"/g, '""');
       const name = (st.name || '').replace(/"/g, '""');
       const code = (st.code || '').replace(/"/g, '""');
       const major = (st.major || '').replace(/"/g, '""');
@@ -63,13 +63,14 @@ const TeacherAnalytics = (() => {
     return csv;
   }
 
-  function exportClassCSV(classList, className = '9A1') {
+  function exportClassCSV(classList, className = '') {
     const csvContent = generateCSVContent(classList, className);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Bao_Cao_Huong_Nghiep_${className}_EduPath.csv`;
+    const fileSuffix = className ? className.replace(/\s+/g, '_') : 'Toan_Truong';
+    link.download = `Bao_Cao_Huong_Nghiep_${fileSuffix}_EduPath.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -82,11 +83,11 @@ const TeacherAnalytics = (() => {
   function downloadExcelTemplate() {
     const headers = ['STT', 'Mã học sinh', 'Họ và tên', 'Lớp', 'Trường THCS'];
     const sampleRows = [
-      [1, '9A1-01', 'Nguyễn Văn An', '9A1', 'THCS Chu Văn An'],
-      [2, '9A1-02', 'Trần Thị Bích', '9A1', 'THCS Chu Văn An'],
-      [3, '9A1-03', 'Lê Hoàng Long', '9A1', 'THCS Chu Văn An'],
-      [4, '9A1-04', 'Phạm Minh Đức', '9A1', 'THCS Chu Văn An'],
-      [5, '9A1-05', 'Võ Thị Mai', '9A1', 'THCS Chu Văn An']
+      [1, '9A-01', 'Nguyễn Văn An', '9A', 'THCS Chu Văn An'],
+      [2, '9A-02', 'Trần Thị Bích', '9A', 'THCS Chu Văn An'],
+      [3, '9B-01', 'Lê Hoàng Long', '9B', 'THCS Chu Văn An'],
+      [4, '9B-02', 'Phạm Minh Đức', '9B', 'THCS Chu Văn An'],
+      [5, '9C-01', 'Võ Thị Mai', '9C', 'THCS Chu Văn An']
     ];
 
     if (typeof window.XLSX !== 'undefined') {
@@ -133,10 +134,10 @@ const TeacherAnalytics = (() => {
 
     for (let r = 0; r < Math.min(rows.length, 10); r++) {
       const row = rows[r].map(cell => String(cell || '').trim().toLowerCase());
-      const codeIdx = row.findIndex(c => c.includes('mã') || c.includes('code') || c === 'mahs' || c === 'id');
-      const nameIdx = row.findIndex(c => c.includes('tên') || c.includes('họ') || c.includes('name'));
-      const gradeIdx = row.findIndex(c => c.includes('lớp') || c.includes('lop') || c.includes('grade') || c.includes('class'));
-      const schoolIdx = row.findIndex(c => c.includes('trường') || c.includes('truong') || c.includes('school'));
+      const codeIdx = row.findIndex(c => c.includes('mã') || c.includes('code') || c === 'mahs' || c.includes('ma ') || c === 'id');
+      const nameIdx = row.findIndex((c, idx) => idx !== codeIdx && (c.includes('tên') || c.includes('ten') || c.includes('họ tên') || c.includes('họ và tên') || c.includes('ho va ten') || c.startsWith('họ ') || c.startsWith('ho ') || c === 'họ' || c === 'ho' || c.includes('name')));
+      const gradeIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && (c.includes('lớp') || c.includes('lop') || c.includes('grade') || c.includes('class')));
+      const schoolIdx = row.findIndex((c, idx) => idx !== codeIdx && idx !== nameIdx && idx !== gradeIdx && (c.includes('trường') || c.includes('truong') || c.includes('school')));
 
       if (codeIdx !== -1 && nameIdx !== -1) {
         headerIdx = r;
@@ -166,8 +167,14 @@ const TeacherAnalytics = (() => {
 
       if (!studentCode && !name) continue;
 
-      if (!grade) grade = '9A1';
-      if (!school) school = 'THCS Chu Văn An';
+      if (!grade) {
+        if (studentCode && studentCode.includes('-')) {
+          grade = studentCode.split('-')[0].trim().toUpperCase();
+        } else {
+          grade = 'Chưa phân lớp';
+        }
+      }
+      if (!school) school = 'Trường THCS';
 
       if (!studentCode && name) {
         const padNum = String(students.length + 1).padStart(2, '0');
@@ -255,7 +262,7 @@ const TeacherAnalytics = (() => {
             const workbook = window.XLSX.read(data, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            const rawRows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            const rawRows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
             const students = extractStudentsFromRows(rawRows);
             resolve(students);
           } catch (err) {
@@ -269,16 +276,8 @@ const TeacherAnalytics = (() => {
         reader.onload = (e) => {
           try {
             const text = e.target.result;
-            if (typeof window.XLSX !== 'undefined') {
-              const workbook = window.XLSX.read(text, { type: 'string' });
-              const firstSheetName = workbook.SheetNames[0];
-              const worksheet = workbook.Sheets[firstSheetName];
-              const rawRows = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-              resolve(extractStudentsFromRows(rawRows));
-            } else {
-              const rawRows = parseCSVText(text);
-              resolve(extractStudentsFromRows(rawRows));
-            }
+            const rawRows = parseCSVText(text);
+            resolve(extractStudentsFromRows(rawRows));
           } catch (err) {
             reject(new Error('Lỗi khi đọc file CSV: ' + (err.message || 'Tệp không hợp lệ.')));
           }

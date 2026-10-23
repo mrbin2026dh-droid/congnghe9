@@ -282,6 +282,7 @@ class EduPathApp {
           this.syncProfileDOM();
           this.renderAssessmentView();
           if (this.currentTab === 'teacher') {
+            this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
             this.renderTeacherHeatmap();
           }
           this.playBeep(880, 'triangle', 0.2);
@@ -305,9 +306,10 @@ class EduPathApp {
     const infoText = document.getElementById('user-info-text');
     if (infoText && this.currentUser) {
       if (this.currentUser.role === 'teacher') {
-        infoText.textContent = `Lớp ${this.currentUser.classId || '9A1'}`;
+        infoText.textContent = 'Quản trị Hệ thống';
       } else {
-        infoText.textContent = `${this.currentUser.code || '9A1-01'} · ${this.studentProfile.name}`;
+        const studentCodeDisplay = this.currentUser.code || this.currentUser.studentCode || 'Học sinh';
+        infoText.textContent = `${studentCodeDisplay} · ${this.studentProfile.name || ''}`;
       }
     }
   }
@@ -446,7 +448,8 @@ class EduPathApp {
           roleTag.classList.remove('teacher');
         }
         if (infoText) {
-          infoText.textContent = `${this.currentUser.code || '9A1-01'} · ${this.studentProfile.name}`;
+          const studentCodeDisplay = this.currentUser.code || this.currentUser.studentCode || 'Học sinh';
+          infoText.textContent = `${studentCodeDisplay} · ${this.studentProfile.name || ''}`;
         }
         // H4 requirement: Show student tabs, hide teacher tab
         if (tabNav) {
@@ -511,7 +514,7 @@ class EduPathApp {
     // Load REAL student profile from Firebase
     this.studentProfile.name = matched.name || 'Học sinh';
     this.studentProfile.school = matched.school || 'Trường THCS';
-    this.studentProfile.grade = matched.grade || '9A1';
+    this.studentProfile.grade = matched.grade || '';
     this.studentProfile.code = matched.code || '';
     this.studentProfile.studentCode = matched.studentCode || cleanCode;
     this.studentProfile.scores = matched.hollandScores || { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
@@ -634,7 +637,11 @@ class EduPathApp {
       const activeFilter = classFilter ? classFilter.value : '';
       this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(activeFilter, (students) => {
         TeacherAnalytics.currentClassData = students || [];
+        if (!activeFilter) {
+          this.syncTeacherClassFilterDropdown(students);
+        }
         if (this.currentTab === 'teacher') {
+          this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
           this.renderTeacherHeatmap();
         }
       });
@@ -711,7 +718,7 @@ class EduPathApp {
     const gradeInput = document.getElementById('student-grade-input');
     if (gradeInput) {
       const updateGrade = (e) => {
-        this.studentProfile.grade = e.target.value.trim() || '9A1';
+        this.studentProfile.grade = e.target.value.trim();
         this.saveProfileToStorage();
         this.renderAssessmentView();
       };
@@ -865,6 +872,7 @@ class EduPathApp {
     if (tabId === 'tree' && this.treeAnimator) {
       this.treeAnimator.handleResize();
     } else if (tabId === 'teacher') {
+      this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
       this.renderTeacherHeatmap();
     } else if (tabId === 'project') {
       this.renderAssessmentView();
@@ -2537,7 +2545,9 @@ class EduPathApp {
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
         const classData = TeacherAnalytics.currentClassData || TeacherAnalytics.DEFAULT_CLASS_DATA;
-        TeacherAnalytics.exportClassCSV(classData, this.studentProfile.grade || '9A1');
+        const filterSelect = document.getElementById('teacher-class-filter-select');
+        const selectedClass = (filterSelect && filterSelect.value) ? filterSelect.value.trim() : '';
+        TeacherAnalytics.exportClassCSV(classData, selectedClass);
         this.playBeep(800);
       });
     }
@@ -2650,8 +2660,12 @@ class EduPathApp {
           if (this.teacherListenerUnsub) this.teacherListenerUnsub();
           this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(val, (students) => {
             TeacherAnalytics.currentClassData = students || [];
+            if (!val) {
+              this.syncTeacherClassFilterDropdown(students);
+            }
             if (this.currentTab === 'teacher') {
-              this.renderTeacherHeatmap();
+              this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
+      this.renderTeacherHeatmap();
             }
           });
         }
@@ -2663,7 +2677,8 @@ class EduPathApp {
     if (wholeClassBtn) {
       wholeClassBtn.addEventListener('click', () => {
         this.selectedTeacherStudentCode = null;
-        this.renderTeacherHeatmap();
+        this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
+      this.renderTeacherHeatmap();
         this.playBeep(640, 'sine', 0.1);
       });
     }
@@ -2673,7 +2688,8 @@ class EduPathApp {
     if (studentChartSelect) {
       studentChartSelect.addEventListener('change', (e) => {
         this.selectedTeacherStudentCode = e.target.value ? e.target.value : null;
-        this.renderTeacherHeatmap();
+        this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
+      this.renderTeacherHeatmap();
         this.playBeep(680, 'sine', 0.1);
       });
     }
@@ -2721,7 +2737,11 @@ class EduPathApp {
       const initialFilter = classFilter ? classFilter.value : '';
       this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(initialFilter, (students) => {
         TeacherAnalytics.currentClassData = students || [];
+        if (!initialFilter) {
+          this.syncTeacherClassFilterDropdown(students);
+        }
         if (this.currentTab === 'teacher') {
+          this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
           this.renderTeacherHeatmap();
         }
       });
@@ -2742,32 +2762,38 @@ class EduPathApp {
     if (isEdit) isEdit.value = 'false';
     if (title) title.textContent = 'Thêm Học Sinh Mới';
 
-    // Determine target grade: never use 'Tất cả các lớp'
+    // Xác định lớp mục tiêu: lấy từ bộ lọc hiện tại hoặc danh sách lớp thực tế của học sinh
     const filterSelect = document.getElementById('teacher-class-filter-select');
     const filterVal = filterSelect ? filterSelect.value.trim() : '';
-    const targetGrade = (filterVal && filterVal !== 'Tất cả các lớp') ? filterVal : '9A1';
+    const classData = TeacherAnalytics.currentClassData || [];
+    const availableGrades = [...new Set(classData.map(s => (s.grade || '').trim()).filter(Boolean))];
+    const targetGrade = (filterVal && filterVal !== 'Tất cả các lớp') ? filterVal : (availableGrades[0] || 'Khối 9');
 
     if (gradeIn) gradeIn.value = targetGrade;
     if (nameIn) nameIn.value = '';
-    if (schoolIn) schoolIn.value = 'THCS Chu Văn An';
+    const defaultSchool = (classData[0] && classData[0].school) ? classData[0].school : 'Trường THCS';
+    if (schoolIn) schoolIn.value = defaultSchool;
 
     if (codeIn) {
       codeIn.disabled = false;
       codeIn.dataset.auto = 'true';
-      const classData = TeacherAnalytics.currentClassData || [];
-      const matchingNums = classData
-        .filter(s => {
-          const g = (s.grade || '').toUpperCase();
-          const c = (s.studentCode || '').toUpperCase();
-          return g === targetGrade.toUpperCase() || c.startsWith(targetGrade.toUpperCase() + '-');
-        })
-        .map(s => {
-          const parts = (s.studentCode || '').split('-');
-          const lastNum = parts.length > 1 ? parseInt(parts[parts.length - 1], 10) : 0;
-          return isNaN(lastNum) ? 0 : lastNum;
-        });
-      const nextNum = matchingNums.length > 0 ? Math.max(...matchingNums) + 1 : 1;
-      codeIn.value = `${targetGrade}-${String(nextNum).padStart(2, '0')}`;
+      if (targetGrade) {
+        const matchingNums = classData
+          .filter(s => {
+            const g = (s.grade || '').toUpperCase();
+            const c = (s.studentCode || '').toUpperCase();
+            return g === targetGrade.toUpperCase() || c.startsWith(targetGrade.toUpperCase() + '-');
+          })
+          .map(s => {
+            const parts = (s.studentCode || '').split('-');
+            const lastNum = parts.length > 1 ? parseInt(parts[parts.length - 1], 10) : 0;
+            return isNaN(lastNum) ? 0 : lastNum;
+          });
+        const nextNum = matchingNums.length > 0 ? Math.max(...matchingNums) + 1 : 1;
+        codeIn.value = `${targetGrade}-${String(nextNum).padStart(2, '0')}`;
+      } else {
+        codeIn.value = '';
+      }
     }
 
     if (modal) modal.style.display = 'flex';
@@ -2784,7 +2810,7 @@ class EduPathApp {
     const err = document.getElementById('crud-student-error');
 
     const classData = TeacherAnalytics.currentClassData || [];
-    const st = classData.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+    const st = classData.find(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `${s.grade || 'HS'}-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
     if (!st) return;
 
     if (err) err.style.display = 'none';
@@ -2795,8 +2821,8 @@ class EduPathApp {
       codeIn.disabled = true;
     }
     if (nameIn) nameIn.value = st.name || '';
-    if (gradeIn) gradeIn.value = st.grade || '9A1';
-    if (schoolIn) schoolIn.value = st.school || 'THCS Chu Văn An';
+    if (gradeIn) gradeIn.value = st.grade || '';
+    if (schoolIn) schoolIn.value = st.school || 'Trường THCS';
 
     if (modal) modal.style.display = 'flex';
   }
@@ -2817,8 +2843,8 @@ class EduPathApp {
 
     const studentCode = codeIn ? codeIn.value.trim().toUpperCase() : '';
     const name = nameIn ? nameIn.value.trim() : '';
-    let grade = gradeIn ? gradeIn.value.trim().toUpperCase() : '9A1';
-    const school = schoolIn ? schoolIn.value.trim() : 'THCS Chu Văn An';
+    let grade = gradeIn ? gradeIn.value.trim().toUpperCase() : '';
+    const school = schoolIn ? schoolIn.value.trim() : 'Trường THCS';
 
     if (err) err.style.display = 'none';
 
@@ -2830,9 +2856,9 @@ class EduPathApp {
       return;
     }
 
-    if (grade.includes('TẤT CẢ') || grade.includes('TAT CA')) {
+    if (!grade || grade.includes('TẤT CẢ') || grade.includes('TAT CA')) {
       if (err) {
-        err.textContent = 'Lớp không hợp lệ. Vui lòng nhập tên lớp cụ thể (ví dụ: 9A1, 9A2...).';
+        err.textContent = 'Lớp không hợp lệ. Vui lòng nhập tên lớp cụ thể (ví dụ: 9A, 9B, 9/1...).';
         err.style.display = 'block';
       }
       return;
@@ -2840,7 +2866,7 @@ class EduPathApp {
 
     if (studentCode.includes('TẤT CẢ') || studentCode.includes('TAT CA')) {
       if (err) {
-        err.textContent = 'Mã học sinh không được chứa "Tất cả các lớp". Định dạng đúng: Lớp-STT (ví dụ: 9A1-01).';
+        err.textContent = 'Mã học sinh không được chứa "Tất cả các lớp". Định dạng đúng: Lớp-STT (ví dụ: 9A-01, 9/1-02).';
         err.style.display = 'block';
       }
       return;
@@ -2894,6 +2920,7 @@ class EduPathApp {
       }
 
       this.closeCrudModal();
+      this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
       this.renderTeacherHeatmap();
       this.playBeep(700, 'sine', 0.15);
     } catch (saveErr) {
@@ -2922,10 +2949,11 @@ class EduPathApp {
       if (TeacherAnalytics.deleteStudentFromRoster) {
         TeacherAnalytics.deleteStudentFromRoster(code);
       } else {
-        const idx = TeacherAnalytics.currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `9A1-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
+        const idx = TeacherAnalytics.currentClassData.findIndex(s => (s.studentCode && s.studentCode.toUpperCase() === code.toUpperCase()) || (s.id && `${s.grade || 'HS'}-${String(s.id).padStart(2, '0')}` === code.toUpperCase()));
         if (idx >= 0) TeacherAnalytics.currentClassData.splice(idx, 1);
       }
 
+      this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
       this.renderTeacherHeatmap();
       this.playBeep(400, 'sawtooth', 0.15);
     } catch (err) {
@@ -3032,7 +3060,7 @@ class EduPathApp {
     const stream = isVocational ? 'Cao đẳng / Trung cấp Nghề 9+' : 'Học tiếp THPT & Đại học';
 
     const currentRoster = TeacherAnalytics.currentClassData || TeacherAnalytics.DEFAULT_CLASS_DATA;
-    const grade = this.studentProfile.grade || '9A1';
+    const grade = this.studentProfile.grade || 'Khối 9';
     let nextNum = currentRoster.length + 1;
     let newCode = `${grade}-${String(nextNum).padStart(2, '0')}`;
     while (currentRoster.some(s => s.studentCode === newCode)) {
@@ -3042,7 +3070,7 @@ class EduPathApp {
 
     TeacherAnalytics.addStudentToRoster({
       studentCode: newCode,
-      school: this.studentProfile.school || 'THCS Chu Văn An',
+      school: this.studentProfile.school || 'Trường THCS',
       grade: grade,
       name: `${this.studentProfile.name || 'Học sinh mới'} (${newCode})`,
       code: this.studentProfile.code || '',
@@ -3052,8 +3080,77 @@ class EduPathApp {
       stream: stream
     });
 
+    this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
     this.renderTeacherHeatmap();
     this.playBeep(850, 'triangle', 0.2);
+  }
+
+  syncTeacherClassFilterDropdown(allStudents) {
+    const classFilter = document.getElementById('teacher-class-filter-select');
+    if (!classFilter) return;
+
+    if (!this.allKnownGrades) {
+      this.allKnownGrades = new Set();
+    }
+
+    const currentFilterVal = (classFilter.value || '').toUpperCase();
+
+    // Collect all unique grades across full dataset and maintain them
+    if (Array.isArray(allStudents) && allStudents.length > 0) {
+      if (!currentFilterVal) {
+        this.cachedAllStudents = allStudents;
+      }
+      allStudents.forEach(s => {
+        if (s && s.grade && String(s.grade).trim().length > 0 && String(s.grade).trim() !== '---') {
+          this.allKnownGrades.add(String(s.grade).trim().toUpperCase());
+        }
+      });
+    }
+
+    if (window.TeacherAnalytics && Array.isArray(window.TeacherAnalytics.currentClassData)) {
+      window.TeacherAnalytics.currentClassData.forEach(s => {
+        if (s && s.grade && String(s.grade).trim().length > 0 && String(s.grade).trim() !== '---') {
+          this.allKnownGrades.add(String(s.grade).trim().toUpperCase());
+        }
+      });
+    }
+
+    const sortedGrades = Array.from(this.allKnownGrades).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+
+    const prevVal = currentFilterVal;
+
+    // Rebuild options dynamically from real student data
+    classFilter.textContent = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = '';
+    allOpt.textContent = 'Tất cả các lớp';
+    classFilter.appendChild(allOpt);
+
+    sortedGrades.forEach(gradeName => {
+      const opt = document.createElement('option');
+      opt.value = gradeName;
+      opt.textContent = `Lớp ${gradeName}`;
+      classFilter.appendChild(opt);
+    });
+
+    if (prevVal && sortedGrades.includes(prevVal)) {
+      classFilter.value = prevVal;
+    } else {
+      classFilter.value = '';
+    }
+
+    // Update datalist for student modal dynamically
+    const datalist = document.getElementById('crud-grade-options');
+    if (datalist) {
+      datalist.textContent = '';
+      sortedGrades.forEach(gradeName => {
+        const opt = document.createElement('option');
+        opt.value = gradeName;
+        datalist.appendChild(opt);
+      });
+    }
   }
 
   openExcelImportModal() {
@@ -3210,6 +3307,7 @@ class EduPathApp {
         `);
         succBox.style.display = 'block';
       }
+      this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
       this.renderTeacherHeatmap();
       this.playBeep(880, 'sine', 0.25);
     }
@@ -3466,7 +3564,7 @@ class EduPathApp {
           <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
           <td style="text-align:center;"><code style="font-weight:700; color:var(--brand); background:var(--surface-elevated); padding:0.15rem 0.35rem; border-radius:4px; font-size:0.75rem;">${studentCode}</code></td>
           <td>${st.school || 'Trường THCS'}</td>
-          <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '9A1'}</span></td>
+          <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '---'}</span></td>
           <td><strong>${st.name || 'Học sinh'}</strong></td>
           <td style="text-align:center;">${hollandBadge}</td>
           <td>${majorText}</td>

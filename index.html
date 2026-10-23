@@ -685,10 +685,6 @@
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
               <select id="teacher-class-filter-select" class="form-select" style="padding:0.4rem 0.65rem; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.8rem; font-weight:700; background:var(--surface-card); color:var(--text-primary); cursor:pointer;">
                 <option value="">Tất cả các lớp</option>
-                <option value="9A1">Lớp 9A1</option>
-                <option value="9A2">Lớp 9A2</option>
-                <option value="9B1">Lớp 9B1</option>
-                <option value="9C">Lớp 9C</option>
               </select>
               <button class="btn-primary" id="btn-open-add-student-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Học Sinh
@@ -884,13 +880,8 @@
         </div>
         <div class="form-group">
           <label for="crud-student-grade">Lớp</label>
-          <input type="text" id="crud-student-grade" list="crud-grade-options" class="auth-input" placeholder="Ví dụ: 9A1" required>
-          <datalist id="crud-grade-options">
-            <option value="9A1">
-            <option value="9A2">
-            <option value="9B1">
-            <option value="9C">
-          </datalist>
+          <input type="text" id="crud-student-grade" list="crud-grade-options" class="auth-input" placeholder="Ví dụ: 9A, 9B, 9/1..." required>
+          <datalist id="crud-grade-options"></datalist>
         </div>
         <div class="form-group">
           <label for="crud-student-school">Trường THCS</label>
