@@ -17,6 +17,13 @@ class EduPathApp {
     this.quizAnswers = [];
     this.quizQuestions = [];
     this.activeAgentId = 'psychologist';
+    this.agentChatHistories = {
+      psychologist: [],
+      'tech-lead': [],
+      'streaming-officer': [],
+      'market-analyst': []
+    };
+    this.isAgentThinking = false;
 
     this.studentProfile = {
       name: '',
@@ -95,6 +102,25 @@ class EduPathApp {
     } catch (e) {
       console.debug('AudioContext not allowed or uninitialized:', e);
     }
+  }
+
+  escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  formatAgentText(text) {
+    if (typeof text !== 'string') return '';
+    let safe = this.escapeHtml(text);
+    safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    safe = safe.replace(/\n/g, '<br>');
+    return safe;
   }
 
   loadProfileFromStorage() {
@@ -1581,7 +1607,7 @@ class EduPathApp {
     this.playBeep(680);
   }
 
-  // --- AI AGENTS MODULE ---
+  // --- AI AGENTS MODULE (Gemini AI + SGK Expert Hybrid) ---
   initAIAgents() {
     const selector = document.getElementById('ai-agent-selector-container');
     if (!selector) return;
@@ -1600,6 +1626,7 @@ class EduPathApp {
         </div>
       `);
       pill.addEventListener('click', () => {
+        if (this.activeAgentId === agent.id) return;
         this.activeAgentId = agent.id;
         document.querySelectorAll('.agent-card-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
@@ -1609,6 +1636,7 @@ class EduPathApp {
       selector.appendChild(pill);
     });
 
+    this.updateGeminiStatusBadge();
     this.renderAgentChat();
 
     // Send button & Input
@@ -1617,7 +1645,7 @@ class EduPathApp {
     if (sendBtn && inputEl) {
       const doSend = () => {
         const text = inputEl.value.trim();
-        if (text) {
+        if (text && !this.isAgentThinking) {
           this.handleSendMessage(text);
           inputEl.value = '';
         }
@@ -1626,6 +1654,150 @@ class EduPathApp {
       inputEl.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') doSend();
       });
+    }
+
+    // Clear chat history button
+    const clearChatBtn = document.getElementById('btn-clear-chat-history');
+    if (clearChatBtn) {
+      clearChatBtn.addEventListener('click', () => {
+        if (this.agentChatHistories && this.agentChatHistories[this.activeAgentId]) {
+          this.agentChatHistories[this.activeAgentId] = [];
+        }
+        this.renderAgentChat();
+        this.playBeep(620);
+      });
+    }
+
+    // Gemini Config Modal Hooks
+    const openConfigBtn = document.getElementById('btn-open-gemini-config');
+    const configModal = document.getElementById('gemini-config-modal');
+    const closeConfigBtn = document.getElementById('btn-close-gemini-modal');
+    const keyInput = document.getElementById('gemini-api-key-input');
+    const modelSelect = document.getElementById('gemini-model-select');
+    const toggleKeyBtn = document.getElementById('btn-toggle-key-visibility');
+    const testBtn = document.getElementById('btn-test-gemini-connection');
+    const saveBtn = document.getElementById('btn-save-gemini-config');
+    const clearConfigBtn = document.getElementById('btn-clear-gemini-config');
+    const configMsg = document.getElementById('gemini-config-msg');
+
+    if (openConfigBtn && configModal) {
+      openConfigBtn.addEventListener('click', () => {
+        const cfg = AIAgentsManager.getGeminiConfig();
+        if (keyInput) keyInput.value = cfg.apiKey;
+        if (modelSelect) modelSelect.value = cfg.model;
+        if (configMsg) configMsg.style.display = 'none';
+        configModal.style.display = 'flex';
+      });
+    }
+
+    if (closeConfigBtn && configModal) {
+      closeConfigBtn.addEventListener('click', () => {
+        configModal.style.display = 'none';
+      });
+    }
+
+    if (toggleKeyBtn && keyInput) {
+      toggleKeyBtn.addEventListener('click', () => {
+        if (keyInput.type === 'password') {
+          keyInput.type = 'text';
+          toggleKeyBtn.textContent = '🙈';
+        } else {
+          keyInput.type = 'password';
+          toggleKeyBtn.textContent = '👁️';
+        }
+      });
+    }
+
+    if (testBtn && keyInput && modelSelect && configMsg) {
+      testBtn.addEventListener('click', async () => {
+        const key = keyInput.value.trim();
+        const model = modelSelect.value;
+        testBtn.disabled = true;
+        const originalText = testBtn.textContent;
+        testBtn.textContent = '⏳ Đang thử kết nối...';
+        configMsg.style.display = 'none';
+
+        try {
+          const testRes = await AIAgentsManager.testGeminiConnection(key, model);
+          configMsg.style.display = 'block';
+          if (testRes.ok) {
+            configMsg.style.background = 'rgba(16, 185, 129, 0.12)';
+            configMsg.style.color = '#10b981';
+            configMsg.style.border = '1px solid #10b981';
+            configMsg.textContent = `✅ ${testRes.message} Phản hồi: "${testRes.reply}"`;
+          } else {
+            configMsg.style.background = 'rgba(239, 68, 68, 0.12)';
+            configMsg.style.color = '#ef4444';
+            configMsg.style.border = '1px solid #ef4444';
+            configMsg.textContent = `❌ ${testRes.error}`;
+          }
+        } catch (err) {
+          configMsg.style.display = 'block';
+          configMsg.style.background = 'rgba(239, 68, 68, 0.12)';
+          configMsg.style.color = '#ef4444';
+          configMsg.style.border = '1px solid #ef4444';
+          configMsg.textContent = `❌ Lỗi kiểm tra kết nối: ${err.message}`;
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = originalText;
+        }
+      });
+    }
+
+    if (saveBtn && keyInput && modelSelect && configMsg) {
+      saveBtn.addEventListener('click', () => {
+        const key = keyInput.value.trim();
+        const model = modelSelect.value;
+        const ok = AIAgentsManager.saveGeminiConfig({ apiKey: key, model });
+        configMsg.style.display = 'block';
+        if (ok) {
+          configMsg.style.background = 'rgba(16, 185, 129, 0.12)';
+          configMsg.style.color = '#10b981';
+          configMsg.style.border = '1px solid #10b981';
+          configMsg.textContent = '💾 Đã lưu cấu hình Google Gemini thành công!';
+          this.updateGeminiStatusBadge();
+          this.playBeep(640);
+          setTimeout(() => {
+            if (configModal) configModal.style.display = 'none';
+          }, 800);
+        } else {
+          configMsg.style.background = 'rgba(239, 68, 68, 0.12)';
+          configMsg.style.color = '#ef4444';
+          configMsg.style.border = '1px solid #ef4444';
+          configMsg.textContent = '❌ Không thể lưu cấu hình vào LocalStorage.';
+        }
+      });
+    }
+
+    if (clearConfigBtn && keyInput && configMsg) {
+      clearConfigBtn.addEventListener('click', () => {
+        AIAgentsManager.clearGeminiConfig();
+        keyInput.value = '';
+        configMsg.style.display = 'block';
+        configMsg.style.background = 'rgba(100, 116, 139, 0.12)';
+        configMsg.style.color = 'var(--text-secondary)';
+        configMsg.style.border = '1px solid var(--border)';
+        configMsg.textContent = '🗑️ Đã xóa API Key. Ứng dụng đã chuyển về Chế độ Cố vấn SGK Ngoại tuyến.';
+        this.updateGeminiStatusBadge();
+        this.playBeep(520);
+      });
+    }
+  }
+
+  updateGeminiStatusBadge() {
+    const badge = document.getElementById('gemini-status-badge');
+    if (!badge) return;
+    const isLive = AIAgentsManager.isGeminiActive();
+    const cfg = AIAgentsManager.getGeminiConfig();
+
+    if (isLive) {
+      badge.className = 'agent-mode-badge live-active';
+      badge.textContent = `⚡ Gemini AI Live (${cfg.model})`;
+      badge.title = `Đang kết nối trực tiếp với Google Gemini AI (${cfg.model})`;
+    } else {
+      badge.className = 'agent-mode-badge';
+      badge.textContent = '🛡️ Chuyên Gia SGK (Ngoại Tuyến)';
+      badge.title = 'Đang sử dụng hệ thống Cố vấn Chuyên gia SGK Công nghệ 9 nội bộ (Ngoại tuyến)';
     }
   }
 
@@ -1636,12 +1808,41 @@ class EduPathApp {
 
     const chatBox = document.getElementById('chat-messages-scroll');
     if (chatBox) {
-      chatBox.innerHTML = sanitize(`
-        <div class="chat-bubble agent">
+      chatBox.textContent = '';
+      const history = (this.agentChatHistories && this.agentChatHistories[this.activeAgentId]) || [];
+
+      if (history.length === 0) {
+        const greetDiv = document.createElement('div');
+        greetDiv.className = 'chat-bubble agent';
+        greetDiv.innerHTML = sanitize(`
+          <span class="source-badge local">🛡️ Chuyên Gia SGK</span><br>
           <strong>${agent.avatar} ${agent.name}:</strong><br>
           ${agent.greeting}
-        </div>
-      `);
+        `);
+        chatBox.appendChild(greetDiv);
+      } else {
+        history.forEach(item => {
+          if (item.role === 'user') {
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-bubble user';
+            userDiv.textContent = item.text;
+            chatBox.appendChild(userDiv);
+          } else {
+            const agentDiv = document.createElement('div');
+            agentDiv.className = 'chat-bubble agent';
+            const sourceBadgeHtml = item.source === 'gemini'
+              ? `<span class="source-badge gemini">⚡ Gemini AI (${item.model || 'Live'})</span>`
+              : `<span class="source-badge local">🛡️ Chuyên Gia SGK</span>`;
+            agentDiv.innerHTML = sanitize(`
+              ${sourceBadgeHtml}<br>
+              <strong>${agent.avatar} ${agent.name}:</strong><br>
+              ${this.formatAgentText(item.text)}
+            `);
+            chatBox.appendChild(agentDiv);
+          }
+        });
+      }
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     const promptsRow = document.getElementById('quick-prompts-row');
@@ -1652,35 +1853,108 @@ class EduPathApp {
         btn.type = 'button';
         btn.className = 'prompt-pill';
         btn.textContent = p;
-        btn.addEventListener('click', () => this.handleSendMessage(p));
+        btn.addEventListener('click', () => {
+          if (!this.isAgentThinking) {
+            this.handleSendMessage(p);
+          }
+        });
         promptsRow.appendChild(btn);
       });
     }
   }
 
-  handleSendMessage(msgText) {
+  async handleSendMessage(msgText) {
     const chatBox = document.getElementById('chat-messages-scroll');
-    if (!chatBox) return;
-    const sanitize = window.sanitize;
+    const inputEl = document.getElementById('chat-input-text');
+    const sendBtn = document.getElementById('chat-send-btn');
+    if (!chatBox || !msgText || this.isAgentThinking) return;
 
+    const sanitize = window.sanitize;
+    const cleanText = msgText.trim();
+    if (!cleanText) return;
+
+    this.isAgentThinking = true;
+    if (sendBtn) sendBtn.disabled = true;
+    if (inputEl) inputEl.disabled = true;
+
+    if (!this.agentChatHistories[this.activeAgentId]) {
+      this.agentChatHistories[this.activeAgentId] = [];
+    }
+
+    // Append user message to history
+    this.agentChatHistories[this.activeAgentId].push({
+      role: 'user',
+      text: cleanText
+    });
+
+    // Render user message bubble
     const userDiv = document.createElement('div');
     userDiv.className = 'chat-bubble user';
-    userDiv.textContent = msgText;
+    userDiv.textContent = cleanText;
     chatBox.appendChild(userDiv);
 
-    const agent = AIAgentsManager.AGENTS.find(a => a.id === this.activeAgentId);
-    const response = AIAgentsManager.generateAgentResponse(this.activeAgentId, msgText, this.studentProfile);
+    const agent = AIAgentsManager.AGENTS.find(a => a.id === this.activeAgentId) || AIAgentsManager.AGENTS[0];
 
-    setTimeout(() => {
+    // Show typing indicator bubble
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-bubble agent typing-indicator';
+    typingDiv.id = 'agent-typing-bubble';
+    typingDiv.innerHTML = sanitize(`<span>🤖 <strong>${agent.name}</strong> đang suy nghĩ...</span> <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>`);
+    chatBox.appendChild(typingDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      const prevHistory = this.agentChatHistories[this.activeAgentId].slice(0, -1);
+      const res = await AIAgentsManager.askAgent(this.activeAgentId, cleanText, prevHistory, this.studentProfile);
+
+      // Remove typing indicator
+      const typingEl = document.getElementById('agent-typing-bubble');
+      if (typingEl && typingEl.parentNode) {
+        typingEl.parentNode.removeChild(typingEl);
+      }
+
+      // Append agent response to history
+      this.agentChatHistories[this.activeAgentId].push({
+        role: 'model',
+        text: res.text,
+        source: res.source,
+        model: res.model
+      });
+
+      // Render agent response bubble
+      const sourceBadgeHtml = res.source === 'gemini'
+        ? `<span class="source-badge gemini">⚡ Gemini AI (${res.model || 'Live'})</span>`
+        : `<span class="source-badge local">🛡️ Chuyên Gia SGK</span>`;
+
       const agentDiv = document.createElement('div');
       agentDiv.className = 'chat-bubble agent';
-      agentDiv.innerHTML = sanitize(`<strong>${agent.avatar} ${agent.name}:</strong><br>${response.replace(/\n/g, '<br>')}`);
+      agentDiv.innerHTML = sanitize(`
+        ${sourceBadgeHtml}<br>
+        <strong>${agent.avatar} ${agent.name}:</strong><br>
+        ${this.formatAgentText(res.text)}
+      `);
       chatBox.appendChild(agentDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
       this.playBeep(720);
-    }, 400);
-
-    chatBox.scrollTop = chatBox.scrollHeight;
+    } catch (err) {
+      console.error('[EduPath Chat] Lỗi khi gửi tin nhắn:', err);
+      const typingEl = document.getElementById('agent-typing-bubble');
+      if (typingEl && typingEl.parentNode) {
+        typingEl.parentNode.removeChild(typingEl);
+      }
+      const errDiv = document.createElement('div');
+      errDiv.className = 'chat-bubble agent';
+      errDiv.innerHTML = sanitize(`<strong>${agent.avatar} ${agent.name}:</strong><br>Rất tiếc, đã có sự cố kết nối. Vui lòng thử lại sau ít phút.`);
+      chatBox.appendChild(errDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } finally {
+      this.isAgentThinking = false;
+      if (sendBtn) sendBtn.disabled = false;
+      if (inputEl) {
+        inputEl.disabled = false;
+        inputEl.focus();
+      }
+    }
   }
 
   // --- PROJECT ASSESSMENT MODULE (Bài 5 SGK) ---

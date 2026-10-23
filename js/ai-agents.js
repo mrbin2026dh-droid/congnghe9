@@ -1,11 +1,17 @@
 /**
  * EduPath AI - Multi-Agent Roleplay Room (4 Specialized AI Persona Agents)
- * Realistic, context-aware pedagogical guidance based on student's Holland Code & SGK data.
- * Zero-Guesswork: Real Student Profile, Real Market Data, No Fake RIA Defaults
+ * Hybrid Dual-Engine Architecture:
+ * 1. Live Google Gemini AI (1.5-flash / 2.0-flash / 1.5-pro) with Rich Persona System Prompts & Student Context Injection
+ * 2. High-Fidelity Local Rule-Based SGK Expert Engine (Graceful Offline / Rate-Limit Fallback)
+ * Zero-Guesswork: Strict SGK Cong nghe 9 Compliance, Real Student Profile, No Fake RIA Defaults
  */
 'use strict';
 
 const AIAgentsManager = (() => {
+  const STORAGE_KEY_API = 'EDUPATH_GEMINI_API_KEY';
+  const STORAGE_KEY_MODEL = 'EDUPATH_GEMINI_MODEL';
+  const DEFAULT_MODEL = 'gemini-1.5-flash';
+
   const AGENTS = [
     {
       id: 'psychologist',
@@ -62,13 +68,289 @@ const AIAgentsManager = (() => {
   ];
 
   /**
-   * Tạo phản hồi thông minh dựa trên ngữ cảnh mã Holland của học sinh
-   * @param {string} agentId - ID của tác tử
-   * @param {string} userMessage - Câu hỏi của học sinh
-   * @param {Object} studentProfile - Hồ sơ { code, scores, name }
+   * System Prompts chuẩn sư phạm cho từng Persona
+   */
+  const PERSONA_SYSTEM_PROMPTS = {
+    psychologist: `Bạn là TS. Minh Tâm - Chuyên gia Tâm lý Hướng nghiệp THCS giàu lòng thấu cảm, ân cần và gần gũi với lứa tuổi 14-15 (học sinh lớp 9).
+SỨ MỆNH: Giúp học sinh nhận diện bản thân, vượt qua áp lực gia đình, định kiến giới tính (con gái làm kỹ thuật/công nghệ), giải tỏa tự ti về điểm số hay học lực (không giỏi Toán thì có làm kĩ thuật được không).
+KIẾN THỨC CỐT LÕI: Nắm chắc triết lý "Cây nghề nghiệp" (Bài 4 SGK Công nghệ 9): Gốc rễ nội lực là Sở thích, Khả năng, Cá tính; Thân cây là Quá trình học tập rèn luyện; Quả ngọt là Thành công, Thu nhập và Đóng góp xã hội.
+PHONG CÁCH: Thân thiện, ấm áp, dùng đại từ xưng hô "thầy - em", tôn trọng cảm xúc, khích lệ tự tin. Trả lời súc tích, mạch lạc (khoảng 2-3 đoạn ngắn, dưới 300 từ).`,
+
+    'tech-lead': `Bạn là KS. Hoàng Bách - Kỹ sư Trưởng Công nghệ & Chế tạo máy, phụ trách các hệ thống Cơ điện tử, Robot và Tự động hóa sản xuất.
+SỨ MỆNH: Truyền cảm hứng hành động và tư duy giải quyết vấn đề kỹ thuật cho học sinh lớp 9. Phương châm sống còn: "Trong giới kỹ thuật, lý thuyết chỉ là 20%, 80% là khả năng xắn tay áo dập tắt sự cố (troubleshooting) và tinh thần không ngại sai lầm (fail fast, learn fast)".
+KIẾN THỨC CỐT LÕI: Kiến thức ngành nghề kĩ thuật, công nghệ (Bài 1 & Bài 5 SGK Công nghệ 9), quy trình an toàn lao động, tư duy phân tích nguyên nhân sự cố, các kỹ năng thực hành vi mạch, cơ khí và lập trình logic.
+PHONG CÁCH: Trực diện, hăng hái, truyền lửa, dùng đại từ "tôi - bạn trẻ/em", thường đưa ra các thử thách tình huống thực tế hoặc câu hỏi gợi mở tư duy kỹ thuật. Trả lời súc tích, rõ ràng (khoảng 2-3 đoạn ngắn).`,
+
+    'streaming-officer': `Bạn là Cô Thanh Mai - Chuyên viên Phân luồng Giáo dục THCS, am hiểu tường tận Chương trình GDPT 2018 và Luật Giáo dục 2019.
+SỨ MỆNH: Giúp học sinh lớp 9 và phụ huynh nắm rõ các ngã rẽ sau tốt nghiệp THCS (Bài 2 SGK Công nghệ 9), xóa bỏ tâm lý kỳ thị học nghề hay áp lực thi vào trường chuyên/công lập khi quá sức.
+KIẾN THỨC CỐT LÕI:
+1) Nhánh 1: Học tiếp THPT (trường công lập, tư thục hoặc GDTX) để định hướng xét tuyển Đại học/Cao đẳng.
+2) Nhánh 2: Mô hình Đào tạo Nghề 9+ (học tại trường Trung cấp hoặc Cao đẳng nghề) - học sinh học song song văn hóa THPT và tay nghề kỹ thuật, tốt nghiệp tuổi 18 có cả Bằng THPT và Bằng nghề, có thể đi làm có thu nhập ngay hoặc học liên thông lên Đại học.
+PHONG CÁCH: Mô phạm, chuẩn mực, thấu tình đạt lý, dùng đại từ "cô - em". Đưa ra lời khuyên lộ trình học tập thực tế và khả thi (khoảng 2-3 đoạn ngắn).`,
+
+    'market-analyst': `Bạn là ThS. Trần Nam - Nhà Phân tích Thị trường Lao động Kỹ thuật, Công nghệ tại Việt Nam (theo Bài 3 SGK Công nghệ 9).
+SỨ MỆNH: Cung cấp bức tranh thực tế về thị trường việc làm, nhu cầu nhân lực, mức thu nhập và xu hướng cách mạng công nghiệp 4.0; cảnh báo học sinh tránh chọn nghề theo tin đồn hay phong trào nhất thời.
+KIẾN THỨC CỐT LÕI: Số liệu thị trường lao động kỹ thuật, công nghệ Việt Nam:
+- 3 nhóm ngành khát nhân lực nhất: Công nghệ thông tin & An ninh mạng, Cơ điện tử & Kỹ thuật Ô tô điện, Kỹ thuật Điện & Năng lượng tái tạo.
+- Nghịch lý thị trường: Thừa lao động phổ thông chưa qua đào tạo nhưng khan hiếm lao động kỹ thuật lành nghề.
+- Khung thu nhập thực tế năm 2026: Kỹ sư đại học mới ra trường: 10 - 18 triệu đồng/tháng; Kỹ thuật viên hệ 9+/cao đẳng nghề: 8 - 14 triệu đồng/tháng; sau 3-5 năm có kinh nghiệm: 25 - 45 triệu đồng/tháng.
+PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng đại từ "tôi - em". Đưa ra nhận định logic, thuyết phục (khoảng 2-3 đoạn ngắn).`
+  };
+
+  /**
+   * Đọc cấu hình Gemini từ LocalStorage
+   */
+  function getGeminiConfig() {
+    try {
+      const apiKey = (localStorage.getItem(STORAGE_KEY_API) || '').trim();
+      const model = (localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_MODEL).trim();
+      return { apiKey, model };
+    } catch (err) {
+      console.warn('[EduPath Gemini] Không thể đọc localStorage:', err);
+      return { apiKey: '', model: DEFAULT_MODEL };
+    }
+  }
+
+  /**
+   * Lưu cấu hình Gemini vào LocalStorage
+   */
+  function saveGeminiConfig(cfg) {
+    try {
+      if (cfg && typeof cfg.apiKey === 'string') {
+        localStorage.setItem(STORAGE_KEY_API, cfg.apiKey.trim());
+      }
+      if (cfg && typeof cfg.model === 'string' && cfg.model.trim()) {
+        localStorage.setItem(STORAGE_KEY_MODEL, cfg.model.trim());
+      }
+      return true;
+    } catch (err) {
+      console.error('[EduPath Gemini] Lỗi khi lưu cấu hình:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Xóa cấu hình Gemini khỏi LocalStorage
+   */
+  function clearGeminiConfig() {
+    try {
+      localStorage.removeItem(STORAGE_KEY_API);
+      localStorage.removeItem(STORAGE_KEY_MODEL);
+      return true;
+    } catch (err) {
+      console.error('[EduPath Gemini] Lỗi khi xóa cấu hình:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Kiểm tra xem Gemini Live Mode có đang được kích hoạt hay không
+   */
+  function isGeminiActive() {
+    const cfg = getGeminiConfig();
+    return Boolean(cfg.apiKey && cfg.apiKey.length >= 10);
+  }
+
+  /**
+   * Xây dựng ngữ cảnh học sinh (Context Injection) để nạp vào Prompt Gemini
+   */
+  function buildStudentContextPrompt(studentProfile, agentId) {
+    const rawCode = (studentProfile && studentProfile.code) ? String(studentProfile.code).trim().toUpperCase() : '';
+    const hasValidSurvey = Boolean(rawCode && rawCode.length >= 3 && rawCode !== '---');
+    const name = (studentProfile && studentProfile.name) || 'em';
+    const grade = (studentProfile && studentProfile.grade) || 'Lớp 9';
+    const school = (studentProfile && studentProfile.school) || 'Trường THCS';
+    const targetMajorName = (studentProfile && studentProfile.targetMajorName) || 'Chưa chọn';
+    const stream = (studentProfile && studentProfile.stream) || 'Chưa xác định';
+
+    if (!hasValidSurvey) {
+      return `THÔNG TIN HỒ SƠ HỌC SINH ĐANG ĐỐI THOẠI:
+- Học sinh: ${name} (${grade}, ${school})
+- Trạng thái khảo sát: CHƯA HOÀN THÀNH KHẢO SÁT HOLLAND RIASEC (Chưa có mã RIASEC cá nhân).
+QUY TẮC BẮT BUỘC (Trường hợp 7 SGK): Học sinh chưa làm khảo sát. Bạn TUYỆT ĐỐI KHÔNG ĐƯỢC tự ý bịa đặt hoặc gán mã mặc định (như RIA) hay khẳng định thiên hướng nghề nghiệp cho học sinh. Nếu học sinh hỏi về kết quả của mình hoặc nghề phù hợp với mình, hãy ân cần hướng dẫn học sinh chuyển sang tab "Trắc Nghiệm Holland" để hoàn thành 60 câu hỏi trước.`;
+    }
+
+    let pctDetails = 'Chưa có chi tiết %';
+    if (studentProfile && studentProfile.scores && typeof studentProfile.scores === 'object') {
+      const parts = [];
+      Object.keys(studentProfile.scores).forEach(k => {
+        parts.push(`${k}: ${studentProfile.scores[k]}%`);
+      });
+      if (parts.length > 0) {
+        pctDetails = parts.join(', ');
+      }
+    }
+
+    return `THÔNG TIN HỒ SƠ HỌC SINH ĐANG ĐỐI THOẠI:
+- Học sinh: ${name} (${grade}, ${school})
+- Mã Holland RIASEC: ${rawCode}
+- Tỉ lệ % từng nhóm RIASEC: ${pctDetails}
+- Ngành nghề kĩ thuật, công nghệ phù hợp hàng đầu: ${targetMajorName}
+- Khuyến nghị phân luồng sau THCS: ${stream}
+QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ngành nghề ${targetMajorName} của học sinh vào câu trả lời khi thảo luận về sở thích, định hướng hoặc năng lực cá nhân.`;
+  }
+
+  /**
+   * Kiểm tra kết nối thử nghiệm tới Google Gemini API
+   */
+  async function testGeminiConnection(apiKey, model) {
+    const cleanKey = (apiKey || '').trim();
+    if (!cleanKey) {
+      return { ok: false, error: 'Chưa nhập API Key. Vui lòng dán khóa Gemini API hợp lệ.' };
+    }
+    const chosenModel = model || DEFAULT_MODEL;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(chosenModel)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: 'Xin chào, đây là tin nhắn kiểm tra kết nối từ ứng dụng Hướng nghiệp Lớp 9. Hãy trả lời thật ngắn gọn: Sẵn sàng đồng hành.' }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 30
+          }
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        const errMsg = (errData && errData.error && errData.error.message) || `Mã HTTP ${resp.status} (${resp.statusText})`;
+        return { ok: false, error: `Kết nối thất bại: ${errMsg}` };
+      }
+
+      const data = await resp.json();
+      const reply = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+      return {
+        ok: true,
+        message: `Kết nối thành công tới mô hình ${chosenModel}!`,
+        reply: (reply || '').trim()
+      };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        return { ok: false, error: 'Hết thời gian chờ kết nối (10 giây). Vui lòng kiểm tra lại mạng Internet.' };
+      }
+      return { ok: false, error: `Lỗi kết nối: ${err.message}` };
+    }
+  }
+
+  /**
+   * Gọi Google Gemini API theo thời gian thực
+   */
+  async function callGeminiAPI(agentId, userMessage, conversationHistory, studentProfile) {
+    const config = getGeminiConfig();
+    if (!config.apiKey) {
+      throw new Error('Chưa cấu hình Gemini API Key.');
+    }
+
+    const personaPrompt = PERSONA_SYSTEM_PROMPTS[agentId] || PERSONA_SYSTEM_PROMPTS.psychologist;
+    const studentContext = buildStudentContextPrompt(studentProfile, agentId);
+    const fullSystemInstruction = `${personaPrompt}\n\n${studentContext}\n\nYÊU CẦU ĐỊNH DẠNG TRẢ LỜI:\n- Trả lời bằng tiếng Việt chuẩn mực, đúng vai persona, phù hợp học sinh lớp 9.\n- Dung lượng súc tích (khoảng 2-3 đoạn ngắn, không quá dài dòng).\n- Sử dụng markdown như in đậm (**từ khóa**) hoặc danh sách gạch đầu dòng khi cần thiết.`;
+
+    const contents = [];
+    if (Array.isArray(conversationHistory)) {
+      conversationHistory.forEach(item => {
+        if (item && item.text && typeof item.text === 'string') {
+          contents.push({
+            role: item.role === 'user' ? 'user' : 'model',
+            parts: [{ text: item.text }]
+          });
+        }
+      });
+    }
+
+    contents.push({
+      role: 'user',
+      parts: [{ text: userMessage }]
+    });
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: contents,
+        systemInstruction: {
+          parts: [{ text: fullSystemInstruction }]
+        },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800
+        }
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      const errMsg = (errData && errData.error && errData.error.message) || `HTTP ${resp.status} (${resp.statusText})`;
+      throw new Error(errMsg);
+    }
+
+    const data = await resp.json();
+    const candidate = data && data.candidates && data.candidates[0];
+    if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+      throw new Error('Gemini không phản hồi định dạng nội dung hợp lệ.');
+    }
+
+    const rawText = candidate.content.parts[0].text;
+    return (rawText || '').trim();
+  }
+
+  /**
+   * Tác vụ tổng hợp: Tự động điều phối giữa Gemini Live AI và Cố vấn Ngoại tuyến Fallback
+   */
+  async function askAgent(agentId, userMessage, conversationHistory, studentProfile) {
+    const config = getGeminiConfig();
+    if (config.apiKey && config.apiKey.length >= 10) {
+      try {
+        const geminiReply = await callGeminiAPI(agentId, userMessage, conversationHistory, studentProfile);
+        return {
+          text: geminiReply,
+          source: 'gemini',
+          model: config.model
+        };
+      } catch (err) {
+        console.warn(`[EduPath Gemini] Lỗi gọi Gemini (${err.message}). Tự động kích hoạt Cố vấn SGK nội bộ:`, err);
+        const localReply = generateAgentResponse(agentId, userMessage, studentProfile);
+        return {
+          text: localReply,
+          source: 'local',
+          fallbackReason: err.message
+        };
+      }
+    }
+
+    // Chế độ ngoại tuyến / Fallback mặc định
+    const localReply = generateAgentResponse(agentId, userMessage, studentProfile);
+    return {
+      text: localReply,
+      source: 'local'
+    };
+  }
+
+  /**
+   * Phản hồi thông minh nội bộ dựa trên SGK Công nghệ 9 và ngữ cảnh thực tế (Local Rule-based Engine)
    */
   function generateAgentResponse(agentId, userMessage, studentProfile) {
-    const rawCode = (studentProfile && studentProfile.code) ? studentProfile.code.trim().toUpperCase() : '';
+    const rawCode = (studentProfile && studentProfile.code) ? String(studentProfile.code).trim().toUpperCase() : '';
     const hasValidSurvey = Boolean(rawCode && rawCode.length >= 3 && rawCode !== '---');
     const code = hasValidSurvey ? rawCode : null;
     const name = (studentProfile && studentProfile.name) || 'em';
@@ -140,7 +422,16 @@ const AIAgentsManager = (() => {
 
   return {
     AGENTS,
-    generateAgentResponse
+    PERSONA_SYSTEM_PROMPTS,
+    getGeminiConfig,
+    saveGeminiConfig,
+    clearGeminiConfig,
+    isGeminiActive,
+    testGeminiConnection,
+    callGeminiAPI,
+    askAgent,
+    generateAgentResponse,
+    buildStudentContextPrompt
   };
 })();
 

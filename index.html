@@ -525,10 +525,21 @@
       <!-- ================= TAB 3: PHÒNG CỐ VẤN AI ĐA TÁC TỬ ================= -->
       <section class="stage-view-section" id="view-agents" style="display:none;">
         <div class="card-panel" style="min-height:560px;">
-          <div class="card-panel-header">
+          <div class="card-panel-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
             <div>
               <h2 class="card-title">🤖 Phòng Cố Vấn Hướng Nghiệp AI Đa Tác Tử (Multi-Agent Room)</h2>
               <p class="card-subtitle">Đối thoại chuyên sâu với 4 Persona AI đại diện cho 4 góc nhìn hướng nghiệp</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <span id="gemini-status-badge" class="agent-mode-badge" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.35rem 0.75rem; border-radius:var(--radius-full); font-size:0.8rem; font-weight:600; background:var(--surface-elevated); border:1px solid var(--border); color:var(--text-secondary);">
+                🛡️ Chuyên Gia SGK (Ngoại Tuyến)
+              </span>
+              <button type="button" class="btn-secondary" id="btn-open-gemini-config" style="padding:0.4rem 0.75rem; font-size:0.825rem; display:inline-flex; align-items:center; gap:0.35rem;">
+                ⚙️ Cài Đặt Gemini API
+              </button>
+              <button type="button" class="btn-secondary" id="btn-clear-chat-history" style="padding:0.4rem 0.75rem; font-size:0.825rem; display:inline-flex; align-items:center; gap:0.35rem;" title="Làm mới cuộc trò chuyện với tác tử hiện tại">
+                🗑️ Làm Mới Chat
+              </button>
             </div>
           </div>
 
@@ -852,6 +863,58 @@
         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
           <button type="button" class="btn-session-action" id="btn-cancel-crud-student" style="flex: 1;">Hủy</button>
           <button type="submit" class="btn-auth-submit" id="btn-save-crud-student" style="flex: 1; margin-top: 0;">Lưu thông tin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= GEMINI API CONFIG MODAL ================= -->
+  <div class="auth-modal-overlay" id="gemini-config-modal" style="display: none;">
+    <div class="auth-modal-container" role="dialog" aria-modal="true" aria-labelledby="gemini-config-modal-title" style="max-width: 520px;">
+      <button type="button" class="auth-modal-close" id="btn-close-gemini-modal" title="Đóng cửa sổ" aria-label="Đóng">&times;</button>
+      <div class="auth-modal-header">
+        <h2 id="gemini-config-modal-title" class="auth-modal-title">⚡ Cấu Hình Google Gemini AI</h2>
+        <p class="auth-modal-desc">Kích hoạt phản hồi đa tác tử theo thời gian thực bằng trí tuệ nhân tạo thế hệ mới của Google</p>
+      </div>
+
+      <form class="auth-form" id="gemini-config-form" onsubmit="return false;">
+        <div class="form-group">
+          <label for="gemini-api-key-input">Khóa Google Gemini API Key</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="gemini-api-key-input" class="auth-input" placeholder="AIzaSy..." autocomplete="off" style="padding-right:2.5rem; width:100%;">
+            <button type="button" id="btn-toggle-key-visibility" title="Ẩn/Hiện khóa" style="position:absolute; right:0.6rem; background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted); padding:0.25rem;">
+              👁️
+            </button>
+          </div>
+          <span class="form-hint" style="margin-top:0.35rem; display:block;">
+            💡 Khóa API được lưu trữ an toàn trong <strong>localStorage</strong> của trình duyệt, không gửi tới máy chủ thứ ba. Lấy key miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color:var(--brand); text-decoration:underline;">Google AI Studio</a>.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="gemini-model-select">Mô hình AI (Google Gemini Model)</label>
+          <select id="gemini-model-select" class="auth-input" style="cursor:pointer;">
+            <option value="gemini-1.5-flash" selected>gemini-1.5-flash (Khuyên dùng - Nhanh, thông minh, tối ưu hạn ngạch)</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ mới nhất - Tốc độ cao)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (Tư duy chuyên sâu - Phân tích chi tiết)</option>
+          </select>
+        </div>
+
+        <!-- Connection Test & Status Feedback -->
+        <div id="gemini-config-msg" style="display:none; padding:0.65rem 0.85rem; border-radius:var(--radius-sm); font-size:0.85rem; margin-bottom:1rem; line-height:1.4;"></div>
+
+        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.75rem;">
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn-secondary" id="btn-test-gemini-connection" style="flex:1;">
+              🔍 Kiểm Tra Kết Nối
+            </button>
+            <button type="button" class="btn-primary" id="btn-save-gemini-config" style="flex:1;">
+              💾 Lưu Cấu Hình
+            </button>
+          </div>
+          <button type="button" class="btn-session-action" id="btn-clear-gemini-config" style="color:var(--danger); border-color:var(--danger);">
+            🗑️ Xóa Khóa API (Chuyển sang Ngoại Tuyến)
+          </button>
         </div>
       </form>
     </div>
