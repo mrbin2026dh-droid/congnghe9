@@ -10,7 +10,16 @@
 const AIAgentsManager = (() => {
   const STORAGE_KEY_API = 'EDUPATH_GEMINI_API_KEY';
   const STORAGE_KEY_MODEL = 'EDUPATH_GEMINI_MODEL';
-  const DEFAULT_MODEL = 'gemini-1.5-flash';
+  const DEFAULT_MODEL = 'gemini-2.5-flash';
+  const FALLBACK_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-flash-latest',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash'
+  ];
 
   const AGENTS = [
     {
@@ -103,7 +112,12 @@ PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng
   function getGeminiConfig() {
     try {
       const apiKey = (localStorage.getItem(STORAGE_KEY_API) || '').trim();
-      const model = (localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_MODEL).trim();
+      let model = (localStorage.getItem(STORAGE_KEY_MODEL) || DEFAULT_MODEL).trim();
+      // Tự động nâng cấp model nếu đang lưu 'gemini-1.5-flash' hoặc 'gemini-2.0-flash' bị lỗi 404 trên v1beta
+      if (model === 'gemini-1.5-flash' || model === 'gemini-2.0-flash') {
+        model = DEFAULT_MODEL;
+        localStorage.setItem(STORAGE_KEY_MODEL, model);
+      }
       return { apiKey, model };
     } catch (err) {
       console.warn('[EduPath Gemini] Không thể đọc localStorage:', err);
@@ -182,7 +196,7 @@ PHONG CÁCH: Khách quan, sắc bén, dựa trên số liệu thực tế, dùng
   /**
    * Xây dựng ngữ cảnh học sinh (Context Injection) để nạp vào Prompt Gemini
    */
-  function buildStudentContextPrompt(studentProfile, agentId) {
+  function buildStudentContextPrompt(studentProfile, _agentId) {
     const rawCode = (studentProfile && studentProfile.code) ? String(studentProfile.code).trim().toUpperCase() : '';
     const hasValidSurvey = Boolean(rawCode && rawCode.length >= 3 && rawCode !== '---');
     const name = (studentProfile && studentProfile.name) || 'em';
@@ -219,63 +233,143 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
   }
 
   /**
-   * Kiểm tra kết nối thử nghiệm tới Google Gemini API
+   * Lấy danh sách các model khả dụng cho API Key từ Google ModelService
+   */
+  async function listAvailableModels(apiKey) {
+    if (!apiKey) return [];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const resp = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      if (!data || !Array.isArray(data.models)) return [];
+      return data.models
+        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => m.name.replace(/^models\//, ''));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Gửi request sinh nội dung tới một model cụ thể (Hỗ trợ chuyển đổi linh hoạt v1beta và v1)
+   */
+  async function sendGenerateContentRequest(modelName, apiKey, requestBody) {
+    let url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+    try {
+      let resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+
+      // Nếu 404, thử sang v1 endpoint
+      if (resp.status === 404) {
+        const urlV1 = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const respV1 = await fetch(urlV1, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+        if (respV1.ok) {
+          resp = respV1;
+        }
+      }
+
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        const errMsg = (errData && errData.error && errData.error.message) || `HTTP ${resp.status} (${resp.statusText})`;
+        const error = new Error(errMsg);
+        error.status = resp.status;
+        throw error;
+      }
+
+      const data = await resp.json();
+      const candidate = data && data.candidates && data.candidates[0];
+      if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+        throw new Error('Gemini không phản hồi định dạng nội dung hợp lệ.');
+      }
+
+      return (candidate.content.parts[0].text || '').trim();
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * Kiểm tra kết nối thử nghiệm tới Google Gemini API (Tự động phát hiện model hoạt động)
    */
   async function testGeminiConnection(apiKey, model) {
     const cleanKey = (apiKey || '').trim();
     if (!cleanKey) {
       return { ok: false, error: 'Chưa nhập API Key. Vui lòng dán khóa Gemini API hợp lệ.' };
     }
-    const chosenModel = model || DEFAULT_MODEL;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(chosenModel)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let modelsToTry = [
+      model,
+      DEFAULT_MODEL,
+      ...FALLBACK_MODELS
+    ].filter(Boolean);
+    modelsToTry = Array.from(new Set(modelsToTry));
 
-    try {
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: 'Xin chào, đây là tin nhắn kiểm tra kết nối từ ứng dụng Hướng nghiệp Lớp 9. Hãy trả lời thật ngắn gọn: Sẵn sàng đồng hành.' }]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 30
-          }
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        const errMsg = (errData && errData.error && errData.error.message) || `Mã HTTP ${resp.status} (${resp.statusText})`;
-        return { ok: false, error: `Kết nối thất bại: ${errMsg}` };
-      }
-
-      const data = await resp.json();
-      const reply = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
-      return {
-        ok: true,
-        message: `Kết nối thành công tới mô hình ${chosenModel}!`,
-        reply: (reply || '').trim()
-      };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
-        return { ok: false, error: 'Hết thời gian chờ kết nối (10 giây). Vui lòng kiểm tra lại mạng Internet.' };
-      }
-      return { ok: false, error: `Lỗi kết nối: ${err.message}` };
+    // Truy vấn danh sách model thực tế từ key nếu có
+    const onlineModels = await listAvailableModels(cleanKey);
+    if (onlineModels.length > 0) {
+      modelsToTry = Array.from(new Set([
+        ...onlineModels.filter(m => m.includes('flash')),
+        ...onlineModels,
+        ...modelsToTry
+      ]));
     }
+
+    const testBody = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: 'Xin chào, đây là tin nhắn kiểm tra kết nối từ ứng dụng Hướng nghiệp Lớp 9. Hãy trả lời thật ngắn gọn: Sẵn sàng đồng hành.' }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 50
+      }
+    };
+
+    let lastError = null;
+    for (const m of modelsToTry) {
+      try {
+        const reply = await sendGenerateContentRequest(m, cleanKey, testBody);
+        return {
+          ok: true,
+          message: `Kết nối thành công tới mô hình ${m}!`,
+          detectedModel: m,
+          reply: reply
+        };
+      } catch (err) {
+        lastError = err;
+        if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('supported methods')))) {
+          continue;
+        } else {
+          return { ok: false, error: `Lỗi kết nối: ${err.message}` };
+        }
+      }
+    }
+
+    return { ok: false, error: `Không tìm thấy mô hình khả dụng: ${lastError ? lastError.message : 'Tất cả model đều thất bại'}` };
   }
 
   /**
-   * Gọi Google Gemini API theo thời gian thực
+   * Gọi Google Gemini API theo thời gian thực (Tự động chuyển model khi 404/not found)
    */
   async function callGeminiAPI(agentId, userMessage, conversationHistory, studentProfile) {
     const config = getGeminiConfig();
@@ -304,42 +398,62 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
       parts: [{ text: userMessage }]
     });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
+    const requestBody = {
+      contents: contents,
+      systemInstruction: {
+        parts: [{ text: fullSystemInstruction }]
+      },
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 800
+      }
+    };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let modelsToTry = [
+      config.model,
+      DEFAULT_MODEL,
+      ...FALLBACK_MODELS
+    ].filter(Boolean);
+    modelsToTry = Array.from(new Set(modelsToTry));
 
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: contents,
-        systemInstruction: {
-          parts: [{ text: fullSystemInstruction }]
-        },
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800
+    let lastError = null;
+    let successfulModel = null;
+    let replyText = null;
+
+    for (const modelCandidate of modelsToTry) {
+      try {
+        replyText = await sendGenerateContentRequest(modelCandidate, config.apiKey, requestBody);
+        successfulModel = modelCandidate;
+        break;
+      } catch (err) {
+        lastError = err;
+        // Nếu là lỗi 404 hoặc model không tìm thấy, tự động chuyển tiếp model kế tiếp
+        if (err.status === 404 || (err.message && (err.message.includes('not found') || err.message.includes('supported methods')))) {
+          console.warn(`[EduPath Gemini] Model '${modelCandidate}' không khả dụng (${err.message}), tự động chuyển model dự phòng...`);
+          continue;
+        } else {
+          throw err;
         }
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      const errMsg = (errData && errData.error && errData.error.message) || `HTTP ${resp.status} (${resp.statusText})`;
-      throw new Error(errMsg);
+      }
     }
 
-    const data = await resp.json();
-    const candidate = data && data.candidates && data.candidates[0];
-    if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
-      throw new Error('Gemini không phản hồi định dạng nội dung hợp lệ.');
+    if (!replyText && lastError) {
+      throw lastError;
     }
 
-    const rawText = candidate.content.parts[0].text;
-    return (rawText || '').trim();
+    // Nếu model thành công khác model ban đầu cấu hình -> tự động cập nhật
+    if (successfulModel && successfulModel !== config.model) {
+      localStorage.setItem('edupath_gemini_model', successfulModel);
+      localStorage.setItem(STORAGE_KEY_MODEL, successfulModel);
+      const modelSelect = document.getElementById('gemini-model-select');
+      if (modelSelect) modelSelect.value = successfulModel;
+      console.log(`[EduPath Gemini] Đã tự động kích hoạt model hoạt động ổn định: ${successfulModel}`);
+    }
+
+    return {
+      text: replyText,
+      model: successfulModel
+    };
   }
 
   /**
@@ -349,11 +463,11 @@ QUY TẮC TƯ VẤN: Hãy vận dụng chính xác mã Holland ${rawCode} và ng
     const config = getGeminiConfig();
     if (config.apiKey && config.apiKey.length >= 10) {
       try {
-        const geminiReply = await callGeminiAPI(agentId, userMessage, conversationHistory, studentProfile);
+        const geminiRes = await callGeminiAPI(agentId, userMessage, conversationHistory, studentProfile);
         return {
-          text: geminiReply,
+          text: geminiRes.text || geminiRes,
           source: 'gemini',
-          model: config.model
+          model: geminiRes.model || config.model
         };
       } catch (err) {
         console.warn(`[EduPath Gemini] Lỗi gọi Gemini (${err.message}). Tự động kích hoạt Cố vấn SGK nội bộ:`, err);

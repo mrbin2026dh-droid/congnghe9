@@ -281,6 +281,100 @@ const HollandEngine = (() => {
   }
 
   /**
+   * Khớp nối và xếp hạng ngành nghề đề xuất theo thứ tự chữ cái mã Holland (A -> S -> E)
+   * Thuật toán dịch ngược từ Aiducation (https://www.aiducation.edu.vn/huong-nghiep/ket-qua/...)
+   * Đảm bảo tính khoa học: Chữ cái thứ 1 (Chủ đạo) -> Chữ cái thứ 2 (Bổ trợ) -> Chữ cái thứ 3 (Xúc tác)
+   * @param {string} userCode - Mã Holland của học sinh (vd: 'ASE', 'RIE', 'SEC')
+   * @param {Object} [options] - Tùy chọn ({ filterLetter?: 'all'|'c1'|'c2'|'c3', isUndifferentiated?: boolean })
+   */
+  function matchHollandOrderCareers(userCode, options = {}) {
+    const aiduMajors = (window.EduPathData && Array.isArray(window.EduPathData.aiducationMajors))
+      ? window.EduPathData.aiducationMajors
+      : [];
+
+    if (!userCode || typeof userCode !== 'string' || userCode.trim().length === 0 || userCode === '---' || options.isUndifferentiated) {
+      return [];
+    }
+
+    const cleanCode = userCode.trim().toUpperCase();
+    if (cleanCode.length < 3) return [];
+
+    const c1 = cleanCode[0];
+    const c2 = cleanCode[1];
+    const c3 = cleanCode[2];
+
+    const ranked = aiduMajors.map(m => {
+      const code = (m.code && m.code.length >= 3) ? m.code.toUpperCase() : 'RIC';
+      let score = 0;
+
+      // Trọng số vị trí 1 của ngành (Primary Type)
+      if (code[0] === c1) score += 200;
+      else if (code[0] === c2) score += 110;
+      else if (code[0] === c3) score += 40;
+
+      // Trọng số vị trí 2 của ngành (Secondary Type)
+      if (code[1] === c1) score += 70;
+      else if (code[1] === c2) score += 50;
+      else if (code[1] === c3) score += 30;
+
+      // Trọng số vị trí 3 của ngành (Tertiary Type)
+      if (code[2] === c1) score += 30;
+      else if (code[2] === c2) score += 20;
+      else if (code[2] === c3) score += 10;
+
+      // Phụ cấp cấu trúc tổ hợp chính xác
+      if (code === cleanCode) score += 500;
+      else if (code.startsWith(c1 + c2)) score += 220; // vd: AS* khi học sinh là ASE
+      else if (code.startsWith(c2 + c1)) score += 160; // vd: SA*
+      else if (code[0] === c1 && code[2] === c3) score += 130; // vd: A*E
+      else if (code.startsWith(c1 + c3)) score += 120; // vd: AE*
+      else if (code.startsWith(c2 + c3)) score += 80;  // vd: SE*
+      else if (code.startsWith(c3 + c1)) score += 60;  // vd: EA*
+
+      // Phân nhóm thiên hướng theo thứ tự chữ cái học sinh (A -> S -> E)
+      let letterStage = 'combined';
+      let stageLabel = 'Liên ngành';
+      let stageLetter = '';
+
+      if (code[0] === c1) {
+        letterStage = 'c1';
+        stageLetter = c1;
+        const gName = GROUP_METADATA[c1] ? GROUP_METADATA[c1].shortName : c1;
+        stageLabel = `Chữ cái 1: ${c1} (${gName} - Chủ đạo)`;
+      } else if (code[0] === c2) {
+        letterStage = 'c2';
+        stageLetter = c2;
+        const gName = GROUP_METADATA[c2] ? GROUP_METADATA[c2].shortName : c2;
+        stageLabel = `Chữ cái 2: ${c2} (${gName} - Bổ trợ)`;
+      } else if (code[0] === c3) {
+        letterStage = 'c3';
+        stageLetter = c3;
+        const gName = GROUP_METADATA[c3] ? GROUP_METADATA[c3].shortName : c3;
+        stageLabel = `Chữ cái 3: ${c3} (${gName} - Xúc tác)`;
+      } else {
+        stageLabel = `Tổ hợp bổ sung (${code})`;
+      }
+
+      return {
+        ...m,
+        score,
+        letterStage,
+        stageLabel,
+        stageLetter
+      };
+    }).sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.name.localeCompare(b.name, 'vi');
+    });
+
+    if (options.filterLetter && options.filterLetter !== 'all') {
+      return ranked.filter(m => m.letterStage === options.filterLetter);
+    }
+
+    return ranked;
+  }
+
+  /**
    * Phát hiện mâu thuẫn nội tâm theo đường chéo Lục giác
    * @param {string} code - Mã 3 chữ cái
    */
@@ -301,6 +395,7 @@ const HollandEngine = (() => {
     getHexagonDistance,
     calculateScores,
     matchMajors,
+    matchHollandOrderCareers,
     detectConflict
   };
 })();

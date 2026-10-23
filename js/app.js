@@ -78,7 +78,7 @@ class EduPathApp {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.audioCtx = new AudioContext();
-    } catch (e) {
+    } catch {
       console.warn('Web Audio not supported');
     }
   }
@@ -519,6 +519,8 @@ class EduPathApp {
 
     if (this.studentProfile.surveyHistory.length > 0) {
       this.renderSurveyAttemptSelector();
+      const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
+      this.applySurveyAttempt(activeId);
     }
 
     // Sync Tree State to Real Student Progress (0% if new)
@@ -845,6 +847,15 @@ class EduPathApp {
       this.renderTeacherHeatmap();
     } else if (tabId === 'project') {
       this.renderAssessmentView();
+    } else if (tabId === 'quiz') {
+      if (this.studentProfile && this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0) {
+        const activeId = this.studentProfile.activeAttemptId || this.studentProfile.surveyHistory[this.studentProfile.surveyHistory.length - 1].id;
+        const activeAttempt = this.studentProfile.surveyHistory.find(a => a.id === activeId);
+        const resultCard = document.getElementById('quiz-result-card');
+        if (activeAttempt && resultCard && resultCard.style.display !== 'none') {
+          this.applySurveyAttempt(activeId);
+        }
+      }
     }
   }
 
@@ -1062,7 +1073,7 @@ class EduPathApp {
       this.quizQuestions = rawQuestions;
     }
 
-    this.quizAnswers = new Array(this.quizQuestions.length).fill(null);
+    this.quizAnswers = Array.from({ length: this.quizQuestions.length }, () => null);
     this.renderQuestionPalette();
     this.renderCurrentQuestion();
     this.renderSurveyAttemptSelector();
@@ -1087,7 +1098,7 @@ class EduPathApp {
 
   retakeQuiz() {
     this.currentQuestionIdx = 0;
-    this.quizAnswers = new Array(this.quizQuestions.length).fill(null);
+    this.quizAnswers = Array.from({ length: this.quizQuestions.length }, () => null);
     const activeCard = document.getElementById('quiz-active-card');
     const resultCard = document.getElementById('quiz-result-card');
     if (activeCard) activeCard.style.display = 'block';
@@ -1319,6 +1330,10 @@ class EduPathApp {
     // Render In-Depth Personality Insights & Conflict
     this.renderPersonalityInsights(results);
 
+    // Render danh sách ngành nghề đề xuất theo thứ tự mã Holland (A -> S -> E)
+    this.lastQuizResults = results;
+    this.renderHollandOrderCareers(results);
+
     // Render danh sách ngành học đã khớp nối
     this.renderMatchedMajors(matchedMajors);
 
@@ -1345,6 +1360,155 @@ class EduPathApp {
     }
 
     this.playBeep(880, 'triangle', 0.25);
+  }
+
+  filterHollandOrderCareers(filterId) {
+    this.activeHollandLetterFilter = filterId;
+    if (this.lastQuizResults) {
+      this.renderHollandOrderCareers(this.lastQuizResults);
+    }
+  }
+
+  renderHollandOrderCareers(results) {
+    const container = document.getElementById('quiz-holland-order-majors-grid');
+    const badgeEl = document.getElementById('holland-order-code-badge');
+    const subtitleEl = document.getElementById('quiz-holland-order-subtitle');
+    const pillsContainer = document.getElementById('holland-letter-filter-pills');
+    if (!container) return;
+    const sanitize = window.sanitize || (html => html);
+    container.textContent = '';
+
+    if (!results || results.isUndifferentiated || !results.code || results.code === '---' || results.code.length < 3) {
+      if (badgeEl) badgeEl.textContent = '---';
+      if (subtitleEl) subtitleEl.textContent = 'Hoàn thành trắc nghiệm Holland để nhận gợi ý ngành nghề theo thứ tự thiên hướng của bạn.';
+      if (pillsContainer) pillsContainer.textContent = '';
+      container.innerHTML = sanitize(`
+        <div style="grid-column: 1 / -1; text-align:center; padding:1.75rem; color:var(--text-muted); background:var(--surface-elevated); border-radius:var(--radius-md); border:1px dashed var(--border);">
+          Chưa có ngành nghề đề xuất theo thứ tự mã Holland. Vui lòng hoàn thành bài trắc nghiệm để mở khóa danh sách!
+        </div>
+      `);
+      return;
+    }
+
+    const code = results.code.toUpperCase();
+    if (badgeEl) badgeEl.textContent = code;
+
+    const c1 = code[0], c2 = code[1], c3 = code[2];
+    const meta = HollandEngine.GROUP_METADATA || {};
+    const g1 = meta[c1] ? meta[c1].shortName : c1;
+    const g2 = meta[c2] ? meta[c2].shortName : c2;
+    const g3 = meta[c3] ? meta[c3].shortName : c3;
+
+    if (subtitleEl) {
+      subtitleEl.innerHTML = sanitize(`
+        Đề xuất ưu tiên theo thứ tự thiên hướng:
+        <strong style="color:${meta[c1] ? meta[c1].color : 'var(--brand)'};">${c1} (${g1} - Chủ đạo)</strong> ➔ 
+        <strong style="color:${meta[c2] ? meta[c2].color : 'var(--brand)'};">${c2} (${g2} - Bổ trợ)</strong> ➔ 
+        <strong style="color:${meta[c3] ? meta[c3].color : 'var(--brand)'};">${c3} (${g3} - Xúc tác)</strong>
+      `);
+    }
+
+    const activeFilter = this.activeHollandLetterFilter || 'all';
+    const allRanked = HollandEngine.matchHollandOrderCareers ? HollandEngine.matchHollandOrderCareers(code) : [];
+
+    // Render Dynamic Letter Filter Pills
+    if (pillsContainer) {
+      pillsContainer.textContent = '';
+      const filters = [
+        { id: 'all', label: `Tất cả (${Math.min(12, allRanked.length)})` },
+        { id: 'c1', label: `1️⃣ Chữ cái ${c1} (${g1})`, color: meta[c1] ? meta[c1].color : null },
+        { id: 'c2', label: `2️⃣ Chữ cái ${c2} (${g2})`, color: meta[c2] ? meta[c2].color : null },
+        { id: 'c3', label: `3️⃣ Chữ cái ${c3} (${g3})`, color: meta[c3] ? meta[c3].color : null }
+      ];
+
+      filters.forEach(f => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-filter-pill';
+        const isActive = (f.id === activeFilter);
+        btn.style.cssText = `
+          padding: 0.35rem 0.75rem;
+          border-radius: var(--radius-full);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid ${isActive ? (f.color || 'var(--brand)') : 'var(--border)'};
+          background: ${isActive ? (f.color || 'var(--brand)') : 'var(--surface-elevated)'};
+          color: ${isActive ? '#ffffff' : 'var(--text-secondary)'};
+        `;
+        btn.textContent = f.label;
+        btn.onclick = () => window.app.filterHollandOrderCareers(f.id);
+        pillsContainer.appendChild(btn);
+      });
+    }
+
+    // Filter list
+    let displayedMajors = allRanked;
+    if (activeFilter !== 'all') {
+      displayedMajors = allRanked.filter(m => m.letterStage === activeFilter);
+    }
+    // Hiển thị top các ngành nổi bật
+    displayedMajors = displayedMajors.slice(0, activeFilter === 'all' ? 12 : 8);
+
+    if (displayedMajors.length === 0) {
+      container.innerHTML = sanitize(`
+        <div style="grid-column: 1 / -1; text-align:center; padding:1.5rem; color:var(--text-muted); background:var(--surface-elevated); border-radius:var(--radius-md);">
+          Không có ngành nào thuộc bộ lọc này trong danh mục đề xuất.
+        </div>
+      `);
+      return;
+    }
+
+    displayedMajors.forEach((m, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card-panel';
+      card.style.cssText = `
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border-left: 4px solid ${meta[m.code[0]] ? meta[m.code[0]].color : 'var(--brand)'};
+        background: var(--surface-card);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      `;
+
+      const stageColor = meta[m.stageLetter] ? meta[m.stageLetter].color : (meta[m.code[0]] ? meta[m.code[0]].color : 'var(--brand)');
+      const stageBg = meta[m.stageLetter] ? meta[m.stageLetter].bgSoft : 'rgba(37, 99, 235, 0.08)';
+
+      let careersSnippet = '';
+      if (m.careers && m.careers.length > 0) {
+        careersSnippet = `
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.5rem; padding-top:0.5rem; border-top:1px dashed var(--border);">
+            💼 <strong>Nghề tiêu biểu:</strong> ${m.careers.join(', ')}
+          </div>
+        `;
+      }
+
+      card.innerHTML = sanitize(`
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; margin-bottom:0.4rem;">
+            <span style="font-weight:700; color:var(--text-primary); font-size:1.025rem; line-height:1.35;">
+              ${idx + 1}. ${m.name}
+            </span>
+            <span style="font-weight:800; font-size:0.825rem; letter-spacing:0.05em; padding:0.2rem 0.5rem; border-radius:4px; background:var(--surface-elevated); border:1px solid var(--border); color:var(--text-primary); flex-shrink:0;">
+              Mã: ${m.code}
+            </span>
+          </div>
+          <div style="display:inline-block; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; margin-bottom:0.6rem; background:${stageBg}; color:${stageColor};">
+            ${m.stageLabel}
+          </div>
+          <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin:0 0 0.5rem 0; font-style:italic;">
+            "${m.description}"
+          </p>
+          ${careersSnippet}
+        </div>
+        <div style="margin-top:0.75rem; font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:0.35rem;">
+          <span>🎯 Chuẩn tham chiếu Aiducation & SGK Hướng nghiệp</span>
+        </div>
+      `);
+      container.appendChild(card);
+    });
   }
 
   renderMatchedMajors(matchedMajors) {
@@ -1477,6 +1641,10 @@ class EduPathApp {
 
     this.renderRIASECBreakdown(dummyResults);
     this.renderPersonalityInsights(dummyResults);
+
+    // Render danh sách ngành nghề đề xuất theo thứ tự mã Holland (A -> S -> E)
+    this.lastQuizResults = dummyResults;
+    this.renderHollandOrderCareers(dummyResults);
 
     this.renderMatchedMajors(matchedMajors);
 
@@ -1752,6 +1920,10 @@ class EduPathApp {
           const testRes = await AIAgentsManager.testGeminiConnection(key, model);
           configMsg.style.display = 'block';
           if (testRes.ok) {
+            if (testRes.detectedModel && testRes.detectedModel !== modelSelect.value) {
+              modelSelect.value = testRes.detectedModel;
+              AIAgentsManager.saveGeminiConfig({ apiKey: key, model: testRes.detectedModel });
+            }
             configMsg.style.background = 'rgba(16, 185, 129, 0.12)';
             configMsg.style.color = '#10b981';
             configMsg.style.border = '1px solid #10b981';
@@ -1952,21 +2124,26 @@ class EduPathApp {
         model: res.model
       });
 
-      // Render agent response bubble
+      // Render agent response bubble with Typewriter Effect
       const sourceBadgeHtml = res.source === 'gemini'
         ? `<span class="source-badge gemini">⚡ Gemini AI (${res.model || 'Live'})</span>`
         : `<span class="source-badge local">🛡️ Chuyên Gia SGK</span>`;
 
       const agentDiv = document.createElement('div');
-      agentDiv.className = 'chat-bubble agent';
+      agentDiv.className = 'chat-bubble agent is-typing';
+      agentDiv.title = 'Nhấp vào để hiện toàn bộ văn bản ngay lập tức';
       agentDiv.innerHTML = sanitize(`
         ${sourceBadgeHtml}<br>
         <strong>${agent.avatar} ${agent.name}:</strong><br>
-        ${this.formatAgentText(res.text)}
+        <span class="agent-typed-content"></span><span class="typewriter-cursor">▌</span>
       `);
       chatBox.appendChild(agentDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
-      this.playBeep(720);
+
+      const contentEl = agentDiv.querySelector('.agent-typed-content');
+      const cursorEl = agentDiv.querySelector('.typewriter-cursor');
+      await this.typewriterAnimate(contentEl, cursorEl, res.text, agentDiv, chatBox);
+      this.playBeep(720, 'sine', 0.1);
     } catch (err) {
       console.error('[EduPath Chat] Lỗi khi gửi tin nhắn:', err);
       const typingEl = document.getElementById('agent-typing-bubble');
@@ -1986,6 +2163,62 @@ class EduPathApp {
         inputEl.focus();
       }
     }
+  }
+
+  typewriterAnimate(contentEl, cursorEl, fullText, containerBubble, chatBox) {
+    return new Promise((resolve) => {
+      if (!contentEl || !fullText) {
+        if (cursorEl && cursorEl.parentNode) cursorEl.remove();
+        if (containerBubble) containerBubble.classList.remove('is-typing');
+        resolve();
+        return;
+      }
+
+      let isFinished = false;
+      const totalLen = fullText.length;
+      let currentIdx = 0;
+
+      const finishImmediately = () => {
+        if (isFinished) return;
+        isFinished = true;
+        if (cursorEl && cursorEl.parentNode) cursorEl.remove();
+        contentEl.innerHTML = sanitize(this.formatAgentText(fullText));
+        if (containerBubble) containerBubble.classList.remove('is-typing');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        resolve();
+      };
+
+      if (containerBubble) {
+        containerBubble.addEventListener('click', finishImmediately, { once: true });
+      }
+
+      // Smooth duration scaling: 0.8s to 2.2s depending on text length
+      const targetDurationMs = Math.min(2200, Math.max(800, totalLen * 4));
+      const intervalMs = 20;
+      const totalTicks = Math.max(1, Math.round(targetDurationMs / intervalMs));
+      const charsPerTick = Math.max(1, Math.ceil(totalLen / totalTicks));
+
+      const timerId = setInterval(() => {
+        if (isFinished) {
+          clearInterval(timerId);
+          return;
+        }
+
+        currentIdx = Math.min(totalLen, currentIdx + charsPerTick);
+        const chunk = fullText.slice(0, currentIdx);
+
+        contentEl.textContent = chunk;
+
+        if (chatBox) {
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        if (currentIdx >= totalLen) {
+          clearInterval(timerId);
+          finishImmediately();
+        }
+      }, intervalMs);
+    });
   }
 
   // --- PROJECT ASSESSMENT MODULE (Bài 5 SGK) ---

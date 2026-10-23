@@ -516,8 +516,33 @@
             <!-- Opposite Pair Insight (if detected) -->
             <div id="quiz-conflict-insight" style="margin:1rem 0; display:none;"></div>
 
-            <h3 style="font-size:1.15rem; font-weight:700; margin:1.5rem 0 1rem 0;">🎯 Top Ngành Học & Nghề Nghiệp Khớp Nhất:</h3>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;" id="quiz-matched-majors-grid"></div>
+            <!-- Gợi Ý Ngành Nghề Đề Xuất Theo Thứ Tự Mã Holland (Dịch ngược chuẩn Aiducation) -->
+            <div id="quiz-holland-order-section" style="margin:2rem 0 1.5rem 0; border-top:1px solid var(--border); padding-top:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+                <div>
+                  <h3 id="quiz-holland-order-title" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:0.5rem;">
+                    🌟 Ngành Nghề Đề Xuất Theo Thứ Tự Mã Holland (<span id="holland-order-code-badge" style="color:var(--brand); font-weight:800;">---</span>):
+                  </h3>
+                  <p id="quiz-holland-order-subtitle" style="font-size:0.875rem; color:var(--text-secondary); margin:0.35rem 0 0 0; line-height:1.45;">
+                    Sắp xếp theo thứ tự ưu tiên: Chữ cái chủ đạo ➔ Kênh bổ trợ ➔ Yếu tố xúc tác (Dịch ngược thuật toán chuẩn Aiducation)
+                  </p>
+                </div>
+                <!-- Filter Pills -->
+                <div class="holland-letter-filter-pills" id="holland-letter-filter-pills" style="display:flex; gap:0.4rem; flex-wrap:wrap;"></div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;" id="quiz-holland-order-majors-grid"></div>
+            </div>
+
+            <!-- Top ngành nghề thuộc lĩnh vực kỹ thuật, công nghệ phù hợp (H2) -->
+            <div style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1.25rem;">
+              <h2 id="quiz-tech-majors-heading" style="font-size:1.15rem; font-weight:700; margin:0 0 0.35rem 0; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                🎯 Top ngành nghề thuộc lĩnh vực kỹ thuật, công nghệ phù hợp
+              </h2>
+              <p style="font-size:0.875rem; color:var(--text-secondary); margin:0 0 1rem 0; line-height:1.45;">
+                Các ngành nghề trọng điểm trong chương trình SGK Công nghệ 9 định hướng nghề nghiệp, phục vụ Dự án Bài 5
+              </p>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;" id="quiz-matched-majors-grid"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -898,9 +923,13 @@
         <div class="form-group">
           <label for="gemini-model-select">Mô hình AI (Google Gemini Model)</label>
           <select id="gemini-model-select" class="auth-input" style="cursor:pointer;">
-            <option value="gemini-1.5-flash" selected>gemini-1.5-flash (Khuyên dùng - Nhanh, thông minh, tối ưu hạn ngạch)</option>
-            <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ mới nhất - Tốc độ cao)</option>
-            <option value="gemini-1.5-pro">gemini-1.5-pro (Tư duy chuyên sâu - Phân tích chi tiết)</option>
+            <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Khuyên dùng - Chuẩn thế hệ mới, ổn định cao)</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro (Tư duy chuyên sâu)</option>
+            <option value="gemini-flash-latest">gemini-flash-latest (Bản cập nhật Flash)</option>
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Siêu nhẹ & Tiết kiệm)</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ 2.0)</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash (Bản cũ 1.5 Flash)</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (Tư duy phân tích)</option>
           </select>
         </div>
 

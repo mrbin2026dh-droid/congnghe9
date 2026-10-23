@@ -935,8 +935,853 @@ const MAJORS_DATABASE = [
   }
 ];
 
+
+// 59 Ngành học và Nghề nghiệp Chuẩn Tham Chiếu Aiducation (Dịch ngược từ https://www.aiducation.edu.vn)
+const AIDUCATION_MAJORS = [
+  {
+    "id": "aidu-khoa-hoc-may-tinh",
+    "slug": "khoa-hoc-may-tinh",
+    "name": "Khoa học máy tính",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Học cách máy tính giải quyết vấn đề, không chỉ cách viết phần mềm.",
+    "careers": [
+      "Kỹ sư phần mềm Viết và bảo trì phần mềm chạy được trong tay người khác.",
+      "Kỹ sư dữ liệu Dựng đường ống đưa dữ liệu từ nơi nó sinh ra tới nơi cần dùng.",
+      "Chuyên viên an ninh mạng Tìm chỗ hở trước khi người khác tìm ra, rồi vá nó."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-phan-mem",
+    "slug": "ky-thuat-phan-mem",
+    "name": "Kỹ thuật phần mềm",
+    "code": "ICR",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "R",
+    "description": "Học cách xây một hệ thống lớn mà nhiều người cùng làm được và vẫn sửa được sau năm năm.",
+    "careers": [
+      "Kỹ sư phần mềm Viết và bảo trì phần mềm chạy được trong tay người khác.",
+      "Chuyên viên kiểm thử phần mềm Nghề của người đi tìm cách làm hỏng thứ người khác vừa dựng.",
+      "Chuyên viên phân tích nghiệp vụ Đứng giữa người cần và người làm, và dịch cho cả hai bên."
+    ]
+  },
+  {
+    "id": "aidu-an-toan-thong-tin",
+    "slug": "an-toan-thong-tin",
+    "name": "An toàn thông tin",
+    "code": "ICR",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "R",
+    "description": "Học cách một hệ thống bị phá, để biết cách giữ nó.",
+    "careers": [
+      "Chuyên viên an ninh mạng Tìm chỗ hở trước khi người khác tìm ra, rồi vá nó.",
+      "Chuyên viên tuân thủ Nghề nói không, có căn cứ, với người có quyền hơn mình."
+    ]
+  },
+  {
+    "id": "aidu-khoa-hoc-du-lieu",
+    "slug": "khoa-hoc-du-lieu",
+    "name": "Khoa học dữ liệu",
+    "code": "ICE",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "E",
+    "description": "Biến dữ liệu lộn xộn thành một câu trả lời mà người không đọc được biểu đồ vẫn hiểu.",
+    "careers": [
+      "Kỹ sư dữ liệu Dựng đường ống đưa dữ liệu từ nơi nó sinh ra tới nơi cần dùng.",
+      "Chuyên viên phân tích dữ liệu Trả lời câu hỏi kinh doanh bằng số liệu, và nói ra được điều số liệu không trả lời.",
+      "Kỹ sư học máy Đưa mô hình từ bài báo ra sản phẩm thật, và giữ cho nó không hỏng lặng lẽ."
+    ]
+  },
+  {
+    "id": "aidu-tri-tue-nhan-tao",
+    "slug": "tri-tue-nhan-tao",
+    "name": "Trí tuệ nhân tạo",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Xây những hệ thống học được từ dữ liệu thay vì được lập trình từng bước.",
+    "careers": [
+      "Kỹ sư dữ liệu Dựng đường ống đưa dữ liệu từ nơi nó sinh ra tới nơi cần dùng.",
+      "Kỹ sư học máy Đưa mô hình từ bài báo ra sản phẩm thật, và giữ cho nó không hỏng lặng lẽ.",
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-dien",
+    "slug": "ky-thuat-dien",
+    "name": "Kỹ thuật điện",
+    "code": "RIC",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Ngành đứng sau mọi thứ cắm điện — từ ổ cắm trong nhà tới lưới điện quốc gia.",
+    "careers": [
+      "Kỹ sư điện Thiết kế và vận hành thứ mà cả toà nhà sẽ tối om nếu bạn tính sai.",
+      "Kỹ sư tự động hoá Dạy dây chuyền tự làm việc, rồi trực khi nó đổi ý."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-dien-tu-vien-thong",
+    "slug": "ky-thuat-dien-tu-vien-thong",
+    "name": "Kỹ thuật điện tử — viễn thông",
+    "code": "RIC",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Làm việc với tín hiệu: từ mạch trong điện thoại tới hạ tầng mạng di động.",
+    "careers": [
+      "Kỹ sư hệ thống nhúng Phần mềm sống bên trong một vật thể có thể cháy nếu bạn viết sai."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-co-khi",
+    "slug": "ky-thuat-co-khi",
+    "name": "Kỹ thuật cơ khí",
+    "code": "RIC",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Ngành làm ra mọi thứ chuyển động — và ngành nền của gần như mọi ngành sản xuất.",
+    "careers": [
+      "Kỹ sư cơ khí Từ bản vẽ tới một cỗ máy quay được, chịu tải được, sửa được."
+    ]
+  },
+  {
+    "id": "aidu-co-dien-tu",
+    "slug": "co-dien-tu",
+    "name": "Kỹ thuật cơ điện tử",
+    "code": "RIC",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Ngành lai giữa cơ khí, điện tử và lập trình — nơi robot và dây chuyền tự động ra đời.",
+    "careers": [
+      "Kỹ sư hệ thống nhúng Phần mềm sống bên trong một vật thể có thể cháy nếu bạn viết sai.",
+      "Kỹ sư điện Thiết kế và vận hành thứ mà cả toà nhà sẽ tối om nếu bạn tính sai.",
+      "Kỹ sư cơ khí Từ bản vẽ tới một cỗ máy quay được, chịu tải được, sửa được."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-xay-dung",
+    "slug": "ky-thuat-xay-dung",
+    "name": "Kỹ thuật xây dựng",
+    "code": "RCE",
+    "primaryType": "R",
+    "secondaryType": "C",
+    "tertiaryType": "E",
+    "description": "Từ bản vẽ tới công trình đứng vững trong năm mươi năm.",
+    "careers": [
+      "Kỹ sư xây dựng Chịu trách nhiệm cho thứ đứng yên suốt năm mươi năm.",
+      "Giám sát thi công Người đứng giữa bản vẽ và thực tế công trường, và phải bảo vệ bản vẽ.",
+      "Quản lý dự án Chịu trách nhiệm cho kết quả của những người không báo cáo cho bạn."
+    ]
+  },
+  {
+    "id": "aidu-kien-truc",
+    "slug": "kien-truc",
+    "name": "Kiến trúc",
+    "code": "ARI",
+    "primaryType": "A",
+    "secondaryType": "R",
+    "tertiaryType": "I",
+    "description": "Thiết kế không gian con người sống trong đó — trong giới hạn của kết cấu, ngân sách và quy định.",
+    "careers": [
+      "Kỹ sư xây dựng Chịu trách nhiệm cho thứ đứng yên suốt năm mươi năm.",
+      "Kiến trúc sư Thiết kế nơi người ta sống — trong ngân sách, trong quy chuẩn, trong đất có sẵn.",
+      "Nhà thiết kế nội thất Một bản vẽ đẹp mà không thi công được là một bản vẽ hỏng."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-hoa-hoc",
+    "slug": "ky-thuat-hoa-hoc",
+    "name": "Kỹ thuật hoá học",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Đưa một phản ứng từ ống nghiệm ra quy mô nhà máy mà vẫn an toàn và có lãi.",
+    "careers": [
+      "Kỹ sư môi trường Đo cái không ai muốn đo, rồi buộc doanh nghiệp làm gì đó với con số ấy.",
+      "Kỹ sư hoá Đưa một phản ứng từ bình thí nghiệm lên quy mô nhà máy mà không nổ."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-moi-truong",
+    "slug": "ky-thuat-moi-truong",
+    "name": "Kỹ thuật môi trường",
+    "code": "RIC",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Xử lý phần mà mọi ngành khác thải ra — nước, khí, chất thải rắn.",
+    "careers": [
+      "Kỹ sư môi trường Đo cái không ai muốn đo, rồi buộc doanh nghiệp làm gì đó với con số ấy."
+    ]
+  },
+  {
+    "id": "aidu-logistics",
+    "slug": "logistics",
+    "name": "Logistics và quản lý chuỗi cung ứng",
+    "code": "CEI",
+    "primaryType": "C",
+    "secondaryType": "E",
+    "tertiaryType": "I",
+    "description": "Đưa đúng hàng tới đúng nơi, đúng lúc, với chi phí thấp nhất có thể.",
+    "careers": [
+      "Chuyên viên xuất nhập khẩu Một lỗi nhỏ trên vận đơn giữ cả lô hàng lại ở cảng.",
+      "Chuyên viên mua hàng Đàm phán giá với người đàm phán giá cả ngày.",
+      "Chuyên viên chuỗi cung ứng Giữ cho hàng đến đúng chỗ, đúng lúc, khi mọi thứ ngoài tầm kiểm soát."
+    ]
+  },
+  {
+    "id": "aidu-toan-hoc",
+    "slug": "toan-hoc",
+    "name": "Toán học",
+    "code": "ICA",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "A",
+    "description": "Ngành dạy bạn chứng minh, chứ không phải tính toán.",
+    "careers": [
+      "Chuyên viên phân tích dữ liệu Trả lời câu hỏi kinh doanh bằng số liệu, và nói ra được điều số liệu không trả lời.",
+      "Kỹ sư học máy Đưa mô hình từ bài báo ra sản phẩm thật, và giữ cho nó không hỏng lặng lẽ.",
+      "Giảng viên đại học Cần học lên cao, và trả bằng thứ khác ngoài lương."
+    ]
+  },
+  {
+    "id": "aidu-toan-ung-dung",
+    "slug": "toan-ung-dung",
+    "name": "Toán ứng dụng",
+    "code": "ICE",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "E",
+    "description": "Dùng toán để trả lời câu hỏi của ngành khác — tài chính, sản xuất, sinh học, giao thông.",
+    "careers": [
+      "Chuyên viên phân tích dữ liệu Trả lời câu hỏi kinh doanh bằng số liệu, và nói ra được điều số liệu không trả lời.",
+      "Kỹ sư học máy Đưa mô hình từ bài báo ra sản phẩm thật, và giữ cho nó không hỏng lặng lẽ.",
+      "Chuyên viên định phí bảo hiểm Định giá rủi ro chưa xảy ra. Ít người làm được và ít người biết nghề này tồn tại."
+    ]
+  },
+  {
+    "id": "aidu-vat-ly",
+    "slug": "vat-ly",
+    "name": "Vật lý học",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Học cách mô tả thế giới bằng phương trình — và kiểm chứng bằng thí nghiệm.",
+    "careers": [
+      "Giảng viên đại học Cần học lên cao, và trả bằng thứ khác ngoài lương.",
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-hoa-hoc",
+    "slug": "hoa-hoc",
+    "name": "Hoá học",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Hiểu chất biến đổi thành chất khác như thế nào, và điều khiển được quá trình đó.",
+    "careers": [
+      "Kỹ sư hoá Đưa một phản ứng từ bình thí nghiệm lên quy mô nhà máy mà không nổ.",
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-sinh-hoc",
+    "slug": "sinh-hoc",
+    "name": "Sinh học",
+    "code": "IRS",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "S",
+    "description": "Nghiên cứu sự sống ở mọi quy mô — từ phân tử tới hệ sinh thái.",
+    "careers": [
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-cong-nghe-sinh-hoc",
+    "slug": "cong-nghe-sinh-hoc",
+    "name": "Công nghệ sinh học",
+    "code": "IRC",
+    "primaryType": "I",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Dùng sinh vật và enzyme làm công cụ sản xuất — thuốc, thực phẩm, giống cây, chế phẩm.",
+    "careers": [
+      "Kỹ sư nông nghiệp Nhu cầu vượt xa số người học, và công việc ở nơi có đất.",
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-thong-ke",
+    "slug": "thong-ke",
+    "name": "Thống kê",
+    "code": "ICE",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "E",
+    "description": "Ngành trả lời câu hỏi “con số này có thật sự nói lên điều đó không?”",
+    "careers": [
+      "Chuyên viên phân tích dữ liệu Trả lời câu hỏi kinh doanh bằng số liệu, và nói ra được điều số liệu không trả lời.",
+      "Chuyên viên định phí bảo hiểm Định giá rủi ro chưa xảy ra. Ít người làm được và ít người biết nghề này tồn tại.",
+      "Chuyên viên nghiên cứu thị trường Hỏi đúng câu, với đúng người, rồi tin vào số chứ không vào linh cảm."
+    ]
+  },
+  {
+    "id": "aidu-y-da-khoa",
+    "slug": "y-da-khoa",
+    "name": "Y đa khoa",
+    "code": "ISR",
+    "primaryType": "I",
+    "secondaryType": "S",
+    "tertiaryType": "R",
+    "description": "Sáu năm học, rồi vài năm nữa mới thành bác sĩ làm được việc — và đó là thiết kế, không phải trục trặc.",
+    "careers": [
+      "Bác sĩ Nghề dài nhất trong danh sách này, và nghề ít ai bỏ giữa chừng nhất."
+    ]
+  },
+  {
+    "id": "aidu-rang-ham-mat",
+    "slug": "rang-ham-mat",
+    "name": "Răng — hàm — mặt",
+    "code": "RIS",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "S",
+    "description": "Nghề của đôi tay trong một không gian vài centimet, lặp lại hàng nghìn lần.",
+    "careers": [
+      "Bác sĩ răng hàm mặt Y học cộng nghề thủ công, làm trên một khoang miệng rộng vài centimet."
+    ]
+  },
+  {
+    "id": "aidu-duoc-hoc",
+    "slug": "duoc-hoc",
+    "name": "Dược học",
+    "code": "ICS",
+    "primaryType": "I",
+    "secondaryType": "C",
+    "tertiaryType": "S",
+    "description": "Ngành về thuốc: nó hoạt động thế nào, làm ra sao, và dùng thế nào cho an toàn.",
+    "careers": [
+      "Dược sĩ Người cuối cùng đứng giữa một đơn thuốc sai và người sẽ uống nó.",
+      "Trình dược viên Bán thuốc cho người hiểu thuốc hơn bạn — nên bạn phải hiểu rất kỹ."
+    ]
+  },
+  {
+    "id": "aidu-dieu-duong",
+    "slug": "dieu-duong",
+    "name": "Điều dưỡng",
+    "code": "SRC",
+    "primaryType": "S",
+    "secondaryType": "R",
+    "tertiaryType": "C",
+    "description": "Người ở cạnh bệnh nhân nhiều nhất trong toàn bộ hệ thống y tế.",
+    "careers": [
+      "Điều dưỡng Người ở cạnh bệnh nhân nhiều giờ hơn bất kỳ ai khác trong bệnh viện."
+    ]
+  },
+  {
+    "id": "aidu-y-te-cong-cong",
+    "slug": "y-te-cong-cong",
+    "name": "Y tế công cộng",
+    "code": "SIC",
+    "primaryType": "S",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Chăm sóc sức khoẻ ở quy mô dân số thay vì từng bệnh nhân.",
+    "careers": [
+      "Chuyên viên y tế công cộng Chữa cho một quần thể thay vì cho một người.",
+      "Chuyên viên phân tích chính sách Nhịp chậm, nhiều ràng buộc, và tác động rộng hơn bất kỳ nghề nào ở đây."
+    ]
+  },
+  {
+    "id": "aidu-ky-thuat-xet-nghiem",
+    "slug": "ky-thuat-xet-nghiem",
+    "name": "Kỹ thuật xét nghiệm y học",
+    "code": "CIR",
+    "primaryType": "C",
+    "secondaryType": "I",
+    "tertiaryType": "R",
+    "description": "Con số bác sĩ dựa vào để chẩn đoán đến từ đây.",
+    "careers": [
+      "Kỹ thuật viên xét nghiệm Con số bạn trả ra quyết định phác đồ của người khác."
+    ]
+  },
+  {
+    "id": "aidu-kinh-te",
+    "slug": "kinh-te",
+    "name": "Kinh tế",
+    "code": "IEC",
+    "primaryType": "I",
+    "secondaryType": "E",
+    "tertiaryType": "C",
+    "description": "Học cách xã hội phân bổ nguồn lực khan hiếm — và vì sao nó thường phân bổ sai.",
+    "careers": [
+      "Chuyên viên phân tích dữ liệu Trả lời câu hỏi kinh doanh bằng số liệu, và nói ra được điều số liệu không trả lời.",
+      "Chuyên viên tín dụng Cửa vào phổ biến nhất của ngân hàng, và có chỉ tiêu doanh số.",
+      "Chuyên viên phân tích tài chính Đọc báo cáo tài chính cho tới khi thấy điều nó đang giấu."
+    ]
+  },
+  {
+    "id": "aidu-quan-tri-kinh-doanh",
+    "slug": "quan-tri-kinh-doanh",
+    "name": "Quản trị kinh doanh",
+    "code": "ECS",
+    "primaryType": "E",
+    "secondaryType": "C",
+    "tertiaryType": "S",
+    "description": "Ngành được chọn nhiều nhất Việt Nam — và cũng dễ hối tiếc nhất nếu chọn vì chưa biết chọn gì.",
+    "careers": [
+      "Chuyên viên phân tích nghiệp vụ Đứng giữa người cần và người làm, và dịch cho cả hai bên.",
+      "Chuyên viên mua hàng Đàm phán giá với người đàm phán giá cả ngày.",
+      "Chuyên viên chuỗi cung ứng Giữ cho hàng đến đúng chỗ, đúng lúc, khi mọi thứ ngoài tầm kiểm soát."
+    ]
+  },
+  {
+    "id": "aidu-tai-chinh-ngan-hang",
+    "slug": "tai-chinh-ngan-hang",
+    "name": "Tài chính — ngân hàng",
+    "code": "CEI",
+    "primaryType": "C",
+    "secondaryType": "E",
+    "tertiaryType": "I",
+    "description": "Ngành về tiền của người khác: huy động, phân bổ, định giá và quản lý rủi ro.",
+    "careers": [
+      "Kế toán Làm tốt thì vô hình, làm sai thì cả công ty biết.",
+      "Chuyên viên tín dụng Cửa vào phổ biến nhất của ngân hàng, và có chỉ tiêu doanh số.",
+      "Chuyên viên phân tích tài chính Đọc báo cáo tài chính cho tới khi thấy điều nó đang giấu."
+    ]
+  },
+  {
+    "id": "aidu-ke-toan",
+    "slug": "ke-toan",
+    "name": "Kế toán",
+    "code": "CIE",
+    "primaryType": "C",
+    "secondaryType": "I",
+    "tertiaryType": "E",
+    "description": "Ngôn ngữ chung của mọi doanh nghiệp — và nghề mà sai một con số là có hậu quả pháp lý.",
+    "careers": [
+      "Kế toán Làm tốt thì vô hình, làm sai thì cả công ty biết.",
+      "Kiểm toán viên Nghề học nhanh nhất và nghỉ việc nhiều nhất trong năm đầu.",
+      "Chuyên viên phân tích tài chính Đọc báo cáo tài chính cho tới khi thấy điều nó đang giấu."
+    ]
+  },
+  {
+    "id": "aidu-kiem-toan",
+    "slug": "kiem-toan",
+    "name": "Kiểm toán",
+    "code": "CIE",
+    "primaryType": "C",
+    "secondaryType": "I",
+    "tertiaryType": "E",
+    "description": "Nghề đi kiểm tra xem con số có phản ánh đúng sự thật không.",
+    "careers": [
+      "Kế toán Làm tốt thì vô hình, làm sai thì cả công ty biết.",
+      "Kiểm toán viên Nghề học nhanh nhất và nghỉ việc nhiều nhất trong năm đầu.",
+      "Chuyên viên tuân thủ Nghề nói không, có căn cứ, với người có quyền hơn mình."
+    ]
+  },
+  {
+    "id": "aidu-marketing",
+    "slug": "marketing",
+    "name": "Marketing",
+    "code": "EAI",
+    "primaryType": "E",
+    "secondaryType": "A",
+    "tertiaryType": "I",
+    "description": "Hiểu vì sao người ta chọn thứ này thay vì thứ kia — rồi làm cho họ biết tới thứ của bạn.",
+    "careers": [
+      "Chuyên viên kinh doanh Nghề bị từ chối nhiều nhất, và nghề trả cho việc chịu được điều đó.",
+      "Chuyên viên marketing Ngành nghe sáng tạo, làm thì đọc số liệu mỗi ngày.",
+      "Chuyên viên marketing số Tiêu tiền quảng cáo của người khác và giải thích được từng đồng."
+    ]
+  },
+  {
+    "id": "aidu-kinh-doanh-quoc-te",
+    "slug": "kinh-doanh-quoc-te",
+    "name": "Kinh doanh quốc tế",
+    "code": "ECS",
+    "primaryType": "E",
+    "secondaryType": "C",
+    "tertiaryType": "S",
+    "description": "Làm ăn qua biên giới: hợp đồng, thanh toán, vận chuyển và khác biệt văn hoá.",
+    "careers": [
+      "Chuyên viên xuất nhập khẩu Một lỗi nhỏ trên vận đơn giữ cả lô hàng lại ở cảng.",
+      "Chuyên viên mua hàng Đàm phán giá với người đàm phán giá cả ngày.",
+      "Chuyên viên kinh doanh Nghề bị từ chối nhiều nhất, và nghề trả cho việc chịu được điều đó."
+    ]
+  },
+  {
+    "id": "aidu-quan-tri-nhan-luc",
+    "slug": "quan-tri-nhan-luc",
+    "name": "Quản trị nhân lực",
+    "code": "SEC",
+    "primaryType": "S",
+    "secondaryType": "E",
+    "tertiaryType": "C",
+    "description": "Làm cho một tập thể chạy được: tuyển đúng người, giữ họ, và xử lý khi có mâu thuẫn.",
+    "careers": [
+      "Chuyên viên nhân sự Thường xuyên phải nói điều người khác không muốn nghe.",
+      "Chuyên viên tuyển dụng Đọc người qua một cuộc trò chuyện bốn mươi phút, và thường xuyên đọc sai."
+    ]
+  },
+  {
+    "id": "aidu-luat",
+    "slug": "luat",
+    "name": "Luật",
+    "code": "IEC",
+    "primaryType": "I",
+    "secondaryType": "E",
+    "tertiaryType": "C",
+    "description": "Nghề của người đọc kỹ — và phần lớn công việc diễn ra trên giấy, không phải ở toà.",
+    "careers": [
+      "Luật sư Phần lớn công việc diễn ra trên giấy, không phải ở toà.",
+      "Chuyên viên pháp chế Bảo vệ doanh nghiệp từ bên trong, trước khi có chuyện.",
+      "Chuyên viên tuân thủ Nghề nói không, có căn cứ, với người có quyền hơn mình."
+    ]
+  },
+  {
+    "id": "aidu-luat-kinh-te",
+    "slug": "luat-kinh-te",
+    "name": "Luật kinh tế",
+    "code": "CIE",
+    "primaryType": "C",
+    "secondaryType": "I",
+    "tertiaryType": "E",
+    "description": "Luật áp dụng vào chỗ có tiền: hợp đồng, doanh nghiệp, đầu tư, cạnh tranh.",
+    "careers": [
+      "Luật sư Phần lớn công việc diễn ra trên giấy, không phải ở toà.",
+      "Chuyên viên pháp chế Bảo vệ doanh nghiệp từ bên trong, trước khi có chuyện.",
+      "Chuyên viên tuân thủ Nghề nói không, có căn cứ, với người có quyền hơn mình."
+    ]
+  },
+  {
+    "id": "aidu-tam-ly-hoc",
+    "slug": "tam-ly-hoc",
+    "name": "Tâm lý học",
+    "code": "SIA",
+    "primaryType": "S",
+    "secondaryType": "I",
+    "tertiaryType": "A",
+    "description": "Khoa học về hành vi con người — chạy bằng thống kê và quy tắc đạo đức, không bằng trực giác.",
+    "careers": [
+      "Chuyên viên nhân sự Thường xuyên phải nói điều người khác không muốn nghe.",
+      "Chuyên viên tuyển dụng Đọc người qua một cuộc trò chuyện bốn mươi phút, và thường xuyên đọc sai.",
+      "Chuyên viên tâm lý học đường Khoảng trống thật ở Việt Nam, và đang được lấp bằng người thiếu chuẩn."
+    ]
+  },
+  {
+    "id": "aidu-xa-hoi-hoc",
+    "slug": "xa-hoi-hoc",
+    "name": "Xã hội học",
+    "code": "ISA",
+    "primaryType": "I",
+    "secondaryType": "S",
+    "tertiaryType": "A",
+    "description": "Nghiên cứu vì sao xã hội vận hành như vậy — và ai được lợi, ai chịu thiệt.",
+    "careers": [
+      "Chuyên viên nghiên cứu thị trường Hỏi đúng câu, với đúng người, rồi tin vào số chứ không vào linh cảm.",
+      "Nhân viên công tác xã hội Dễ kiệt sức vì lý do đạo đức hơn vì khối lượng công việc.",
+      "Nghiên cứu viên Chu kỳ tính bằng năm, và phần lớn thí nghiệm không ra gì."
+    ]
+  },
+  {
+    "id": "aidu-cong-tac-xa-hoi",
+    "slug": "cong-tac-xa-hoi",
+    "name": "Công tác xã hội",
+    "code": "SEC",
+    "primaryType": "S",
+    "secondaryType": "E",
+    "tertiaryType": "C",
+    "description": "Kết nối người đang gặp khó với nguồn lực họ có quyền tiếp cận nhưng không biết cách.",
+    "careers": [
+      "Nhân viên công tác xã hội Dễ kiệt sức vì lý do đạo đức hơn vì khối lượng công việc."
+    ]
+  },
+  {
+    "id": "aidu-quan-he-quoc-te",
+    "slug": "quan-he-quoc-te",
+    "name": "Quan hệ quốc tế",
+    "code": "EIS",
+    "primaryType": "E",
+    "secondaryType": "I",
+    "tertiaryType": "S",
+    "description": "Hiểu cách các quốc gia và tổ chức thương lượng, hợp tác và va chạm với nhau.",
+    "careers": [
+      "Chuyên viên phân tích chính sách Nhịp chậm, nhiều ràng buộc, và tác động rộng hơn bất kỳ nghề nào ở đây.",
+      "Chuyên viên đối ngoại Cầu nối giữa ban lãnh đạo nước ngoài và bộ phận vận hành trong nước."
+    ]
+  },
+  {
+    "id": "aidu-bao-chi",
+    "slug": "bao-chi",
+    "name": "Báo chí",
+    "code": "ASE",
+    "primaryType": "A",
+    "secondaryType": "S",
+    "tertiaryType": "E",
+    "description": "Nghề đi tìm sự thật rồi kể lại nó đủ rõ để người bận rộn cũng hiểu.",
+    "careers": [
+      "Chuyên viên nội dung Viết cho người đang lướt qua, không phải cho người đang đọc.",
+      "Chuyên viên quan hệ công chúng Nghề mà ngày bận nhất là ngày có chuyện.",
+      "Phóng viên Hỏi tiếp một câu khó khi người đối diện đang muốn dừng."
+    ]
+  },
+  {
+    "id": "aidu-truyen-thong-da-phuong-tien",
+    "slug": "truyen-thong-da-phuong-tien",
+    "name": "Truyền thông đa phương tiện",
+    "code": "ARE",
+    "primaryType": "A",
+    "secondaryType": "R",
+    "tertiaryType": "E",
+    "description": "Nghề của người dựng được một thông điệp bằng chữ, hình, tiếng và chuyển động cùng lúc.",
+    "careers": [
+      "Nhà thiết kế giao diện số Thiết kế thứ người ta dùng hằng ngày mà không phải nghĩ.",
+      "Chuyên viên nội dung Viết cho người đang lướt qua, không phải cho người đang đọc.",
+      "Người dựng phim Nhịp của tác phẩm được quyết định ở đây, một mình, lúc nửa đêm."
+    ]
+  },
+  {
+    "id": "aidu-ngon-ngu-anh",
+    "slug": "ngon-ngu-anh",
+    "name": "Ngôn ngữ Anh",
+    "code": "ASC",
+    "primaryType": "A",
+    "secondaryType": "S",
+    "tertiaryType": "C",
+    "description": "Tiếng Anh không phải một nghề — nó là thứ nhân đôi giá trị của một nghề khác.",
+    "careers": [
+      "Chuyên viên nội dung Viết cho người đang lướt qua, không phải cho người đang đọc.",
+      "Giáo viên tiếng Anh Nguồn thu nhập ổn định nhất của người học ngoại ngữ.",
+      "Biên dịch viên Chất lượng phụ thuộc vào hiểu lĩnh vực, không chỉ vào vốn từ."
+    ]
+  },
+  {
+    "id": "aidu-dong-phuong-hoc",
+    "slug": "dong-phuong-hoc",
+    "name": "Đông phương học",
+    "code": "ISA",
+    "primaryType": "I",
+    "secondaryType": "S",
+    "tertiaryType": "A",
+    "description": "Học một khu vực đủ sâu để hiểu vì sao người ở đó làm việc theo cách của họ.",
+    "careers": [
+      "Chuyên viên nội dung Viết cho người đang lướt qua, không phải cho người đang đọc.",
+      "Hướng dẫn viên du lịch Làm việc đúng vào lúc người khác nghỉ.",
+      "Biên dịch viên Chất lượng phụ thuộc vào hiểu lĩnh vực, không chỉ vào vốn từ."
+    ]
+  },
+  {
+    "id": "aidu-lich-su",
+    "slug": "lich-su",
+    "name": "Lịch sử",
+    "code": "IAS",
+    "primaryType": "I",
+    "secondaryType": "A",
+    "tertiaryType": "S",
+    "description": "Học cách kiểm chứng một câu chuyện về quá khứ — kỹ năng hiếm hơn bạn tưởng.",
+    "careers": [
+      "Biên tập viên Chịu trách nhiệm cuối cùng cho những gì được đăng.",
+      "Giáo viên trung học Giỏi môn và dạy được môn là hai năng lực khác nhau.",
+      "Giảng viên đại học Cần học lên cao, và trả bằng thứ khác ngoài lương."
+    ]
+  },
+  {
+    "id": "aidu-su-pham-toan",
+    "slug": "su-pham-toan",
+    "name": "Sư phạm Toán",
+    "code": "SIC",
+    "primaryType": "S",
+    "secondaryType": "I",
+    "tertiaryType": "C",
+    "description": "Biết toán và dạy được toán là hai năng lực khác nhau — ngành này rèn năng lực thứ hai.",
+    "careers": [
+      "Giáo viên trung học Giỏi môn và dạy được môn là hai năng lực khác nhau.",
+      "Giảng viên đại học Cần học lên cao, và trả bằng thứ khác ngoài lương."
+    ]
+  },
+  {
+    "id": "aidu-su-pham-ngu-van",
+    "slug": "su-pham-ngu-van",
+    "name": "Sư phạm Ngữ văn",
+    "code": "SAC",
+    "primaryType": "S",
+    "secondaryType": "A",
+    "tertiaryType": "C",
+    "description": "Dạy học sinh đọc kỹ và viết rõ — hai kỹ năng đi theo các em suốt đời.",
+    "careers": [
+      "Biên tập viên Chịu trách nhiệm cuối cùng cho những gì được đăng.",
+      "Giáo viên trung học Giỏi môn và dạy được môn là hai năng lực khác nhau."
+    ]
+  },
+  {
+    "id": "aidu-giao-duc-tieu-hoc",
+    "slug": "giao-duc-tieu-hoc",
+    "name": "Giáo dục tiểu học",
+    "code": "SAC",
+    "primaryType": "S",
+    "secondaryType": "A",
+    "tertiaryType": "C",
+    "description": "Dạy tất cả các môn cho lứa tuổi đang học cách học — công việc rộng hơn bất kỳ giáo viên nào khác.",
+    "careers": [
+      "Giáo viên tiểu học Dạy tất cả các môn cho lứa tuổi đang học cách học."
+    ]
+  },
+  {
+    "id": "aidu-giao-duc-mam-non",
+    "slug": "giao-duc-mam-non",
+    "name": "Giáo dục mầm non",
+    "code": "SAR",
+    "primaryType": "S",
+    "secondaryType": "A",
+    "tertiaryType": "R",
+    "description": "Những năm học quan trọng nhất của một đời người, và ít ai nhận ra điều đó.",
+    "careers": [
+      "Giáo viên mầm non Những năm học quan trọng nhất của một đời người, và ít ai nhận ra."
+    ]
+  },
+  {
+    "id": "aidu-thiet-ke-do-hoa",
+    "slug": "thiet-ke-do-hoa",
+    "name": "Thiết kế đồ hoạ",
+    "code": "ARE",
+    "primaryType": "A",
+    "secondaryType": "R",
+    "tertiaryType": "E",
+    "description": "Sắp xếp chữ, hình và khoảng trống sao cho người xem hiểu đúng thứ cần hiểu.",
+    "careers": [
+      "Nhà thiết kế giao diện số Thiết kế thứ người ta dùng hằng ngày mà không phải nghĩ.",
+      "Chuyên viên đồ hoạ chuyển động Kỹ năng khan hiếm và trả tốt, học được nếu chịu ngồi.",
+      "Nhà thiết kế đồ hoạ Tấm bằng gần như vô giá trị nếu portfolio trống."
+    ]
+  },
+  {
+    "id": "aidu-thiet-ke-noi-that",
+    "slug": "thiet-ke-noi-that",
+    "name": "Thiết kế nội thất",
+    "code": "ARE",
+    "primaryType": "A",
+    "secondaryType": "R",
+    "tertiaryType": "E",
+    "description": "Thiết kế không gian người ta sống trong đó mỗi ngày — và phải thi công được.",
+    "careers": [
+      "Giám sát thi công Người đứng giữa bản vẽ và thực tế công trường, và phải bảo vệ bản vẽ.",
+      "Nhà thiết kế nội thất Một bản vẽ đẹp mà không thi công được là một bản vẽ hỏng."
+    ]
+  },
+  {
+    "id": "aidu-thiet-ke-thoi-trang",
+    "slug": "thiet-ke-thoi-trang",
+    "name": "Thiết kế thời trang",
+    "code": "ARE",
+    "primaryType": "A",
+    "secondaryType": "R",
+    "tertiaryType": "E",
+    "description": "Thiết kế thứ người ta mặc lên người — nghề của rập, vải và số đo, không chỉ của bản vẽ.",
+    "careers": [
+      "Nhà thiết kế thời trang Nghề của rập, vải và số đo — không chỉ của bản vẽ."
+    ]
+  },
+  {
+    "id": "aidu-am-nhac",
+    "slug": "am-nhac",
+    "name": "Âm nhạc",
+    "code": "ASR",
+    "primaryType": "A",
+    "secondaryType": "S",
+    "tertiaryType": "R",
+    "description": "Ngành mà năng lực được xây bằng số giờ luyện tập, không bằng số tín chỉ.",
+    "careers": [
+      "Nhà sản xuất âm nhạc Sống bằng nhiều nguồn cùng lúc là thông lệ, không phải ngoại lệ."
+    ]
+  },
+  {
+    "id": "aidu-dien-anh-truyen-hinh",
+    "slug": "dien-anh-truyen-hinh",
+    "name": "Điện ảnh — truyền hình",
+    "code": "AER",
+    "primaryType": "A",
+    "secondaryType": "E",
+    "tertiaryType": "R",
+    "description": "Nghề tập thể: một cảnh quay là kết quả của hàng chục người làm đúng việc của mình.",
+    "careers": [
+      "Người dựng phim Nhịp của tác phẩm được quyết định ở đây, một mình, lúc nửa đêm.",
+      "Quay phim Chịu trách nhiệm cho hình ảnh và ánh sáng, tại chỗ, không làm lại được."
+    ]
+  },
+  {
+    "id": "aidu-du-lich-lu-hanh",
+    "slug": "du-lich-lu-hanh",
+    "name": "Quản trị dịch vụ du lịch và lữ hành",
+    "code": "ESC",
+    "primaryType": "E",
+    "secondaryType": "S",
+    "tertiaryType": "C",
+    "description": "Nghề bán trải nghiệm — và chịu trách nhiệm khi trải nghiệm đó không diễn ra như kế hoạch.",
+    "careers": [
+      "Hướng dẫn viên du lịch Làm việc đúng vào lúc người khác nghỉ.",
+      "Chuyên viên điều hành tour Xương sống của công ty lữ hành, và người nhận điện thoại lúc nửa đêm.",
+      "Quản lý khách sạn Không ai quản được bộ phận mình chưa từng làm trong đó."
+    ]
+  },
+  {
+    "id": "aidu-khach-san",
+    "slug": "khach-san",
+    "name": "Quản trị khách sạn",
+    "code": "ESC",
+    "primaryType": "E",
+    "secondaryType": "S",
+    "tertiaryType": "C",
+    "description": "Ngành mà chất lượng được đo bằng những chi tiết khách không nói ra.",
+    "careers": [
+      "Quản lý khách sạn Không ai quản được bộ phận mình chưa từng làm trong đó."
+    ]
+  },
+  {
+    "id": "aidu-nong-nghiep",
+    "slug": "nong-nghiep",
+    "name": "Nông nghiệp",
+    "code": "RIE",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "E",
+    "description": "Ngành cũ nhất đang được viết lại bằng giống mới, cảm biến và tiêu chuẩn xuất khẩu.",
+    "careers": [
+      "Kỹ sư nông nghiệp Nhu cầu vượt xa số người học, và công việc ở nơi có đất."
+    ]
+  },
+  {
+    "id": "aidu-thu-y",
+    "slug": "thu-y",
+    "name": "Thú y",
+    "code": "RIS",
+    "primaryType": "R",
+    "secondaryType": "I",
+    "tertiaryType": "S",
+    "description": "Y học cho bệnh nhân không nói được đau ở đâu — và người trả tiền là một người khác.",
+    "careers": [
+      "Bác sĩ thú y Bệnh nhân không nói được đau ở đâu, và người trả tiền là một người khác."
+    ]
+  }
+];
+
 window.EduPathData = {
   holland: HOLLAND_DATA,
   sgk: SGK_DATA,
-  majors: MAJORS_DATABASE
+  majors: MAJORS_DATABASE,
+  aiducationMajors: AIDUCATION_MAJORS
 };

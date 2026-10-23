@@ -1678,6 +1678,29 @@ html, body {
   40% { opacity: 1; transform: translateY(-2px); }
 }
 
+.typewriter-cursor {
+  display: inline-block;
+  color: var(--brand);
+  font-weight: 900;
+  margin-left: 2px;
+  animation: typewriterBlink 0.75s infinite;
+}
+
+@keyframes typewriterBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.agent-typed-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble.agent.is-typing {
+  cursor: pointer;
+  user-select: text;
+}
+
 /* Print CSS */
 @media print {
   .top-nav, .tab-nav, .theme-toggle-btn, .btn-primary, .btn-secondary, .root-controls-grid, .ai-agent-selector, .quick-prompts-row {
