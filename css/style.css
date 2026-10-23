@@ -775,6 +775,127 @@ html, body {
   width: 100%;
 }
 
+.quiz-palette-wrapper {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+
+.quiz-question-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 0.2rem;
+}
+
+.palette-item {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.palette-item:hover {
+  border-color: var(--brand);
+  background-color: var(--brand-soft);
+  color: var(--brand);
+}
+
+.palette-item.answered {
+  background-color: var(--brand);
+  color: #ffffff;
+  border-color: var(--brand);
+}
+
+.palette-item.current {
+  outline: 2px solid var(--accent-tech);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+  font-weight: 900;
+}
+
+/* 6-Category RIASEC Breakdown */
+.riasec-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .riasec-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.riasec-bar-row {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.riasec-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.riasec-bar-bg {
+  width: 100%;
+  height: 10px;
+  background-color: var(--surface-inset);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.riasec-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.personality-detail-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.personality-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.conflict-callout-card {
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 4px solid var(--accent-enterprise);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+}
+
 .quiz-progress-bar-bg {
   width: 100%;
   height: 8px;

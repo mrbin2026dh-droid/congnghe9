@@ -521,7 +521,59 @@ class EduPathApp {
     }
 
     this.quizAnswers = new Array(this.quizQuestions.length).fill(null);
+    this.renderQuestionPalette();
     this.renderCurrentQuestion();
+
+    // Retake button
+    const retakeBtn = document.getElementById('btn-retake-quiz');
+    if (retakeBtn) {
+      retakeBtn.onclick = () => this.retakeQuiz();
+    }
+  }
+
+  retakeQuiz() {
+    this.currentQuestionIdx = 0;
+    this.quizAnswers = new Array(this.quizQuestions.length).fill(null);
+    const activeCard = document.getElementById('quiz-active-card');
+    const resultCard = document.getElementById('quiz-result-card');
+    if (activeCard) activeCard.style.display = 'block';
+    if (resultCard) resultCard.style.display = 'none';
+    this.renderQuestionPalette();
+    this.renderCurrentQuestion();
+    this.playBeep(620);
+  }
+
+  renderQuestionPalette() {
+    const palette = document.getElementById('quiz-question-palette');
+    if (!palette) return;
+
+    palette.textContent = '';
+    const total = this.quizQuestions.length;
+
+    for (let i = 0; i < total; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const isAnswered = this.quizAnswers[i] !== null;
+      const isCurrent = i === this.currentQuestionIdx;
+
+      btn.className = `palette-item ${isAnswered ? 'answered' : ''} ${isCurrent ? 'current' : ''}`;
+      btn.textContent = (i + 1).toString();
+      btn.title = `Câu ${i + 1}: ${isAnswered ? 'Đã trả lời' : 'Chưa trả lời'}`;
+
+      btn.addEventListener('click', () => {
+        this.jumpToQuestion(i);
+      });
+
+      palette.appendChild(btn);
+    }
+  }
+
+  jumpToQuestion(idx) {
+    if (idx >= 0 && idx < this.quizQuestions.length) {
+      this.currentQuestionIdx = idx;
+      this.renderCurrentQuestion();
+      this.playBeep(560);
+    }
   }
 
   renderCurrentQuestion() {
@@ -529,7 +581,10 @@ class EduPathApp {
     const q = this.quizQuestions[this.currentQuestionIdx];
     if (!q) return;
 
-    // Progress
+    // Update Palette highlights
+    this.renderQuestionPalette();
+
+    // Progress bar and text
     const fillEl = document.getElementById('quiz-progress-fill');
     const textEl = document.getElementById('quiz-progress-text');
     const pct = Math.round(((this.currentQuestionIdx + 1) / total) * 100);
@@ -588,6 +643,7 @@ class EduPathApp {
 
   selectAnswer(val) {
     this.quizAnswers[this.currentQuestionIdx] = val;
+    this.saveProfileToStorage();
     const total = this.quizQuestions.length;
 
     if (this.currentQuestionIdx < total - 1) {
@@ -616,12 +672,22 @@ class EduPathApp {
     this.studentProfile.code = results.code;
     this.studentProfile.scores = results.rawScores;
     this.studentProfile.percentages = results.percentages;
+    this.saveProfileToStorage();
 
-    document.getElementById('quiz-active-card').style.display = 'none';
+    const activeCard = document.getElementById('quiz-active-card');
+    if (activeCard) activeCard.style.display = 'none';
+
     const resultBox = document.getElementById('quiz-result-card');
     if (resultBox) resultBox.style.display = 'block';
 
-    document.getElementById('result-holland-code').textContent = results.code;
+    const codeEl = document.getElementById('result-holland-code');
+    if (codeEl) codeEl.textContent = results.code;
+
+    // Render Detailed 6-Category RIASEC Breakdown
+    this.renderRIASECBreakdown(results);
+
+    // Render In-Depth Personality Insights & Conflict
+    this.renderPersonalityInsights(results);
 
     // Recommended Majors
     const matchedMajors = HollandEngine.matchMajors(results.code, results.percentages);
@@ -662,6 +728,88 @@ class EduPathApp {
     }
 
     this.playBeep(880, 'triangle', 0.25);
+  }
+
+  renderRIASECBreakdown(results) {
+    const container = document.getElementById('quiz-riasec-breakdown');
+    if (!container) return;
+    const sanitize = window.sanitize;
+    container.textContent = '';
+
+    const maxPerGroup = this.quizMode === 'quick' ? 15 : 50;
+
+    HollandEngine.RIASEC_ORDER.forEach(type => {
+      const meta = HollandEngine.GROUP_METADATA[type] || {};
+      const score = results.rawScores[type] || 0;
+      const pct = results.percentages[type] || 0;
+
+      const row = document.createElement('div');
+      row.className = 'riasec-bar-row';
+      row.innerHTML = sanitize(`
+        <div class="riasec-bar-header">
+          <span style="color:${meta.color};">${meta.code} — ${meta.name}</span>
+          <span style="font-weight:800; color:var(--text-primary);">${score}/${maxPerGroup} (${pct}%)</span>
+        </div>
+        <div class="riasec-bar-bg">
+          <div class="riasec-bar-fill" style="width:${pct}%; background-color:${meta.color};"></div>
+        </div>
+      `);
+      container.appendChild(row);
+    });
+  }
+
+  renderPersonalityInsights(results) {
+    const detailsContainer = document.getElementById('quiz-personality-details');
+    const conflictContainer = document.getElementById('quiz-conflict-insight');
+    const sanitize = window.sanitize;
+
+    if (detailsContainer) {
+      detailsContainer.textContent = '';
+      const top1 = results.top3[0];
+      const top2 = results.top3[1];
+      const top3 = results.top3[2];
+
+      const meta1 = HollandEngine.GROUP_METADATA[top1] || {};
+      const meta2 = HollandEngine.GROUP_METADATA[top2] || {};
+      const meta3 = HollandEngine.GROUP_METADATA[top3] || {};
+
+      const card = document.createElement('div');
+      card.className = 'personality-detail-card';
+      card.innerHTML = sanitize(`
+        <div class="personality-detail-header" style="color:${meta1.color};">
+          <span>🌟 Nhóm Thống Trị: ${meta1.name} (Chữ cái ${top1})</span>
+        </div>
+        <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:0.4rem;">${meta1.description}</p>
+        <div style="font-size:0.825rem; line-height:1.5; color:var(--text-secondary);">
+          <div>💪 <strong>Thế mạnh vượt trội:</strong> ${meta1.strengths}</div>
+          <div>📖 <strong>Học hiệu quả nhất khi:</strong> ${meta1.bestLearnsWhen}</div>
+          <div>⚠️ <strong>Dễ chán nản khi:</strong> ${meta1.losesInterestWhen}</div>
+        </div>
+        <div style="margin-top:0.6rem; padding-top:0.6rem; border-top:1px dashed var(--border); font-size:0.825rem; color:var(--text-muted);">
+          🔗 <strong>Kênh bổ trợ & xúc tác:</strong> Chữ cái thứ hai (${top2} - ${meta2.shortName}) và thứ ba (${top3} - ${meta3.shortName}) giúp em đa dạng hóa khả năng thích nghi và mở rộng cơ hội việc làm kĩ thuật.
+        </div>
+      `);
+      detailsContainer.appendChild(card);
+    }
+
+    if (conflictContainer) {
+      const conflict = HollandEngine.detectConflict(results.code);
+      if (conflict) {
+        conflictContainer.style.display = 'block';
+        conflictContainer.innerHTML = sanitize(`
+          <div class="conflict-callout-card">
+            <h4 style="font-size:0.925rem; font-weight:700; color:var(--accent-enterprise); margin-bottom:0.35rem;">
+              ⚖️ Điểm Giao Thoa Độc Đáo: ${conflict.title}
+            </h4>
+            <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+              ${conflict.insight}
+            </p>
+          </div>
+        `);
+      } else {
+        conflictContainer.style.display = 'none';
+      }
+    }
   }
 
   selectMajorForProject(majorId) {

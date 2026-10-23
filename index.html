@@ -445,6 +445,15 @@
               </div>
             </div>
 
+            <!-- Question Palette Navigation Grid -->
+            <div class="quiz-palette-wrapper" style="margin-bottom:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; font-size:0.825rem; font-weight:600;">
+                <span>🎯 Bảng điều hướng câu hỏi:</span>
+                <span id="quiz-palette-legend" style="color:var(--text-muted); font-size:0.75rem;">🟢 Đã trả lời &nbsp;|&nbsp; ⚪ Chưa trả lời</span>
+              </div>
+              <div class="quiz-question-palette" id="quiz-question-palette"></div>
+            </div>
+
             <!-- Question Card -->
             <div class="question-card">
               <span class="question-tag" id="quiz-question-type-tag">Nhóm Kỹ thuật (R)</span>
@@ -469,15 +478,30 @@
                 <h2 class="card-title">🎉 Kết Quả Trắc Nghiệm Holland Của Bạn</h2>
                 <p class="card-subtitle">Giải mã 3 chữ cái đại diện cho phong cách nghề nghiệp vượt trội</p>
               </div>
+              <button class="btn-secondary" id="btn-retake-quiz" style="padding:0.4rem 0.85rem; font-size:0.8rem;">
+                🔄 Khảo Sát Lại
+              </button>
             </div>
 
-            <div style="text-align:center; padding:1.5rem 0;">
+            <div style="text-align:center; padding:1rem 0;">
               <p style="font-size:0.85rem; font-weight:700; color:var(--brand); text-transform:uppercase; letter-spacing:0.1em;">MÃ HOLLAND CHÍNH</p>
-              <h1 id="result-holland-code" style="font-size:4rem; font-weight:900; letter-spacing:0.1em; color:var(--text-primary); margin:0.25rem 0;">RIE</h1>
-              <p style="font-size:0.95rem; color:var(--text-secondary); max-width:600px; margin:0 auto;">
-                Ba nhóm bạn có điểm số cao nhất. Chữ đầu tiên đóng vai trò chi phối, hai chữ tiếp theo là kênh bổ trợ và xúc tác môi trường.
+              <h1 id="result-holland-code" style="font-size:3.75rem; font-weight:900; letter-spacing:0.1em; color:var(--text-primary); margin:0.25rem 0;">RIE</h1>
+              <p style="font-size:0.95rem; color:var(--text-secondary); max-width:640px; margin:0 auto; line-height:1.5;">
+                Ba nhóm có điểm số cao nhất. Chữ cái đầu tiên đóng vai trò chi phối chủ đạo, hai chữ cái tiếp theo là kênh bổ trợ và định hình môi trường phát triển tối ưu.
               </p>
             </div>
+
+            <!-- 6-Category RIASEC Breakdown -->
+            <div style="margin:1rem 0;">
+              <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem;">📊 Phổ Điểm 6 Nhóm Tính Cách RIASEC:</h3>
+              <div id="quiz-riasec-breakdown" class="riasec-breakdown-grid"></div>
+            </div>
+
+            <!-- In-Depth Personality Insights -->
+            <div id="quiz-personality-details" style="margin:1rem 0;"></div>
+
+            <!-- Opposite Pair Insight (if detected) -->
+            <div id="quiz-conflict-insight" style="margin:1rem 0; display:none;"></div>
 
             <h3 style="font-size:1.15rem; font-weight:700; margin:1.5rem 0 1rem 0;">🎯 Top Ngành Học & Nghề Nghiệp Khớp Nhất:</h3>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;" id="quiz-matched-majors-grid"></div>
