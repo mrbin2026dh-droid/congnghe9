@@ -188,9 +188,9 @@ def test_h1_and_h2():
         print("✓ H2 PERSISTENCE VERIFIED: Re-login immediately displays latest survey results (ASE)!")
 
         # -------------------------------------------------------------
-        # STEP 4: TEST H2 - RETAKE SURVEY CLEARS FIREBASE & TEACHER TABLE
+        # STEP 4: TEST H2 - RETAKE SURVEY KEEPS PREVIOUS RESULT UNTIL NEW ONE IS FINISHED
         # -------------------------------------------------------------
-        print("\n=== STEP 4: Retake Survey (Khảo sát lại) & Clear Firebase ===")
+        print("\n=== STEP 4: Retake Survey (Khảo sát lại) keeps previous result ===")
         # Click Retake button
         student_page.locator('#btn-retake-quiz').click()
         student_page.wait_for_timeout(1000)
@@ -200,7 +200,7 @@ def test_h1_and_h2():
         assert not student_page.locator('#quiz-result-card').is_visible(), "Result card must be hidden after retake"
         print("Student view switched back to question 1.")
 
-        # Check teacher table live-updated to 'Chưa làm' / 'Chưa chọn'!
+        # Teacher table must still show the previous result plus an in-progress badge
         teacher_page.wait_for_timeout(1500)
         row_after_retake = teacher_page.evaluate("""() => {
             const rows = document.querySelectorAll('#teacher-student-table-body tr');
@@ -219,11 +219,12 @@ def test_h1_and_h2():
             return null;
         }""")
         print("Teacher table live update after retake:", row_after_retake)
-        assert row_after_retake['holland'] == 'Chưa làm', f"Expected Holland 'Chưa làm' after retake, got: '{row_after_retake['holland']}'"
-        assert 'Chưa chọn' in row_after_retake['major'], f"Expected Major 'Chưa chọn' after retake, got: '{row_after_retake['major']}'"
-        assert 'Chưa làm' in row_after_retake['score'], f"Expected Score 'Chưa làm' after retake, got: '{row_after_retake['score']}'"
-        assert 'Chưa có' in row_after_retake['stream'], f"Expected Stream 'Chưa có' after retake, got: '{row_after_retake['stream']}'"
-        print("✓ H2 RETAKE VERIFIED: Results cleared on Firebase and Teacher table live-updated to 'Chưa làm'!")
+        # Kết quả lần trước (ASE) phải được GIỮ NGUYÊN cho tới khi học sinh hoàn thành bài mới,
+        # đồng thời giáo viên thấy học sinh đang làm dở lần khảo sát mới.
+        assert row_after_retake['holland'].startswith('ASE'), f"Expected previous Holland 'ASE' kept after retake, got: '{row_after_retake['holland']}'"
+        assert 'Đang làm' in row_after_retake['holland'], f"Expected in-progress badge after retake, got: '{row_after_retake['holland']}'"
+        assert 'Chưa chọn' not in row_after_retake['major'], f"Expected previous major kept after retake, got: '{row_after_retake['major']}'"
+        print("✓ H2 RETAKE VERIFIED: Previous result kept on Firebase while the new survey is in progress!")
 
         # -------------------------------------------------------------
         # STEP 5: TEST H2 - SUBMIT NEW SURVEY (RSC) & ACCURATE UPDATE

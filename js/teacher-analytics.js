@@ -350,10 +350,26 @@ const TeacherAnalytics = (() => {
       }
     });
   }
+  /**
+   * Tiêu chí DUY NHẤT để coi một học sinh là "đã làm khảo sát": có mã Holland 3 chữ cái hợp lệ
+   * và không ở trạng thái "chưa phân hóa". Dùng chung cho mọi thống kê để số liệu khớp nhau.
+   */
+  function isValidHolland(student) {
+    if (!student) return false;
+    const code = String(student.code || '').trim().toUpperCase();
+    return /^[RIASEC]{3}$/.test(code) && !student.isUndifferentiated;
+  }
+
+  // Học sinh thuộc luồng Giáo dục nghề nghiệp (9+) theo chuỗi phân luồng đã lưu
+  function isVocationalStream(stream) {
+    const s = String(stream || '').toLowerCase();
+    return s.includes('nghề') || s.includes('9+') || s.includes('trung cấp') || s.includes('cao đẳng');
+  }
+
   function computeDistribution(classList) {
     const counts = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
     // Only count students who have taken Holland quiz (code is not empty)
-    const validStudents = (classList || []).filter(s => Boolean(s.code && s.code.trim().length > 0));
+    const validStudents = (classList || []).filter(isValidHolland);
     const total = validStudents.length;
 
     if (total > 0) {
@@ -510,7 +526,7 @@ const TeacherAnalytics = (() => {
 
     const studentRows = list.map((st, idx) => {
       const code = (st.code || '').trim().toUpperCase();
-      const hasValidHolland = Boolean(code.length >= 3 && code !== '---' && /^[RIASEC]{3}$/.test(code) && !st.isUndifferentiated);
+      const hasValidHolland = isValidHolland(st);
       const hasSurvey = hasValidHolland;
       if (hasSurvey) {
         completed += 1;
@@ -527,12 +543,13 @@ const TeacherAnalytics = (() => {
       const streamLower = stream.toLowerCase();
       let normalizedStream = 'Chưa có';
       if (hasSurvey) {
-        if (streamLower.includes('thpt') || streamLower.includes('phổ thông')) {
-          thptCount += 1;
-          normalizedStream = 'Tiếp tục học THPT';
-        } else if (streamLower.includes('nghề') || streamLower.includes('9+') || streamLower.includes('trung cấp') || streamLower.includes('học nghề')) {
+        // Kiểm tra luồng nghề trước: chuỗi "Cao đẳng / Trung cấp Nghề 9+" không chứa "thpt"
+        if (isVocationalStream(stream)) {
           vocationalCount += 1;
           normalizedStream = 'Giáo dục nghề nghiệp (9+)';
+        } else if (streamLower.includes('thpt') || streamLower.includes('phổ thông')) {
+          thptCount += 1;
+          normalizedStream = 'Tiếp tục học THPT';
         } else {
           otherStreamCount += 1;
           normalizedStream = stream || 'Đang cân nhắc';
@@ -578,8 +595,9 @@ const TeacherAnalytics = (() => {
 
     const completedRate = total > 0 ? Math.round((completed / total) * 100) : 0;
     const pendingRate = total > 0 ? (100 - completedRate) : 0;
-    const thptRate = total > 0 ? Math.round((thptCount / total) * 100) : 0;
-    const vocationalRate = total > 0 ? Math.round((vocationalCount / total) * 100) : 0;
+    // Tỷ lệ phân luồng tính trên số học sinh ĐÃ khảo sát (giống dashboard giáo viên)
+    const thptRate = completed > 0 ? Math.round((thptCount / completed) * 100) : 0;
+    const vocationalRate = completed > 0 ? Math.round((vocationalCount / completed) * 100) : 0;
 
     const riasecPercentages = {};
     for (const k in riasecCounts) {
@@ -647,8 +665,8 @@ const TeacherAnalytics = (() => {
         ['Tổng số học sinh', stats.total, '100%', 'Sĩ số chính thức trong danh sách'],
         ['Đã hoàn thành khảo sát Holland', stats.completed, `${stats.completedRate}%`, 'Đã xác định mã nghề và nhóm ngành'],
         ['Chưa hoàn thành khảo sát', stats.pending, `${stats.pendingRate}%`, 'Cần giáo viên/phụ huynh đôn đốc hoàn thành'],
-        ['Định hướng tiếp tục học THPT', stats.thptCount, `${stats.thptRate}%`, 'Học sinh có nguyện vọng/phù hợp THPT công lập/tư thục'],
-        ['Định hướng Giáo dục nghề nghiệp (9+)', stats.vocationalCount, `${stats.vocationalRate}%`, 'Học nghề hoặc vừa học văn hóa vừa học trung cấp nghề'],
+        ['Định hướng tiếp tục học THPT', stats.thptCount, `${stats.thptRate}%`, 'Tỷ lệ trên số HS đã khảo sát · Phù hợp THPT công lập/tư thục'],
+        ['Định hướng Giáo dục nghề nghiệp (9+)', stats.vocationalCount, `${stats.vocationalRate}%`, 'Tỷ lệ trên số HS đã khảo sát · Học nghề kết hợp văn hóa'],
         [''],
         ['II. PHÂN BỐ XU HƯỚNG NGHỀ NGHIỆP HOLLAND (RIASEC)'],
         ['Mã nhóm', 'Tên nhóm nghề nghiệp', 'Số lượng (HS)', 'Tỷ lệ (%)', 'Lĩnh vực nghề tiêu biểu'],
@@ -928,13 +946,13 @@ const TeacherAnalytics = (() => {
         <td>Định hướng tiếp tục học THPT</td>
         <td class="text-center font-bold">${stats.thptCount}</td>
         <td class="text-center font-bold">${stats.thptRate}%</td>
-        <td>Nguyện vọng THPT</td>
+        <td>Nguyện vọng THPT (tỷ lệ trên số HS đã khảo sát)</td>
       </tr>
       <tr>
         <td>Định hướng Giáo dục nghề nghiệp (9+)</td>
         <td class="text-center font-bold">${stats.vocationalCount}</td>
         <td class="text-center font-bold">${stats.vocationalRate}%</td>
-        <td>Học nghề kết hợp văn hóa</td>
+        <td>Học nghề kết hợp văn hóa (tỷ lệ trên số HS đã khảo sát)</td>
       </tr>
     </tbody>
   </table>
@@ -1092,6 +1110,8 @@ const TeacherAnalytics = (() => {
     deleteStudentFromRoster,
     generateCSVContent,
     computeDistribution,
+    isValidHolland,
+    isVocationalStream,
     renderClassHeatmap,
     exportClassCSV,
     downloadExcelTemplate,

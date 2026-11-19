@@ -36,6 +36,18 @@ window.EduPathFirebase = (() => {
           window.firebase.initializeApp(cfg);
         }
         dbInstance = window.firebase.database();
+        // Chế độ kiểm thử: mở trang với ?emulator=1 để dùng Firebase Emulator chạy trên máy
+        // (127.0.0.1:9400), không đụng tới dữ liệu học sinh thật. Mở bình thường thì không ảnh hưởng.
+        try {
+          const params = new URLSearchParams(window.location.search || '');
+          if (params.get('emulator') === '1') {
+            dbInstance.useEmulator('127.0.0.1', Number(params.get('emulatorPort')) || 9400);
+            window.EduPathUsingEmulator = true;
+            console.info('EduPath AI: Đang dùng Firebase Emulator (chế độ kiểm thử).');
+          }
+        } catch (emuErr) {
+          console.warn('Không bật được Firebase Emulator:', emuErr);
+        }
         isFirebaseReady = true;
         console.info('EduPath AI: Kết nối thành công Firebase Realtime Database.');
         // Live Firebase: 100% cloud sync, zero fake auto-seed
@@ -57,6 +69,16 @@ window.EduPathFirebase = (() => {
     const trimmed = String(classId).trim();
     if (trimmed === 'Tất cả các lớp' || trimmed === 'TAT CA CAC LOP') return '';
     return trimmed.toUpperCase();
+  }
+
+  // Một học sinh thuộc lớp theo trường `grade`; chỉ dùng tiền tố mã (vd: 9A-01) khi chưa có `grade`.
+  // Tránh trường hợp đổi lớp xong học sinh xuất hiện ở cả lớp cũ (theo mã) lẫn lớp mới (theo grade).
+  function matchesClass(student, normClass) {
+    if (!normClass) return true;
+    if (!student) return false;
+    const sGrade = String(student.grade || '').trim().toUpperCase();
+    if (sGrade) return sGrade === normClass;
+    return String(student.studentCode || '').toUpperCase().startsWith(normClass + '-');
   }
 
   // Recursively sanitize objects for Firebase Realtime Database:
@@ -122,10 +144,7 @@ window.EduPathFirebase = (() => {
     const roster = getLocalRoster();
     localListeners.forEach(({ classId, callback }) => {
       try {
-        const filtered = classId 
-          ? roster.filter(s => (s.grade || '').toUpperCase() === classId || (s.studentCode || '').toUpperCase().startsWith(classId + '-')) 
-          : roster;
-        callback(filtered);
+        callback(roster.filter(s => matchesClass(s, classId)));
       } catch (err) {
         console.error('Lỗi khi kích hoạt listener địa phương:', err);
       }
@@ -145,6 +164,8 @@ window.EduPathFirebase = (() => {
   return {
     init: initFirebase,
 
+    matchesClass,
+
     isConfigured: () => {
       return isFirebaseReady && dbInstance !== null;
     },
@@ -155,10 +176,14 @@ window.EduPathFirebase = (() => {
 
       if (isFirebaseReady && dbInstance) {
         try {
-          const snapshot = await dbInstance.ref(`students/${cleanCode}`).once('value');
-          if (snapshot.exists()) {
-            return snapshot.val();
-          }
+          // Khi mất mạng, once('value') có thể chờ vô hạn -> giới hạn 10 giây rồi dùng dữ liệu local
+          const snapshot = await Promise.race([
+            dbInstance.ref(`students/${cleanCode}`).once('value'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Hết thời gian chờ Firebase (mất mạng?)')), 10000))
+          ]);
+          // Firebase là nguồn dữ liệu chuẩn: đọc thành công mà không có -> học sinh không tồn tại
+          // (đã bị xóa), không tra tiếp bộ nhớ đệm local đã cũ.
+          return snapshot.exists() ? snapshot.val() : null;
         } catch (err) {
           console.warn('Lỗi đọc từ Firebase, tra cứu local:', err);
         }
@@ -178,12 +203,7 @@ window.EduPathFirebase = (() => {
           if (snapshot.exists()) {
             const data = snapshot.val() || {};
             const list = Object.values(data).filter(s => s && s.studentCode);
-            return list.filter(s => {
-              if (!normClass) return true;
-              const sGrade = (s.grade || '').toUpperCase();
-              const sCode = (s.studentCode || '').toUpperCase();
-              return sGrade === normClass || sCode.startsWith(normClass + '-');
-            });
+            return list.filter(s => matchesClass(s, normClass));
           }
           return [];
         } catch (err) {
@@ -192,12 +212,7 @@ window.EduPathFirebase = (() => {
       }
 
       const roster = getLocalRoster();
-      return roster.filter(s => {
-        if (!normClass) return true;
-        const sGrade = (s.grade || '').toUpperCase();
-        const sCode = (s.studentCode || '').toUpperCase();
-        return sGrade === normClass || sCode.startsWith(normClass + '-');
-      });
+      return roster.filter(s => matchesClass(s, normClass));
     },
 
     addStudent: async (student) => {
@@ -385,13 +400,7 @@ window.EduPathFirebase = (() => {
           if (snapshot.exists()) {
             const data = snapshot.val() || {};
             const list = Object.values(data).filter(s => s && s.studentCode);
-            const filtered = list.filter(s => {
-              if (!normClass) return true;
-              const sGrade = (s.grade || '').toUpperCase();
-              const sCode = (s.studentCode || '').toUpperCase();
-              return sGrade === normClass || sCode.startsWith(normClass + '-');
-            });
-            callback(filtered);
+            callback(list.filter(s => matchesClass(s, normClass)));
           } else {
             callback([]);
           }
@@ -406,10 +415,7 @@ window.EduPathFirebase = (() => {
 
       // Immediate first callback invocation
       const roster = getLocalRoster();
-      const filtered = normClass 
-        ? roster.filter(s => (s.grade || '').toUpperCase() === normClass || (s.studentCode || '').toUpperCase().startsWith(normClass + '-')) 
-        : roster;
-      callback(filtered);
+      callback(roster.filter(s => matchesClass(s, normClass)));
 
       return () => {
         const index = localListeners.indexOf(listenerObj);

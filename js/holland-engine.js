@@ -176,8 +176,50 @@ const HollandEngine = (() => {
       validAnswersCount,
       isIncomplete,
       isUndifferentiated: false,
-      undifferentiatedMessage: ''
+      undifferentiatedMessage: '',
+      tieWarning: describeTies(sortedTypes, rawScores)
     };
+  }
+
+  /**
+   * Mô tả các trường hợp bằng điểm làm thay đổi mã Holland (không phải 6 nhóm bằng nhau).
+   * Khi bằng điểm, thứ tự được phá hòa theo R-I-A-S-E-C nên cần báo cho học sinh biết.
+   * @returns {string} Thông báo, rỗng nếu không có hòa điểm ảnh hưởng tới mã
+   */
+  function describeTies(sortedTypes, rawScores) {
+    if (!Array.isArray(sortedTypes) || sortedTypes.length < 4) return '';
+    const name = t => `${t} (${GROUP_METADATA[t] ? GROUP_METADATA[t].shortName : t})`;
+    const messages = [];
+
+    // Hòa ở ranh giới vị trí 3/4: chữ cái thứ 3 có thể là một nhóm khác
+    const third = sortedTypes[2];
+    const boundaryTies = sortedTypes.slice(3).filter(t => rawScores[t] === rawScores[third]);
+    if (boundaryTies.length > 0) {
+      messages.push(`Nhóm ${[third, ...boundaryTies].map(name).join(', ')} bằng điểm nhau (${rawScores[third]} điểm), nên chữ cái thứ 3 có thể là bất kỳ nhóm nào trong số này. Em nên tham khảo thêm ngành nghề của cả các nhóm đó.`);
+    }
+
+    // Hòa trong nội bộ 3 chữ cái đầu: thứ tự chữ cái có thể hoán đổi
+    const innerTies = [];
+    for (let i = 0; i < 2; i++) {
+      const a = sortedTypes[i];
+      const b = sortedTypes[i + 1];
+      if (rawScores[a] === rawScores[b]) innerTies.push(`${name(a)} và ${name(b)}`);
+    }
+    if (innerTies.length > 0) {
+      messages.push(`Nhóm ${innerTies.join('; ')} bằng điểm nhau, nên thứ tự các chữ cái này trong mã có thể hoán đổi.`);
+    }
+
+    return messages.join(' ');
+  }
+
+  // Dùng cho các lần khảo sát cũ đã lưu (chỉ có điểm thô, chưa có tieWarning)
+  function describeTiesFromScores(rawScores) {
+    if (!rawScores) return '';
+    const sorted = [...RIASEC_ORDER].sort((a, b) => {
+      if ((rawScores[b] || 0) !== (rawScores[a] || 0)) return (rawScores[b] || 0) - (rawScores[a] || 0);
+      return RIASEC_ORDER.indexOf(a) - RIASEC_ORDER.indexOf(b);
+    });
+    return describeTies(sorted, rawScores);
   }
 
   /**
@@ -396,6 +438,7 @@ const HollandEngine = (() => {
     GROUP_METADATA,
     getHexagonDistance,
     calculateScores,
+    describeTiesFromScores,
     matchMajors,
     matchHollandOrderCareers,
     detectConflict
