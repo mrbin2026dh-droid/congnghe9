@@ -58,6 +58,7 @@
           <button class="btn-session-action btn-logout" id="btn-logout" title="Đăng xuất khỏi hệ thống">Đăng xuất</button>
         </div>
         <button class="btn-session-action btn-login-open" id="btn-open-login">Đăng nhập</button>
+        <span class="network-status-badge" id="network-status-badge" role="status" hidden>📴 Offline</span>
         <button type="button" class="btn-session-action btn-install-app" id="btn-install-app" data-pwa-install hidden title="Cài TeenVoca AI lên màn hình chính của thiết bị">📲 Cài ứng dụng</button>
         <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
       </div>
@@ -705,9 +706,14 @@
       <!-- ================= TAB 5: BẢNG ĐIỀU KHIỂN GIÁO VIÊN ================= -->
       <section class="stage-view-section" id="view-teacher" style="display:none;">
         <div class="card-panel">
+          <div class="teacher-offline-banner" id="teacher-offline-banner" role="status" hidden></div>
           <div class="card-panel-header">
             <div>
               <h2 class="card-title">👨‍🏫 Bảng Điều Khiển Quản Lý Lớp Học & Phân Luồng (Teacher Dashboard)</h2>
+              <div class="offline-roster-bar">
+                <span id="offline-roster-info">💾 Máy này chưa lưu danh sách học sinh dùng offline</span>
+                <button type="button" class="offline-roster-clear" id="btn-clear-offline-data" title="Xóa danh sách học sinh đã lưu offline trên máy này">Xóa dữ liệu offline</button>
+              </div>
               <p class="card-subtitle">Bức tranh toàn cảnh về phân bố tính cách RIASEC và định hướng sau THCS</p>
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -717,6 +723,9 @@
               <button class="btn-primary" id="btn-sync-all-realtime" style="padding:0.4rem 0.75rem; font-size:0.8rem; background:linear-gradient(135deg, #10b981, #059669); border-color:#059669; color:#fff; display:inline-flex; align-items:center; gap:0.35rem; font-weight:700;" title="Lấy dữ liệu khảo sát thời gian thực toàn bộ học sinh từ Firebase">
                 <span class="live-pulse-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#fff; box-shadow:0 0 6px rgba(255,255,255,0.9);"></span>
                 <span class="sync-all-text">🔄 Đồng Bộ Realtime (Cả Lớp)</span>
+              </button>
+              <button class="btn-secondary" id="btn-download-roster-offline" style="padding:0.4rem 0.75rem; font-size:0.8rem;" title="Lưu danh sách lớp đang xem vào máy này để học sinh đăng nhập được khi mất mạng (dùng cho máy tính nhà trường)">
+                💾 Tải DS lớp về máy (dùng offline)
               </button>
               <button class="btn-primary" id="btn-open-add-student-modal" style="padding:0.4rem 0.75rem; font-size:0.8rem;">
                 ➕ Thêm Học Sinh
@@ -1304,6 +1313,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js"></script>
+  <script src="js/offline-accounts.js"></script>
 
   <!-- Script Modules Loaded in Strict Order -->
   <script src="js/data.js"></script>

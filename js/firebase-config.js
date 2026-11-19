@@ -166,6 +166,49 @@ window.EduPathFirebase = (() => {
 
     matchesClass,
 
+    /**
+     * Tra cứu học sinh trên Firebase với trạng thái RÕ RÀNG (dùng cho đăng nhập):
+     *  - { status: 'found', data }   Firebase trả lời, có học sinh
+     *  - { status: 'not_found' }     Firebase trả lời, KHÔNG có (mã sai hoặc đã bị xóa)
+     *  - { status: 'unreachable' }   Không hỏi được Firebase (mất mạng / quá 8 giây / chưa cấu hình)
+     * Máy báo đang offline thì trả 'unreachable' ngay, không bắt người dùng chờ.
+     */
+    lookupStudent: async (studentCode) => {
+      if (!studentCode) return { status: 'not_found' };
+      const cleanCode = String(studentCode).toUpperCase().trim();
+      if (!isFirebaseReady || !dbInstance) return { status: 'unreachable' };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'unreachable' };
+      try {
+        const snapshot = await Promise.race([
+          dbInstance.ref(`students/${cleanCode}`).once('value'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+        ]);
+        return snapshot.exists() ? { status: 'found', data: snapshot.val() } : { status: 'not_found' };
+      } catch (err) {
+        console.warn('Không tra cứu được Firebase:', err);
+        return { status: 'unreachable' };
+      }
+    },
+
+    /**
+     * Đọc mã PIN giáo viên với trạng thái rõ ràng:
+     *  - { status: 'found', pin } | { status: 'not_set' } (chưa đặt PIN trên Firebase) | { status: 'unreachable' }
+     */
+    lookupTeacherPin: async () => {
+      if (!isFirebaseReady || !dbInstance) return { status: 'unreachable' };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'unreachable' };
+      try {
+        const snapshot = await Promise.race([
+          dbInstance.ref('settings/teacherPin').once('value'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+        ]);
+        return snapshot.exists() ? { status: 'found', pin: String(snapshot.val()) } : { status: 'not_set' };
+      } catch (err) {
+        console.warn('Không đọc được PIN giáo viên từ Firebase:', err);
+        return { status: 'unreachable' };
+      }
+    },
+
     isConfigured: () => {
       return isFirebaseReady && dbInstance !== null;
     },

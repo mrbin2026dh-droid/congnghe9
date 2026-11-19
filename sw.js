@@ -13,7 +13,7 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const APP_CACHE = `teenvoca-app-${CACHE_VERSION}`;
 const CDN_CACHE = `teenvoca-cdn-${CACHE_VERSION}`;
 const NETWORK_TIMEOUT_MS = 4000;
@@ -24,6 +24,7 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './css/style.css',
   './js/firebase-config.js',
+  './js/offline-accounts.js',
   './js/data.js',
   './js/holland-engine.js',
   './js/tree-svg-animator.js',

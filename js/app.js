@@ -75,6 +75,18 @@ class TeenVocaApp {
     }
     this.initTeacherDashboard();
     this.bindEvents();
+    // Có mạng trở lại: đẩy ngay tiến độ làm lúc offline; giáo viên thì nạp lại dữ liệu lớp trực tiếp
+    window.addEventListener('online', () => {
+      if (!this.currentUser) return;
+      if (this.currentUser.role === 'student') {
+        const code = this.currentUser.code || this.studentProfile.studentCode;
+        try {
+          if (code && localStorage.getItem(this.pendingProgressKey(code))) this.syncProgressToFirebase(true);
+        } catch { /* bỏ qua */ }
+      } else if (this.currentUser.role === 'teacher') {
+        this.attachTeacherListener();
+      }
+    });
     if (this.currentUser && this.currentUser.role === 'teacher') {
       this.switchTab('teacher');
     } else {
@@ -409,6 +421,14 @@ class TeenVocaApp {
       // lần đăng nhập sau sẽ đẩy lại bản này lên Firebase (xem applyPendingProgressBackup).
       const savedAt = new Date().toISOString();
       const pendingKey = this.pendingProgressKey(studentCode);
+      // Bản lưu offline trên máy luôn có tiến độ mới nhất (để đăng nhập lại khi không có mạng)
+      if (window.OfflineAccounts) {
+        window.OfflineAccounts.mergeProgress(studentCode, { ...payload, lastProgressUpdate: savedAt }, {
+          name: this.studentProfile.name,
+          grade: this.studentProfile.grade,
+          school: this.studentProfile.school
+        });
+      }
       try {
         localStorage.setItem(pendingKey, JSON.stringify({ savedAt, payload }));
       } catch (storageErr) {
@@ -719,35 +739,42 @@ class TeenVocaApp {
     }
 
     const cleanCode = code.toUpperCase().trim();
+    const showLoginError = (msg) => {
+      if (studentErr) {
+        studentErr.textContent = msg;
+        studentErr.style.display = 'block';
+      }
+      this.playBeep(220, 'sawtooth', 0.2);
+    };
+
+    // 1. Hỏi Firebase (nguồn chuẩn). Máy đang offline thì bỏ qua ngay, không bắt chờ.
+    const fb = window.EduPathFirebase;
+    const lookup = (fb && fb.lookupStudent) ? await fb.lookupStudent(cleanCode) : { status: 'unreachable' };
+    const offlineStore = window.OfflineAccounts || null;
     let matched = null;
-    if (window.EduPathFirebase) {
-      matched = await window.EduPathFirebase.getStudent(cleanCode);
-    }
-    if (!matched && window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) {
-      matched = window.TeacherAnalytics.currentClassData.find(s => (s.studentCode && s.studentCode.toUpperCase() === cleanCode));
-    }
+    let loggedInOffline = false;
 
-    if (!matched && typeof navigator !== 'undefined' && navigator.onLine === false) {
-      if (studentErr) {
-        studentErr.textContent = 'Máy đang mất kết nối mạng nên chưa kiểm tra được mã học sinh. Em hãy kết nối mạng rồi đăng nhập lại — tiến độ khảo sát đã làm trên máy này vẫn được giữ.';
-        studentErr.style.display = 'block';
-      }
-      this.playBeep(220, 'sawtooth', 0.2);
+    if (lookup.status === 'found') {
+      matched = lookup.data;
+    } else if (lookup.status === 'not_found') {
+      // Firebase khẳng định không có mã này (sai mã hoặc đã bị giáo viên xóa) -> xóa luôn bản lưu offline
+      if (offlineStore) offlineStore.remove(cleanCode);
+      showLoginError(`Mã học sinh "${code}" không tồn tại trên hệ thống. Vui lòng liên hệ giáo viên để được cấp tài khoản.`);
       return;
-    }
-
-    if (matched) {
-      matched = this.applyPendingProgressBackup(cleanCode, matched);
-    }
-
-    if (!matched) {
-      if (studentErr) {
-        studentErr.textContent = `Mã học sinh "${code}" không tồn tại trên hệ thống. Vui lòng liên hệ giáo viên để được cấp tài khoản.`;
-        studentErr.style.display = 'block';
+    } else {
+      // 2. Không có mạng: dùng tài khoản đã lưu trên máy (đã từng đăng nhập, hoặc GV đã tải danh sách lớp)
+      matched = offlineStore ? offlineStore.get(cleanCode) : null;
+      loggedInOffline = Boolean(matched);
+      if (!matched) {
+        showLoginError(`Máy đang mất mạng và chưa có dữ liệu của mã "${code}". Lần đầu đăng nhập trên máy này cần có mạng; ở máy tính của trường, thầy cô có thể bấm "Tải danh sách lớp về máy" trước giờ học.`);
+        return;
       }
-      this.playBeep(220, 'sawtooth', 0.2);
-      return;
     }
+
+    // Gộp tiến độ còn chờ đồng bộ (làm lúc mất mạng) nếu mới hơn dữ liệu đang có
+    matched = this.applyPendingProgressBackup(cleanCode, matched);
+    // Ghi nhớ tài khoản trên máy để lần sau đăng nhập được khi không có mạng
+    if (offlineStore) offlineStore.save(cleanCode, matched, 'login');
 
     // Load REAL student profile from Firebase
     this.studentProfile.name = matched.name || 'Học sinh';
@@ -854,6 +881,10 @@ class TeenVocaApp {
     this.switchTab(this.consumeStartTab() || 'tree');
     this.renderAssessmentView();
     this.playBeep(660, 'sine', 0.15);
+    if (loggedInOffline) {
+      this.showToastNotification('📴 Đã đăng nhập không cần mạng bằng dữ liệu lưu trên máy. Tiến độ sẽ tự đồng bộ khi có mạng.');
+    }
+    if (window.TeenVocaPWA && window.TeenVocaPWA.requestPersistentStorage) window.TeenVocaPWA.requestPersistentStorage();
   }
 
   async handleTeacherLogin(pin) {
@@ -867,22 +898,45 @@ class TeenVocaApp {
       return;
     }
 
-    let activePin = '2026';
-    const fb = window.TeenVocaFirebase || window.EduPathFirebase;
-    if (fb && fb.getTeacherPin) {
-      activePin = await fb.getTeacherPin();
-    } else {
-      activePin = localStorage.getItem('teenvoca_teacher_pin') || localStorage.getItem('edupath_teacher_pin') || '2026';
-    }
-
-    if (pin.trim() !== String(activePin).trim()) {
+    const showTeacherError = (msg) => {
       if (teacherErr) {
-        teacherErr.textContent = 'Mã bảo mật giáo viên không chính xác. Vui lòng kiểm tra lại.';
+        teacherErr.textContent = msg;
         teacherErr.style.display = 'block';
       }
       this.playBeep(220, 'sawtooth', 0.2);
+    };
+
+    const enteredPin = pin.trim();
+    const fb = window.TeenVocaFirebase || window.EduPathFirebase;
+    const store = window.OfflineAccounts || null;
+    const pinLookup = (fb && fb.lookupTeacherPin) ? await fb.lookupTeacherPin() : { status: 'unreachable' };
+    let pinOk = false;
+    let teacherOffline = false;
+
+    if (pinLookup.status === 'found') {
+      pinOk = enteredPin === String(pinLookup.pin).trim();
+    } else if (pinLookup.status === 'not_set') {
+      // Hệ thống chưa đặt PIN trên Firebase: dùng PIN khởi tạo (giáo viên nên đổi ngay sau khi vào)
+      const initialPin = localStorage.getItem('teenvoca_teacher_pin') || localStorage.getItem('edupath_teacher_pin') || '2026';
+      pinOk = enteredPin === String(initialPin).trim();
+    } else {
+      // Không có mạng: chỉ chấp nhận PIN đã được xác minh online trên CHÍNH máy này (so mã băm),
+      // tuyệt đối không dùng PIN mặc định -> người lạ không thể vào chế độ giáo viên khi ngắt mạng.
+      const verified = store ? await store.verifyTeacherPinOffline(enteredPin) : null;
+      if (verified === null) {
+        showTeacherError('Máy đang mất mạng. Lần đầu đăng nhập giáo viên trên máy này cần có mạng để xác minh mã bảo mật.');
+        return;
+      }
+      pinOk = verified;
+      teacherOffline = true;
+    }
+
+    if (!pinOk) {
+      showTeacherError('Mã bảo mật giáo viên không chính xác. Vui lòng kiểm tra lại.');
       return;
     }
+    // Ghi nhớ (dạng băm) để lần sau đăng nhập được khi không có mạng
+    if (!teacherOffline && store) await store.rememberTeacherPin(enteredPin);
 
     if (teacherErr) teacherErr.style.display = 'none';
 
@@ -897,27 +951,117 @@ class TeenVocaApp {
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.syncAuthUI();
 
-    // Re-attach live Firebase listener to fetch all students
-    if (window.EduPathFirebase) {
-      if (this.teacherListenerUnsub) {
-        this.teacherListenerUnsub();
-      }
-      const classFilter = document.getElementById('teacher-class-filter-select');
-      const activeFilter = classFilter ? classFilter.value : '';
-      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(activeFilter, (students) => {
-        TeacherAnalytics.currentClassData = students || [];
-        if (!activeFilter) {
-          this.syncTeacherClassFilterDropdown(students);
-        }
-        if (this.currentTab === 'teacher') {
-          this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
-          this.renderTeacherHeatmap();
-        }
-      });
-    }
+    // Gắn listener realtime (khi offline: hiện ngay dữ liệu lớp đã lưu trên máy)
+    this.attachTeacherListener();
 
     this.switchTab('teacher');
     this.playBeep(880, 'sine', 0.15);
+    if (teacherOffline) {
+      this.showToastNotification('📴 Đăng nhập giáo viên không cần mạng. Đang xem dữ liệu lớp lưu trên máy; thêm/sửa/xóa học sinh cần có mạng.');
+    }
+  }
+
+  /**
+   * Gắn (lại) listener realtime danh sách học sinh cho giáo viên theo lớp đang lọc.
+   * Hiện ngay danh sách đã lưu trên máy (nếu có) kèm thông báo, rồi thay bằng dữ liệu trực tiếp khi Firebase phản hồi.
+   */
+  attachTeacherListener() {
+    if (!window.EduPathFirebase) return;
+    if (this.teacherListenerUnsub) {
+      this.teacherListenerUnsub();
+      this.teacherListenerUnsub = null;
+    }
+    const classFilter = document.getElementById('teacher-class-filter-select');
+    const activeFilter = classFilter ? classFilter.value : '';
+    const normFilter = String(activeFilter || '').trim().toUpperCase();
+    const store = window.OfflineAccounts;
+    this.teacherLiveConnected = false;
+
+    const cached = store ? store.getTeacherRoster() : null;
+    if (cached && cached.students.length > 0) {
+      const matches = window.EduPathFirebase.matchesClass || (() => true);
+      TeacherAnalytics.currentClassData = cached.students.filter(s => matches(s, normFilter));
+      this.showTeacherOfflineBanner(cached.savedAt);
+      if (this.currentTab === 'teacher') {
+        this.syncTeacherClassFilterDropdown(cached.students);
+        this.renderTeacherHeatmap();
+      }
+    }
+
+    this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(activeFilter, (students) => {
+      this.teacherLiveConnected = true;
+      this.showTeacherOfflineBanner(null);
+      TeacherAnalytics.currentClassData = students || [];
+      // Lưu lại để lần sau mở bảng giáo viên được khi không có mạng
+      if (store) {
+        if (!activeFilter) store.replaceTeacherRoster(students || []);
+        else store.saveTeacherRoster(students || []);
+      }
+      if (!activeFilter) {
+        this.syncTeacherClassFilterDropdown(students);
+      }
+      if (this.currentTab === 'teacher') {
+        this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
+        this.renderTeacherHeatmap();
+      }
+    });
+    this.updateOfflineRosterInfo();
+  }
+
+  showTeacherOfflineBanner(savedAt) {
+    const banner = document.getElementById('teacher-offline-banner');
+    if (!banner) return;
+    if (!savedAt) {
+      banner.hidden = true;
+      return;
+    }
+    const d = new Date(savedAt);
+    const when = isNaN(d.getTime()) ? '' : ` lúc ${d.toLocaleString('vi-VN')}`;
+    banner.textContent = `📴 Đang hiển thị dữ liệu lớp đã lưu trên máy${when}. Bảng sẽ tự cập nhật trực tiếp khi có mạng.`;
+    banner.hidden = false;
+  }
+
+  // Thao tác ghi dữ liệu (thêm/sửa/xóa, nhập Excel, đổi PIN) cần có mạng để không bị treo chờ Firebase
+  requireOnline(actionLabel) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.showToastNotification(`📴 Cần có mạng để ${actionLabel}. Em/Thầy Cô vui lòng kết nối mạng rồi thử lại.`, 'error');
+      this.playBeep(220, 'sawtooth', 0.2);
+      return false;
+    }
+    return true;
+  }
+
+  updateOfflineRosterInfo() {
+    const info = document.getElementById('offline-roster-info');
+    if (!info || !window.OfflineAccounts) return;
+    const n = window.OfflineAccounts.count();
+    info.textContent = n > 0 ? `💾 Máy này: ${n} học sinh đăng nhập được khi mất mạng` : '💾 Máy này chưa lưu danh sách học sinh dùng offline';
+  }
+
+  // Máy tính nhà trường: tải danh sách lớp đang xem về máy để học sinh đăng nhập được khi mất mạng
+  downloadRosterForOffline() {
+    const store = window.OfflineAccounts;
+    const list = (window.TeacherAnalytics && TeacherAnalytics.currentClassData) || [];
+    if (!store || list.length === 0) {
+      this.showToastNotification('Chưa có học sinh nào trong danh sách đang xem để tải về máy.', 'error');
+      return;
+    }
+    const n = store.saveMany(list, 'teacher');
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const scope = (filterSelect && filterSelect.value) ? `lớp ${filterSelect.value}` : 'tất cả các lớp';
+    this.updateOfflineRosterInfo();
+    this.showToastNotification(`💾 Đã lưu ${n} học sinh (${scope}) vào máy này. Các em đăng nhập được ngay cả khi mất mạng.`);
+    this.playBeep(820, 'sine', 0.15);
+  }
+
+  clearOfflineStudentData() {
+    const store = window.OfflineAccounts;
+    if (!store) return;
+    const ok = window.confirm(`Xóa dữ liệu offline của ${store.count()} học sinh đã lưu trên máy này? Học sinh vẫn đăng nhập bình thường khi có mạng.`);
+    if (!ok) return;
+    store.clearStudents();
+    this.updateOfflineRosterInfo();
+    this.showToastNotification('🧹 Đã xóa dữ liệu học sinh lưu offline trên máy này.');
   }
 
   handleLogout() {
@@ -3231,19 +3375,7 @@ class TeenVocaApp {
       classFilter.addEventListener('change', (e) => {
         const val = e.target.value;
         this.selectedTeacherStudentCode = null;
-        if (window.EduPathFirebase) {
-          if (this.teacherListenerUnsub) this.teacherListenerUnsub();
-          this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(val, (students) => {
-            TeacherAnalytics.currentClassData = students || [];
-            if (!val) {
-              this.syncTeacherClassFilterDropdown(students);
-            }
-            if (this.currentTab === 'teacher') {
-              this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
-      this.renderTeacherHeatmap();
-            }
-          });
-        }
+        this.attachTeacherListener();
       });
     }
 
@@ -3370,19 +3502,13 @@ class TeenVocaApp {
     // Realtime Sync Listener for Teacher Dashboard — chỉ gắn khi phiên hiện tại là giáo viên,
     // tránh học sinh/khách tải toàn bộ danh sách học sinh. Đăng nhập giáo viên sẽ tự gắn listener.
     if (window.EduPathFirebase && this.currentUser && this.currentUser.role === 'teacher') {
-      if (this.teacherListenerUnsub) this.teacherListenerUnsub();
-      const initialFilter = classFilter ? classFilter.value : '';
-      this.teacherListenerUnsub = window.EduPathFirebase.onClassStudentsChange(initialFilter, (students) => {
-        TeacherAnalytics.currentClassData = students || [];
-        if (!initialFilter) {
-          this.syncTeacherClassFilterDropdown(students);
-        }
-        if (this.currentTab === 'teacher') {
-          this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
-          this.renderTeacherHeatmap();
-        }
-      });
+      this.attachTeacherListener();
     }
+
+    const downloadRosterBtn = document.getElementById('btn-download-roster-offline');
+    if (downloadRosterBtn) downloadRosterBtn.addEventListener('click', () => this.downloadRosterForOffline());
+    const clearOfflineBtn = document.getElementById('btn-clear-offline-data');
+    if (clearOfflineBtn) clearOfflineBtn.addEventListener('click', () => this.clearOfflineStudentData());
   }
 
   openAddStudentModal() {
@@ -3492,6 +3618,7 @@ class TeenVocaApp {
   }
 
   async saveCrudStudent() {
+    if (!this.requireOnline('thêm hoặc sửa học sinh')) return;
     const isEdit = document.getElementById('crud-is-edit').value === 'true';
     const codeIn = document.getElementById('crud-student-code');
     const nameIn = document.getElementById('crud-student-name');
@@ -3608,6 +3735,7 @@ class TeenVocaApp {
   }
 
   async confirmDeleteStudent(code) {
+    if (!this.requireOnline('xóa học sinh')) return;
     const ok = window.confirm(`Thầy/Cô có chắc chắn muốn xóa học sinh mã ${code} không?`);
     if (!ok) return;
 
@@ -3654,6 +3782,7 @@ class TeenVocaApp {
   }
 
   async handleChangeTeacherPin() {
+    if (!this.requireOnline('đổi mã PIN giáo viên')) return;
     const currentPinInput = document.getElementById('change-pin-current');
     const newPinInput = document.getElementById('change-pin-new');
     const confirmPinInput = document.getElementById('change-pin-confirm');
@@ -3709,6 +3838,8 @@ class TeenVocaApp {
 
     if (fb && fb.setTeacherPin) {
       await fb.setTeacherPin(newPin);
+      // Cập nhật mã băm PIN dùng cho đăng nhập offline trên máy này
+      if (window.OfflineAccounts) await window.OfflineAccounts.rememberTeacherPin(newPin);
     } else {
       localStorage.setItem('teenvoca_teacher_pin', newPin);
       localStorage.setItem('edupath_teacher_pin', newPin);
@@ -3825,6 +3956,7 @@ class TeenVocaApp {
   }
 
   async syncAllStudentsRealtime() {
+    if (!this.requireOnline('đồng bộ dữ liệu cả lớp')) return;
     const classFilter = document.getElementById('teacher-class-filter-select');
     const activeFilter = classFilter ? classFilter.value : '';
     const syncBtn = document.getElementById('btn-sync-all-realtime');
@@ -3859,6 +3991,7 @@ class TeenVocaApp {
   }
 
   async syncSingleStudentRealtime(studentCode, btnElement) {
+    if (!this.requireOnline('đồng bộ dữ liệu học sinh')) return;
     if (!studentCode) return;
     const cleanCode = studentCode.toUpperCase().trim();
     if (!window.EduPathFirebase) return;
@@ -4084,6 +4217,7 @@ class TeenVocaApp {
   }
 
   async executeBatchExcelImport() {
+    if (!this.requireOnline('nhập danh sách từ Excel')) return;
     const students = this.pendingExcelStudents || [];
     if (!students || students.length === 0) return;
 

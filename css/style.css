@@ -2353,3 +2353,57 @@ html, body {
   margin-top: 0.85rem;
   min-height: 44px;
 }
+
+/* =====================================================================
+   OFFLINE: huy hiệu mất mạng, thông báo dữ liệu đã lưu, danh sách lớp offline
+   ===================================================================== */
+.network-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.network-status-badge[hidden],
+.teacher-offline-banner[hidden] {
+  display: none !important;
+}
+.teacher-offline-banner {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  border-left: 4px solid var(--warning);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.offline-roster-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.offline-roster-clear {
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.offline-roster-clear:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}

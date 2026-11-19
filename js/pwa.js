@@ -117,8 +117,33 @@
     toast('🎉 Đã cài TeenVoca AI! Em có thể mở ứng dụng từ màn hình chính.');
   });
 
-  window.addEventListener('offline', () => toast('📴 Mất kết nối mạng. Tiến độ khảo sát vẫn được lưu trên máy và sẽ tự đồng bộ khi có mạng.', 'error'));
-  window.addEventListener('online', () => toast('📶 Đã có mạng trở lại – đang đồng bộ dữ liệu.'));
+  // Huy hiệu "📴 Offline" luôn hiện trên thanh trên cùng khi mất mạng
+  function refreshNetworkBadge() {
+    const badge = document.getElementById('network-status-badge');
+    if (badge) badge.hidden = navigator.onLine !== false;
+  }
+
+  // Xin trình duyệt lưu trữ BỀN VỮNG: không tự xóa dữ liệu offline (tài khoản, bài làm dở) khi máy thiếu dung lượng
+  let persistRequested = false;
+  async function requestPersistentStorage() {
+    if (persistRequested || !(navigator.storage && navigator.storage.persist)) return false;
+    persistRequested = true;
+    try {
+      if (await navigator.storage.persisted()) return true;
+      return await navigator.storage.persist();
+    } catch {
+      return false;
+    }
+  }
+
+  window.addEventListener('offline', () => {
+    refreshNetworkBadge();
+    toast('📴 Mất kết nối mạng. Em vẫn dùng app bình thường; tiến độ được lưu trên máy và tự đồng bộ khi có mạng.', 'error');
+  });
+  window.addEventListener('online', () => {
+    refreshNetworkBadge();
+    toast('📶 Đã có mạng trở lại – đang đồng bộ dữ liệu.');
+  });
 
   window.addEventListener('DOMContentLoaded', () => {
     installButtons().forEach((btn) => btn.addEventListener('click', onInstallClick));
@@ -131,8 +156,13 @@
       });
     }
     refreshInstallButton();
+    refreshNetworkBadge();
     registerServiceWorker();
+    // Ứng dụng đã cài hoặc đã có người đăng nhập trên máy: xin lưu trữ bền vững ngay
+    if (isStandalone() || localStorage.getItem('teenvoca_current_user')) requestPersistentStorage();
   });
 
-  window.TeenVocaPWA = { isStandalone, isIos, refreshInstallButton };
+  window.addEventListener('appinstalled', () => { requestPersistentStorage(); });
+
+  window.TeenVocaPWA = { isStandalone, isIos, refreshInstallButton, requestPersistentStorage };
 })();

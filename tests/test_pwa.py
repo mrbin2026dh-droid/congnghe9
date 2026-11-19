@@ -105,7 +105,7 @@ def run(site_dir):
             return out;
         }''')
         for must in ['/index.html', '/js/app.js', '/js/career-games.js', '/css/style.css', '/icons/icon-512.png',
-                     'gsap.min.js', 'xlsx.full.min.js', 'firebase-app-compat.js', 'firebase-database-compat.js']:
+                     '/js/offline-accounts.js', 'gsap.min.js', 'xlsx.full.min.js', 'firebase-app-compat.js', 'firebase-database-compat.js']:
             check(f'Đã lưu đệm: {must}', any(u.endswith(must) for u in cached))
         check('Không lưu đệm file PDF SGK nặng', not any(u.endswith('.pdf') for u in cached))
 
@@ -120,7 +120,7 @@ def run(site_dir):
         page.locator('#login-student-code').fill('9B-01')
         page.locator('#btn-submit-student-login').click()
         page.wait_for_selector('#student-login-error', state='visible', timeout=15000)
-        check('Offline: đăng nhập báo mất kết nối (không báo sai mã)', 'mất kết nối' in page.locator('#student-login-error').inner_text())
+        check('Offline: đăng nhập báo mất mạng (không báo sai mã)', 'mất mạng' in page.locator('#student-login-error').inner_text())
         ctx.set_offline(False)
 
         # ---------- 4. Học sinh đã đăng nhập, offline
