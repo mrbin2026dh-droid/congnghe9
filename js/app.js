@@ -70,6 +70,9 @@ class TeenVocaApp {
     this.initQuiz();
     this.initAIAgents();
     this.initProjectAssessment();
+    if (window.CareerGames) {
+      window.CareerGames.init(this);
+    }
     this.initTeacherDashboard();
     this.bindEvents();
     if (this.currentUser && this.currentUser.role === 'teacher') {
@@ -104,6 +107,11 @@ class TeenVocaApp {
           this.currentUser[key] = fresh[key];
         }
       });
+      // Gộp điểm trò chơi (có thể đã chơi trên máy khác) để không ghi đè kỉ lục trên Firebase
+      if (window.CareerGames && (fresh.gameStats || this.studentProfile.gameStats)) {
+        this.studentProfile.gameStats = window.CareerGames.mergeStats(this.studentProfile.gameStats, fresh.gameStats);
+        window.CareerGames.show();
+      }
       localStorage.setItem('teenvoca_current_user', JSON.stringify(this.currentUser));
       localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
       localStorage.setItem('teenvoca_student_profile', JSON.stringify(this.studentProfile));
@@ -287,6 +295,13 @@ class TeenVocaApp {
     }
   }
 
+  // Lưu điểm/huy hiệu trò chơi nghề nghiệp vào hồ sơ và đồng bộ ngay lên Firebase
+  saveGameStats(stats) {
+    this.studentProfile.gameStats = stats;
+    this.saveProfileToStorage();
+    this.flushProgressSync();
+  }
+
   syncProgressToFirebase(forceSync = false) {
     if (!this.currentUser || this.currentUser.role !== 'student') return;
     const studentCode = this.currentUser.code || this.studentProfile.studentCode;
@@ -301,7 +316,8 @@ class TeenVocaApp {
     const hasThreeQuestions = Object.values(tq).some(v => typeof v === 'string' && v.trim().length > 0);
     const hasSelfTraits = Object.values(this.studentProfile.selfTraits || {}).some(v => typeof v === 'string' && v.trim().length > 0);
     const draft = this.getValidDraft();
-    const hasAnyData = Boolean(draft) || hasHolland || hasMatches || hasThreeQuestions || hasSelfTraits || Boolean(this.studentProfile.targetMajorId) || (this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0);
+    const gameStats = (this.studentProfile.gameStats && typeof this.studentProfile.gameStats === 'object') ? this.studentProfile.gameStats : null;
+    const hasAnyData = Boolean(draft) || Boolean(gameStats) || hasHolland || hasMatches || hasThreeQuestions || hasSelfTraits || Boolean(this.studentProfile.targetMajorId) || (this.studentProfile.surveyHistory && this.studentProfile.surveyHistory.length > 0);
     if (!hasAnyData && !forceSync) {
       return;
     }
@@ -368,6 +384,8 @@ class TeenVocaApp {
       activeAttemptId: this.studentProfile.activeAttemptId || '',
       // Bài khảo sát đang làm dở (null = không có -> xóa khỏi Firebase)
       surveyDraft: draft ? { ...draft } : null,
+      // Chỉ gửi khi có, tránh xóa điểm trò chơi trên Firebase bằng bản hồ sơ cũ chưa có dữ liệu này
+      ...(gameStats ? { gameStats } : {}),
       isUndifferentiated: Boolean(this.studentProfile.isUndifferentiated)
     };
 
@@ -746,6 +764,10 @@ class TeenVocaApp {
       this.studentProfile.selfTraits = {};
     }
 
+    // Điểm và huy hiệu trò chơi nghề nghiệp
+    this.studentProfile.gameStats = (matched.gameStats && typeof matched.gameStats === 'object') ? matched.gameStats : null;
+    if (window.CareerGames) window.CareerGames.reset();
+
     // Bài khảo sát đang làm dở (đã lưu từng câu) — khôi phục để học sinh làm tiếp
     this.studentProfile.surveyDraft = (matched.surveyDraft && typeof matched.surveyDraft === 'object') ? matched.surveyDraft : null;
 
@@ -931,6 +953,7 @@ class TeenVocaApp {
       threeQuestions: { understandSelf: '', understandCareer: '', careerPathPlan: '' }
     };
     this.assessmentMatches = [false, false, false, false, false, false, false, false, false, false];
+    if (window.CareerGames) window.CareerGames.reset();
     if (this.treeAnimator) {
       this.treeAnimator.updateState({
         rootInterest: 0,
@@ -1135,6 +1158,8 @@ class TeenVocaApp {
       this.renderTeacherHeatmap();
     } else if (tabId === 'project') {
       this.renderAssessmentView();
+    } else if (tabId === 'games') {
+      if (window.CareerGames) window.CareerGames.show();
     } else if (tabId === 'quiz') {
       const rawCode = (this.studentProfile.code || '').trim().toUpperCase();
       const hasValidHolland = Boolean(rawCode.length >= 3 && rawCode !== '---' && !this.studentProfile.isUndifferentiated && /^[RIASEC]{3}$/.test(rawCode));
@@ -4308,6 +4333,79 @@ class TeenVocaApp {
     this.playBeep(720, 'triangle', 0.2);
   }
 
+  formatGameStatsCell(rawStats) {
+    if (!rawStats || !window.CareerGames) {
+      return '<span style="color:var(--text-muted); font-size:0.75rem;">Chưa chơi</span>';
+    }
+    const st = window.CareerGames.normalizeStats(rawStats);
+    const plays = Object.values(st.plays).reduce((a, b) => a + b, 0);
+    if (plays === 0) {
+      return '<span style="color:var(--text-muted); font-size:0.75rem;">Chưa chơi</span>';
+    }
+    const badgeCount = Object.keys(st.badges).length;
+    return `<strong>${st.achievementPoints}</strong><span style="color:var(--text-muted); font-size:0.72rem;">/${window.CareerGames.MAX_ACHIEVEMENT}</span>`
+      + `<div style="font-size:0.7rem; color:var(--text-muted);" title="Số huy hiệu · Tổng lượt chơi">🏅 ${badgeCount} · 🔁 ${plays}</div>`;
+  }
+
+  // Bảng xếp hạng trò chơi nghề nghiệp theo lớp đang lọc (điểm thành tích = tổng kỉ lục 4 trò chơi)
+  renderGamesLeaderboard(classData) {
+    const box = document.getElementById('teacher-games-leaderboard');
+    if (!box) return;
+    if (!window.CareerGames) {
+      box.textContent = '';
+      return;
+    }
+    const players = (classData || [])
+      .map(st => ({ st, stats: window.CareerGames.normalizeStats(st.gameStats) }))
+      .filter(x => Object.values(x.stats.plays).some(n => n > 0))
+      .sort((a, b) => b.stats.achievementPoints - a.stats.achievementPoints
+        || Object.keys(b.stats.badges).length - Object.keys(a.stats.badges).length
+        || String(a.st.studentCode || '').localeCompare(String(b.st.studentCode || '')));
+
+    const filterSelect = document.getElementById('teacher-class-filter-select');
+    const scope = (filterSelect && filterSelect.value) ? `lớp ${this.escapeHtml(filterSelect.value)}` : 'toàn bộ học sinh';
+    const total = (classData || []).length;
+    const header = `
+      <div class="games-leaderboard-head">
+        <h3>🎮 Bảng Xếp Hạng Trò Chơi Nghề Nghiệp (${scope})</h3>
+        <span class="game-chip">${players.length}/${total} em đã tham gia</span>
+      </div>`;
+
+    if (players.length === 0) {
+      box.innerHTML = window.sanitize(`${header}<p class="games-hint">Chưa có học sinh nào chơi. Thầy cô có thể giới thiệu tab "🎮 Trò Chơi Nghề Nghiệp" để học sinh vừa chơi vừa ôn kiến thức SGK.</p>`);
+      return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const badgeIcons = window.CareerGames.BADGES;
+    const rows = players.slice(0, 10).map((x, i) => {
+      const icons = Object.keys(x.stats.badges).map(id => (badgeIcons[id] ? badgeIcons[id].icon : '')).join(' ');
+      const plays = Object.values(x.stats.plays).reduce((a, b) => a + b, 0);
+      return `
+        <tr>
+          <td style="text-align:center; font-weight:800;">${medals[i] || i + 1}</td>
+          <td><strong>${this.escapeHtml(x.st.name || 'Học sinh')}</strong><div style="font-size:0.72rem; color:var(--text-muted);">${this.escapeHtml(x.st.studentCode)} · Lớp ${this.escapeHtml(x.st.grade || '---')}</div></td>
+          <td style="text-align:center;"><strong>${x.stats.achievementPoints}</strong>/${window.CareerGames.MAX_ACHIEVEMENT}</td>
+          <td style="text-align:center;">${plays}</td>
+          <td>${icons || '<span style="color:var(--text-muted);">—</span>'}</td>
+        </tr>`;
+    }).join('');
+
+    box.innerHTML = window.sanitize(`${header}
+      <div class="matrix-table-wrapper">
+        <table class="matrix-table">
+          <thead><tr>
+            <th style="width:8%; text-align:center;">Hạng</th>
+            <th>Học sinh</th>
+            <th style="width:16%; text-align:center;">Điểm thành tích</th>
+            <th style="width:10%; text-align:center;">Lượt chơi</th>
+            <th style="width:26%;">Huy hiệu</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  }
+
   renderTeacherHeatmap() {
     const canvas = document.getElementById('teacher-heatmap-canvas');
     if (!canvas) return;
@@ -4544,6 +4642,8 @@ class TeenVocaApp {
       });
     }
 
+    this.renderGamesLeaderboard(classData);
+
     const countEl = document.getElementById('teacher-search-result-count');
     if (countEl) {
       countEl.innerHTML = sanitize(`(Hiển thị: <strong>${displayList.length}</strong>/${totalCount} HS)`);
@@ -4556,13 +4656,13 @@ class TeenVocaApp {
         const emptyTr = document.createElement('tr');
         if (classData.length === 0) {
           emptyTr.innerHTML = sanitize(`
-            <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
+            <td colspan="11" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
               Chưa có học sinh nào trên Firebase. Hãy nhấn <strong>"➕ Thêm Học Sinh"</strong> để cấp tài khoản.
             </td>
           `);
         } else {
           emptyTr.innerHTML = sanitize(`
-            <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
+            <td colspan="11" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
               🔍 Không tìm thấy học sinh nào phù hợp với bộ lọc (Từ khóa: <em>"${this.escapeHtml(this.teacherSearchKeyword || '---')}"</em>, Trạng thái: <em>${this.teacherStatusFilter === 'completed' ? 'Đã khảo sát' : (this.teacherStatusFilter === 'pending' ? 'Chưa khảo sát' : 'Tất cả')}</em>).
             </td>
           `);
@@ -4613,6 +4713,7 @@ class TeenVocaApp {
         const streamText = (hasValidHolland && st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${this.escapeHtml(st.stream)}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
 
         const isSelected = this.selectedTeacherStudentCode && (this.selectedTeacherStudentCode.toUpperCase() === studentCode.toUpperCase());
+        const gameText = this.formatGameStatsCell(st.gameStats);
         const safeCode = this.escapeHtml(studentCode);
         const tr = document.createElement('tr');
         if (isSelected) {
@@ -4631,6 +4732,7 @@ class TeenVocaApp {
           <td>${majorText}</td>
           <td style="text-align:center;">${scoreText}</td>
           <td>${streamText}</td>
+          <td style="text-align:center;">${gameText}</td>
           <td style="text-align:center; white-space:nowrap;">
             <button type="button" class="btn-table-action btn-sync-student" data-code="${safeCode}" title="Lấy dữ liệu khảo sát thời gian thực của học sinh ${safeCode} từ Firebase" style="color:#059669; border-color:#10b981; font-weight:700; display:inline-flex; align-items:center; gap:0.25rem;">
               <span class="sync-icon">🔄</span> Realtime
