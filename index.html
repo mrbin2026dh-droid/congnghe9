@@ -11,7 +11,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+  <!-- PWA: cài đặt ứng dụng lên điện thoại / máy tính -->
+  <meta name="description" content="TeenVoca AI – Cây nghề nghiệp, trắc nghiệm Holland, cố vấn AI và trò chơi khám phá nghề theo SGK Công nghệ 9.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="TeenVoca AI">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   
   <!-- GSAP Animation Library for Lifelike Biological Motion -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -47,6 +58,7 @@
           <button class="btn-session-action btn-logout" id="btn-logout" title="Đăng xuất khỏi hệ thống">Đăng xuất</button>
         </div>
         <button class="btn-session-action btn-login-open" id="btn-open-login">Đăng nhập</button>
+        <button type="button" class="btn-session-action btn-install-app" id="btn-install-app" data-pwa-install hidden title="Cài TeenVoca AI lên màn hình chính của thiết bị">📲 Cài ứng dụng</button>
         <button class="theme-toggle-btn" id="theme-toggle-btn" title="Đổi giao diện Sáng/Tối">🌙</button>
       </div>
     </header>
@@ -858,6 +870,24 @@
       </section>
 
     </main>
+
+    <!-- PWA: báo có phiên bản mới -->
+    <div class="pwa-update-bar" id="pwa-update-bar" role="status" hidden>
+      <span>✨ Đã có phiên bản mới của TeenVoca AI.</span>
+      <button type="button" class="btn-primary" id="btn-pwa-update">Cập nhật ngay</button>
+    </div>
+
+    <!-- PWA: hướng dẫn cài trên iPhone/iPad (Safari không có hộp thoại cài tự động) -->
+    <dialog class="pwa-ios-guide" id="pwa-ios-guide" aria-labelledby="pwa-ios-guide-title">
+      <h2 id="pwa-ios-guide-title">📲 Cài TeenVoca AI lên iPhone/iPad</h2>
+      <ol>
+        <li>Mở trang này bằng trình duyệt <strong>Safari</strong>.</li>
+        <li>Bấm nút <strong>Chia sẻ</strong> <span aria-hidden="true">(ô vuông có mũi tên ⬆️)</span> ở thanh dưới cùng.</li>
+        <li>Kéo xuống, chọn <strong>Thêm vào MH chính</strong> (Add to Home Screen).</li>
+        <li>Bấm <strong>Thêm</strong>. Biểu tượng cây nghề nghiệp sẽ xuất hiện trên màn hình chính.</li>
+      </ol>
+      <button type="button" class="btn-primary" id="btn-close-ios-guide">Đã hiểu</button>
+    </dialog>
   </div>
 
   <!-- ================= AUTHENTICATION MODAL ================= -->
@@ -893,6 +923,9 @@
         <div class="auth-error-msg" id="teacher-login-error" style="display: none;"></div>
         <button type="submit" class="btn-auth-submit" id="btn-submit-teacher-login">Đăng Nhập Giáo Viên</button>
       </form>
+
+      <!-- PWA: cài ứng dụng ngay từ màn hình đăng nhập (lần đầu mở trang) -->
+      <button type="button" class="btn-session-action btn-install-app btn-install-app-modal" id="btn-install-app-modal" data-pwa-install hidden>📲 Cài TeenVoca AI lên thiết bị này</button>
     </div>
   </div>
 
@@ -1281,5 +1314,6 @@
   <script src="js/career-games.js"></script>
   <script src="js/teacher-analytics.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

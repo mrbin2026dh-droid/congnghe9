@@ -78,8 +78,23 @@ class TeenVocaApp {
     if (this.currentUser && this.currentUser.role === 'teacher') {
       this.switchTab('teacher');
     } else {
-      this.switchTab('tree');
+      // Phím tắt của ứng dụng đã cài (vd: ?tab=games) mở thẳng đúng tab cho học sinh đã đăng nhập
+      const startTab = this.currentUser ? this.consumeStartTab() : '';
+      this.switchTab(startTab || 'tree');
       this.refreshStudentIdentityFromCloud();
+    }
+  }
+
+  // Tab yêu cầu qua tham số ?tab=... (phím tắt PWA); chỉ dùng 1 lần
+  consumeStartTab() {
+    const allowed = ['tree', 'quiz', 'agents', 'project', 'games'];
+    try {
+      const tab = new URLSearchParams(window.location.search || '').get('tab');
+      if (this.startTabConsumed || !allowed.includes(tab)) return '';
+      this.startTabConsumed = true;
+      return tab;
+    } catch {
+      return '';
     }
   }
 
@@ -836,7 +851,7 @@ class TeenVocaApp {
     localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
     this.saveProfileToStorage();
     this.syncAuthUI();
-    this.switchTab('tree');
+    this.switchTab(this.consumeStartTab() || 'tree');
     this.renderAssessmentView();
     this.playBeep(660, 'sine', 0.15);
   }

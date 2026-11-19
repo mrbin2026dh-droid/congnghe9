@@ -2263,3 +2263,93 @@ html, body {
     transition: none;
   }
 }
+
+/* =====================================================================
+   PWA: nút cài ứng dụng, thanh báo phiên bản mới, hướng dẫn iPhone
+   ===================================================================== */
+.btn-install-app {
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.btn-install-app:hover {
+  background-color: var(--brand-soft);
+}
+.btn-install-app[hidden],
+.pwa-update-bar[hidden] {
+  display: none !important;
+}
+.pwa-update-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100vw - 32px);
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  border: 1px solid var(--brand);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.pwa-update-bar .btn-primary {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+}
+.pwa-ios-guide {
+  /* CSS chung đặt margin: 0 cho mọi phần tử -> trả lại margin: auto để hộp thoại nằm giữa màn hình */
+  margin: auto;
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.35rem;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+.pwa-ios-guide::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+}
+.pwa-ios-guide h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0 0 0.75rem;
+}
+.pwa-ios-guide ol {
+  padding-left: 1.2rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.pwa-ios-guide .btn-primary {
+  width: 100%;
+  min-height: 44px;
+}
+/* Khi chạy như ứng dụng đã cài: chừa vùng tai thỏ / thanh trạng thái trên iPhone */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+@media (max-width: 640px) {
+  .btn-install-app {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
+  }
+}
+.btn-install-app-modal {
+  width: 100%;
+  margin-top: 0.85rem;
+  min-height: 44px;
+}
