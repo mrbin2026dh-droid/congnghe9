@@ -74,6 +74,31 @@ class TeenVocaApp {
       this.switchTab('teacher');
     } else {
       this.switchTab('tree');
+      this.refreshStudentIdentityFromCloud();
+    }
+  }
+
+  // Khi tải lại trang, lấy họ tên/lớp/trường mới nhất do giáo viên quản lý trên Firebase
+  async refreshStudentIdentityFromCloud() {
+    if (!this.currentUser || this.currentUser.role !== 'student' || !window.EduPathFirebase) return;
+    const code = this.currentUser.code || this.studentProfile.studentCode;
+    if (!code) return;
+    try {
+      const fresh = await window.EduPathFirebase.getStudent(code);
+      if (!fresh) return;
+      ['name', 'grade', 'school'].forEach(key => {
+        if (typeof fresh[key] === 'string' && fresh[key].trim()) {
+          this.studentProfile[key] = fresh[key];
+          this.currentUser[key] = fresh[key];
+        }
+      });
+      localStorage.setItem('teenvoca_current_user', JSON.stringify(this.currentUser));
+      localStorage.setItem('edupath_current_user', JSON.stringify(this.currentUser));
+      localStorage.setItem('teenvoca_student_profile', JSON.stringify(this.studentProfile));
+      localStorage.setItem('edupath_student_profile', JSON.stringify(this.studentProfile));
+      this.syncProfileDOM();
+    } catch (err) {
+      console.warn('Không thể làm mới thông tin học sinh từ Firebase:', err);
     }
   }
 
@@ -108,8 +133,8 @@ class TeenVocaApp {
   }
 
   escapeHtml(str) {
-    if (typeof str !== 'string') return '';
-    return str
+    if (str === null || str === undefined) return '';
+    return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -282,10 +307,9 @@ class TeenVocaApp {
 
     const result = (hasHolland && hasMatches && window.ProjectAssessment) ? window.ProjectAssessment.calculateProjectResult(this.assessmentMatches) : null;
 
+    // Không gửi name/school/grade: thông tin danh tính do giáo viên quản lý,
+    // tránh bản sao cũ trong localStorage của học sinh ghi đè sửa đổi của giáo viên.
     const payload = {
-      name: this.studentProfile.name,
-      school: this.studentProfile.school,
-      grade: this.studentProfile.grade,
       code: hasHolland ? rawCode : '',
       major: hasHolland ? targetMajorName : '',
       targetMajorId: hasHolland ? targetMajorId : '',
@@ -1262,9 +1286,6 @@ class TeenVocaApp {
     if (fb && studentCode) {
       try {
         await fb.saveStudentProgress(studentCode, {
-          name: this.studentProfile.name,
-          school: this.studentProfile.school,
-          grade: this.studentProfile.grade,
           code: '',
           major: '',
           targetMajorId: '',
@@ -1785,6 +1806,17 @@ class TeenVocaApp {
     const attempt = history.find(a => a.id === attemptId);
     if (!attempt) return;
 
+    // Áp dụng lại đúng lần khảo sát đang dùng: ưu tiên ngành học sinh đã tự chọn
+    // (tương thích dữ liệu cũ, khi lựa chọn chỉ được lưu ở hồ sơ mà chưa lưu vào lần khảo sát).
+    const isSameAttempt = attempt.id === this.studentProfile.activeAttemptId;
+    const majorsList = (window.EduPathData && window.EduPathData.majors) || [];
+    const chosenMajorId = this.studentProfile.targetMajorId;
+    if (isSameAttempt && !attempt.isUndifferentiated && chosenMajorId && majorsList.some(m => m.id === chosenMajorId)) {
+      const chosen = majorsList.find(m => m.id === chosenMajorId);
+      attempt.targetMajorId = chosen.id;
+      attempt.targetMajorName = chosen.name;
+    }
+
     this.studentProfile.activeAttemptId = attempt.id;
     this.studentProfile.code = attempt.code;
     this.studentProfile.scores = attempt.scores;
@@ -1983,12 +2015,26 @@ class TeenVocaApp {
     }
   }
 
-  selectMajorForProject(majorId) {
+  // Ghi nhận ngành học sinh tự chọn vào hồ sơ VÀ lần khảo sát đang áp dụng,
+  // để applySurveyAttempt không khôi phục lại ngành gợi ý tự động.
+  setTargetMajor(majorId) {
+    const majors = (window.EduPathData && window.EduPathData.majors) || [];
+    const found = majors.find(m => m.id === majorId);
     this.studentProfile.targetMajorId = majorId;
-    if (window.EduPathData && window.EduPathData.majors) {
-      const found = window.EduPathData.majors.find(m => m.id === majorId);
-      if (found) this.studentProfile.targetMajorName = found.name;
+    if (found) {
+      this.studentProfile.targetMajorName = found.name;
+      this.studentProfile.major = found.name;
     }
+    const history = this.studentProfile.surveyHistory || [];
+    const activeAttempt = history.find(a => a.id === this.studentProfile.activeAttemptId);
+    if (activeAttempt) {
+      activeAttempt.targetMajorId = majorId;
+      activeAttempt.targetMajorName = found ? found.name : '';
+    }
+  }
+
+  selectMajorForProject(majorId) {
+    this.setTargetMajor(majorId);
     this.saveProfileToStorage();
     this.switchTab('project');
     this.renderAssessmentView();
@@ -2492,9 +2538,7 @@ class TeenVocaApp {
       });
       majorSelect.value = this.studentProfile.targetMajorId || window.EduPathData.majors[0].id;
       majorSelect.addEventListener('change', (e) => {
-        this.studentProfile.targetMajorId = e.target.value;
-        const found = window.EduPathData.majors.find(m => m.id === e.target.value);
-        if (found) this.studentProfile.targetMajorName = found.name;
+        this.setTargetMajor(e.target.value);
         this.saveProfileToStorage();
         this.renderAssessmentView();
         this.playBeep(640);
@@ -2573,7 +2617,7 @@ class TeenVocaApp {
         <td>
           <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--brand);">${c.category}</span><br>
           <strong style="display:block; margin-bottom:0.25rem;">${c.title}</strong>
-          <textarea class="criteria-self-trait-input" id="self-trait-input-${idx}" rows="2" placeholder="Ghi nhận đặc điểm bản thân...">${currentTrait}</textarea>
+          <textarea class="criteria-self-trait-input" id="self-trait-input-${idx}" rows="2" placeholder="Ghi nhận đặc điểm bản thân...">${this.escapeHtml(currentTrait)}</textarea>
         </td>
         <td style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45;">${c.requirement}</td>
         <td style="text-align:center;">
@@ -3193,18 +3237,28 @@ class TeenVocaApp {
           st.school = school;
         }
       } else {
-        const existingIdx = classData.findIndex(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+        // Chặn thêm trùng mã: kiểm tra cả danh sách đang hiển thị lẫn toàn bộ CSDL (mọi lớp)
+        const existsLocally = classData.some(s => s.studentCode && s.studentCode.toUpperCase() === studentCode);
+        const existsInDb = window.EduPathFirebase ? Boolean(await window.EduPathFirebase.getStudent(studentCode)) : false;
+        if (existsLocally || existsInDb) {
+          if (err) {
+            err.textContent = `Mã học sinh "${studentCode}" đã tồn tại. Vui lòng dùng mã khác hoặc bấm "Sửa" ở học sinh đó để chỉnh thông tin.`;
+            err.style.display = 'block';
+          }
+          this.playBeep(220, 'sawtooth', 0.2);
+          return;
+        }
         const newStudent = {
           studentCode,
           name,
           grade,
           school,
-          code: existingIdx >= 0 && classData[existingIdx].code ? classData[existingIdx].code : '',
-          major: existingIdx >= 0 && classData[existingIdx].major ? classData[existingIdx].major : '',
-          projectScore: (existingIdx >= 0 && typeof classData[existingIdx].projectScore === 'number') ? classData[existingIdx].projectScore : null,
-          classification: existingIdx >= 0 && classData[existingIdx].classification ? classData[existingIdx].classification : '',
-          stream: existingIdx >= 0 && classData[existingIdx].stream ? classData[existingIdx].stream : '',
-          createdAt: existingIdx >= 0 && classData[existingIdx].createdAt ? classData[existingIdx].createdAt : new Date().toISOString()
+          code: '',
+          major: '',
+          projectScore: null,
+          classification: '',
+          stream: '',
+          createdAt: new Date().toISOString()
         };
         TeacherAnalytics.addStudentToRoster(newStudent);
         if (window.EduPathFirebase) {
@@ -3605,6 +3659,7 @@ class TeenVocaApp {
 
     try {
       const students = await TeacherAnalytics.parseExcelFile(file);
+      await this.assignNonCollidingExcelCodes(students);
       this.pendingExcelStudents = students;
 
       if (previewSummary) {
@@ -3618,10 +3673,10 @@ class TeenVocaApp {
           const tr = document.createElement('tr');
           tr.innerHTML = window.sanitize(`
             <td style="text-align:center;">${idx + 1}</td>
-            <td><strong style="color:var(--brand);">${st.studentCode}</strong></td>
-            <td>${st.name}</td>
-            <td style="text-align:center;">${st.grade}</td>
-            <td>${st.school}</td>
+            <td><strong style="color:var(--brand);">${this.escapeHtml(st.studentCode)}</strong></td>
+            <td>${this.escapeHtml(st.name)}</td>
+            <td style="text-align:center;">${this.escapeHtml(st.grade)}</td>
+            <td>${this.escapeHtml(st.school)}</td>
           `);
           previewTbody.appendChild(tr);
         });
@@ -3649,6 +3704,61 @@ class TeenVocaApp {
       if (previewContainer) previewContainer.style.display = 'none';
       this.playBeep(220, 'sawtooth', 0.2);
     }
+  }
+
+  /**
+   * Đánh lại mã cho các học sinh trong file Excel không có cột mã (autoCode),
+   * tiếp nối số thứ tự lớn nhất đang có của từng lớp trên toàn hệ thống để không ghi đè học sinh cũ.
+   */
+  async assignNonCollidingExcelCodes(students) {
+    if (!Array.isArray(students)) return;
+    const autoStudents = students.filter(s => s.autoCode);
+    if (autoStudents.length === 0) {
+      students.forEach(s => { delete s.autoCode; });
+      return;
+    }
+
+    let existing = [];
+    try {
+      if (window.EduPathFirebase) {
+        existing = await window.EduPathFirebase.getAllStudents('');
+      }
+    } catch (fetchErr) {
+      console.warn('Không lấy được danh sách học sinh hiện có, dùng dữ liệu đang hiển thị:', fetchErr);
+    }
+    const local = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || [];
+    const taken = new Set();
+    [...(existing || []), ...local].forEach(s => {
+      if (s && s.studentCode) taken.add(String(s.studentCode).toUpperCase());
+    });
+    students.forEach(s => {
+      if (!s.autoCode && s.studentCode) taken.add(s.studentCode.toUpperCase());
+    });
+
+    const nextNumByPrefix = {};
+    autoStudents.forEach(st => {
+      const lastDash = st.studentCode.lastIndexOf('-');
+      const prefix = lastDash > 0 ? st.studentCode.slice(0, lastDash) : st.studentCode;
+      if (nextNumByPrefix[prefix] === undefined) {
+        let maxNum = 0;
+        taken.forEach(code => {
+          if (code.startsWith(prefix + '-')) {
+            const n = parseInt(code.slice(prefix.length + 1), 10);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+        });
+        nextNumByPrefix[prefix] = maxNum + 1;
+      }
+      let candidate;
+      do {
+        candidate = `${prefix}-${String(nextNumByPrefix[prefix]).padStart(2, '0')}`;
+        nextNumByPrefix[prefix] += 1;
+      } while (taken.has(candidate));
+      st.studentCode = candidate;
+      taken.add(candidate);
+    });
+
+    students.forEach(s => { delete s.autoCode; });
   }
 
   async executeBatchExcelImport() {
@@ -3856,19 +3966,19 @@ class TeenVocaApp {
         : `<span style="background:rgba(245,158,11,0.15); color:#d97706; border:1px solid rgba(245,158,11,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">🟡 Chưa làm</span>`;
 
       const codeBadge = st.hasSurvey
-        ? `<span style="font-weight:800; color:var(--brand);">${st.code}</span>`
+        ? `<span style="font-weight:800; color:var(--brand);">${this.escapeHtml(st.code)}</span>`
         : `<span style="color:var(--text-muted);">---</span>`;
 
       return `
         <tr>
           <td style="text-align:center; font-weight:600;">${st.stt}</td>
-          <td style="font-weight:700; color:var(--text-primary);">${st.studentCode}</td>
-          <td style="font-weight:600;">${st.name}</td>
-          <td style="text-align:center;">${st.grade}</td>
+          <td style="font-weight:700; color:var(--text-primary);">${this.escapeHtml(st.studentCode)}</td>
+          <td style="font-weight:600;">${this.escapeHtml(st.name)}</td>
+          <td style="text-align:center;">${this.escapeHtml(st.grade)}</td>
           <td style="text-align:center;">${statusBadge}</td>
           <td style="text-align:center;">${codeBadge}</td>
-          <td style="font-size:0.76rem; color:var(--text-secondary);">${st.major}</td>
-          <td style="font-size:0.78rem; font-weight:600;">${st.stream}</td>
+          <td style="font-size:0.76rem; color:var(--text-secondary);">${this.escapeHtml(st.major)}</td>
+          <td style="font-size:0.78rem; font-weight:600;">${this.escapeHtml(st.stream)}</td>
         </tr>
       `;
     }).join('');
@@ -3886,9 +3996,9 @@ class TeenVocaApp {
 
     const filtered = this.currentStatsData.studentRows.filter(st => {
       const matchKeyword = !keyword ||
-        st.name.toLowerCase().includes(keyword) ||
-        st.studentCode.toLowerCase().includes(keyword) ||
-        st.code.toLowerCase().includes(keyword);
+        String(st.name || '').toLowerCase().includes(keyword) ||
+        String(st.studentCode || '').toLowerCase().includes(keyword) ||
+        String(st.code || '').toLowerCase().includes(keyword);
 
       let matchStatus = true;
       if (status === 'completed') matchStatus = st.hasSurvey;
@@ -3962,6 +4072,9 @@ class TeenVocaApp {
 
     if (selectedStudent) {
       // ===== CHẾ ĐỘ XEM BIỂU ĐỒ RIASEC CÁ NHÂN TỪNG HỌC SINH =====
+      const safeSelName = this.escapeHtml(selectedStudent.name || 'Học sinh');
+      const safeSelCode = this.escapeHtml(selectedStudent.studentCode);
+      const safeSelHolland = this.escapeHtml(selectedStudent.code);
       if (wholeClassBtn) wholeClassBtn.style.display = 'inline-flex';
 
       const hasSurvey = Boolean(selectedStudent.code && selectedStudent.code.trim().length > 0 && selectedStudent.code !== '---');
@@ -3986,9 +4099,9 @@ class TeenVocaApp {
 
       if (heatmapTitleEl) {
         if (hasSurvey) {
-          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${selectedStudent.name || 'Học sinh'}</span> (${selectedStudent.studentCode} · Mã: <strong style="color:var(--brand);">${selectedStudent.code}</strong>)`);
+          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${safeSelName}</span> (${safeSelCode} · Mã: <strong style="color:var(--brand);">${safeSelHolland}</strong>)`);
         } else {
-          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${selectedStudent.name || 'Học sinh'}</span> (${selectedStudent.studentCode} · Chưa làm bài)`);
+          heatmapTitleEl.innerHTML = sanitize(`📊 Biểu Đồ RIASEC Cá Nhân: <span style="color:var(--brand);">${safeSelName}</span> (${safeSelCode} · Chưa làm bài)`);
         }
       }
 
@@ -4004,10 +4117,11 @@ class TeenVocaApp {
         if (vocBarEl) vocBarEl.style.width = `${vocVal}%`;
 
         if (recEl) {
-          const stMajor = selectedStudent.major || (window.HollandEngine && window.EduPathData ? window.HollandEngine.matchMajors(selectedStudent.code, studentPercentages)[0].name : '');
+          const recList = (window.HollandEngine && window.EduPathData) ? window.HollandEngine.matchMajors(selectedStudent.code, studentPercentages) : [];
+          const stMajor = this.escapeHtml(selectedStudent.major || (recList && recList.length > 0 ? recList[0].name : ''));
           const m0 = (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[selectedStudent.code[0]]) ? window.HollandEngine.GROUP_METADATA[selectedStudent.code[0]].shortName : selectedStudent.code[0];
           const m1 = (window.HollandEngine && window.HollandEngine.GROUP_METADATA && window.HollandEngine.GROUP_METADATA[selectedStudent.code[1]]) ? window.HollandEngine.GROUP_METADATA[selectedStudent.code[1]].shortName : selectedStudent.code[1];
-          recEl.innerHTML = sanitize(`💡 <strong>Hồ sơ Hướng nghiệp Cá nhân (${selectedStudent.name || 'Học sinh'} - ${selectedStudent.studentCode}):</strong><br>• Mã Holland: <strong>${selectedStudent.code}</strong> · Ngành đề xuất: <strong>${stMajor}</strong><br>• Đề xuất phân luồng: <strong>${selectedStudent.stream || 'Học tiếp THPT & Đại học'}</strong>.<br>• Phân tích: Học sinh có điểm nổi bật ở nhóm <strong>${m0} (${studentPercentages[selectedStudent.code[0]] || 0}%)</strong> và <strong>${m1} (${studentPercentages[selectedStudent.code[1]] || 0}%)</strong>. Giáo viên nên định hướng em tập trung vào tổ hợp môn phù hợp với thế mạnh này.`);
+          recEl.innerHTML = sanitize(`💡 <strong>Hồ sơ Hướng nghiệp Cá nhân (${safeSelName} - ${safeSelCode}):</strong><br>• Mã Holland: <strong>${safeSelHolland}</strong> · Ngành đề xuất: <strong>${stMajor}</strong><br>• Đề xuất phân luồng: <strong>${this.escapeHtml(selectedStudent.stream || 'Học tiếp THPT & Đại học')}</strong>.<br>• Phân tích: Học sinh có điểm nổi bật ở nhóm <strong>${this.escapeHtml(m0)} (${studentPercentages[selectedStudent.code[0]] || 0}%)</strong> và <strong>${this.escapeHtml(m1)} (${studentPercentages[selectedStudent.code[1]] || 0}%)</strong>. Giáo viên nên định hướng em tập trung vào tổ hợp môn phù hợp với thế mạnh này.`);
         }
       } else {
         if (thptPercentEl) thptPercentEl.textContent = '0%';
@@ -4016,7 +4130,7 @@ class TeenVocaApp {
         if (vocBarEl) vocBarEl.style.width = '0%';
 
         if (recEl) {
-          recEl.innerHTML = sanitize(`💡 <strong>Chưa có dữ liệu khảo sát:</strong> Học sinh <strong>${selectedStudent.name || 'Học sinh'}</strong> (${selectedStudent.studentCode}) chưa hoàn thành bài trắc nghiệm Holland RIASEC. Giáo viên vui lòng hướng dẫn học sinh đăng nhập vào hệ thống để làm bài.`);
+          recEl.innerHTML = sanitize(`💡 <strong>Chưa có dữ liệu khảo sát:</strong> Học sinh <strong>${safeSelName}</strong> (${safeSelCode}) chưa hoàn thành bài trắc nghiệm Holland RIASEC. Giáo viên vui lòng hướng dẫn học sinh đăng nhập vào hệ thống để làm bài.`);
         }
       }
     } else {
@@ -4176,7 +4290,7 @@ class TeenVocaApp {
         } else {
           emptyTr.innerHTML = sanitize(`
             <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:var(--text-muted); font-size:0.9rem;">
-              🔍 Không tìm thấy học sinh nào phù hợp với bộ lọc (Từ khóa: <em>"${this.teacherSearchKeyword || '---'}"</em>, Trạng thái: <em>${this.teacherStatusFilter === 'completed' ? 'Đã khảo sát' : (this.teacherStatusFilter === 'pending' ? 'Chưa khảo sát' : 'Tất cả')}</em>).
+              🔍 Không tìm thấy học sinh nào phù hợp với bộ lọc (Từ khóa: <em>"${this.escapeHtml(this.teacherSearchKeyword || '---')}"</em>, Trạng thái: <em>${this.teacherStatusFilter === 'completed' ? 'Đã khảo sát' : (this.teacherStatusFilter === 'pending' ? 'Chưa khảo sát' : 'Tất cả')}</em>).
             </td>
           `);
         }
@@ -4218,14 +4332,15 @@ class TeenVocaApp {
           }
         }
 
-        const majorText = (hasValidHolland && resolvedMajor) ? resolvedMajor : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
+        const majorText = (hasValidHolland && resolvedMajor) ? this.escapeHtml(resolvedMajor) : `<span style="color:var(--text-muted); font-style:italic;">Chưa chọn</span>`;
         const scoreText = (hasValidHolland && typeof st.projectScore === 'number') ? `<strong>${st.projectScore}/10</strong>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa làm</span>`;
         const realtimeBadge = hasValidHolland
           ? `<span class="realtime-status-pill online" title="Đã có dữ liệu khảo sát thời gian thực từ Firebase (Mã: ${rawCode})" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:700; background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 5px #10b981;"></span> Live</span>`
           : `<span class="realtime-status-pill offline" title="Chưa có dữ liệu khảo sát thời gian thực" style="display:inline-flex; align-items:center; gap:3px; padding:0.15rem 0.4rem; border-radius:4px; font-size:0.7rem; font-weight:600; background:rgba(156,163,175,0.12); color:#6b7280; border:1px solid rgba(156,163,175,0.3); margin-left:0.35rem;"><span style="width:6px; height:6px; border-radius:50%; background:#9ca3af; display:inline-block;"></span> Chờ</span>`;
-        const streamText = (hasValidHolland && st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${st.stream}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
+        const streamText = (hasValidHolland && st.stream ? `<span style="background:var(--surface-elevated); padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">${this.escapeHtml(st.stream)}</span>` : `<span style="color:var(--text-muted); font-size:0.75rem;">Chưa có</span>`) + realtimeBadge;
 
         const isSelected = this.selectedTeacherStudentCode && (this.selectedTeacherStudentCode.toUpperCase() === studentCode.toUpperCase());
+        const safeCode = this.escapeHtml(studentCode);
         const tr = document.createElement('tr');
         if (isSelected) {
           tr.className = 'selected-student-row';
@@ -4235,21 +4350,21 @@ class TeenVocaApp {
 
         tr.innerHTML = sanitize(`
           <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
-          <td style="text-align:center;"><code style="font-weight:700; color:var(--brand); background:var(--surface-elevated); padding:0.15rem 0.35rem; border-radius:4px; font-size:0.75rem;">${studentCode}</code></td>
-          <td>${st.school || 'Trường THCS'}</td>
-          <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${st.grade || '---'}</span></td>
-          <td><strong>${st.name || 'Học sinh'}</strong></td>
+          <td style="text-align:center;"><code style="font-weight:700; color:var(--brand); background:var(--surface-elevated); padding:0.15rem 0.35rem; border-radius:4px; font-size:0.75rem;">${safeCode}</code></td>
+          <td>${this.escapeHtml(st.school || 'Trường THCS')}</td>
+          <td style="text-align:center;"><span style="font-weight:700; background:var(--surface-elevated); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.78rem;">${this.escapeHtml(st.grade || '---')}</span></td>
+          <td><strong>${this.escapeHtml(st.name || 'Học sinh')}</strong></td>
           <td style="text-align:center;">${hollandBadge}</td>
           <td>${majorText}</td>
           <td style="text-align:center;">${scoreText}</td>
           <td>${streamText}</td>
           <td style="text-align:center; white-space:nowrap;">
-            <button type="button" class="btn-table-action btn-sync-student" data-code="${studentCode}" title="Lấy dữ liệu khảo sát thời gian thực của học sinh ${studentCode} từ Firebase" style="color:#059669; border-color:#10b981; font-weight:700; display:inline-flex; align-items:center; gap:0.25rem;">
+            <button type="button" class="btn-table-action btn-sync-student" data-code="${safeCode}" title="Lấy dữ liệu khảo sát thời gian thực của học sinh ${safeCode} từ Firebase" style="color:#059669; border-color:#10b981; font-weight:700; display:inline-flex; align-items:center; gap:0.25rem;">
               <span class="sync-icon">🔄</span> Realtime
             </button>
-            <button type="button" class="btn-table-action btn-table-chart" data-code="${studentCode}" title="Xem biểu đồ của riêng học sinh này">📊 Biểu đồ</button>
-            <button type="button" class="btn-table-action btn-table-edit" data-code="${studentCode}">Sửa</button>
-            <button type="button" class="btn-table-action btn-table-delete" data-code="${studentCode}">Xóa</button>
+            <button type="button" class="btn-table-action btn-table-chart" data-code="${safeCode}" title="Xem biểu đồ của riêng học sinh này">📊 Biểu đồ</button>
+            <button type="button" class="btn-table-action btn-table-edit" data-code="${safeCode}">Sửa</button>
+            <button type="button" class="btn-table-action btn-table-delete" data-code="${safeCode}">Xóa</button>
           </td>
         `);
         tbody.appendChild(tr);

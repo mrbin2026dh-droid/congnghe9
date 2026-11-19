@@ -9,6 +9,17 @@ const TeacherAnalytics = (() => {
   const DEFAULT_CLASS_DATA = [];
   const currentClassData = [];
 
+  // Thoát ký tự HTML cho mọi dữ liệu do người dùng nhập (tên, lớp, trường...) trước khi chèn vào HTML
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function addStudentToRoster(studentObj) {
     const list = (window.TeacherAnalytics && window.TeacherAnalytics.currentClassData) || currentClassData;
     const nextId = list.length > 0 ? Math.max(...list.map(s => s.id || 0)) + 1 : 1;
@@ -215,9 +226,12 @@ const TeacherAnalytics = (() => {
       }
       if (!school) school = 'Trường THCS';
 
+      // Mã tạm thời; app.js sẽ đánh lại số không trùng với học sinh đã có trên hệ thống
+      let autoCode = false;
       if (!studentCode && name) {
         const padNum = String(students.length + 1).padStart(2, '0');
         studentCode = `${grade}-${padNum}`;
+        autoCode = true;
       }
 
       studentCode = studentCode.toUpperCase().replace(/\s+/g, '-');
@@ -244,7 +258,8 @@ const TeacherAnalytics = (() => {
         projectScore: null,
         classification: '',
         stream: '',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        autoCode
       });
     }
 
@@ -734,8 +749,8 @@ const TeacherAnalytics = (() => {
    */
   function generatePrintableHTMLReport(classList, className = '', schoolName = '') {
     const stats = computeClassStatistics(classList, className);
-    const targetSchool = schoolName || stats.schoolName || 'Trường THCS';
-    const targetClass = className || stats.className || 'Toàn trường';
+    const targetSchool = escapeHtml(schoolName || stats.schoolName || 'Trường THCS');
+    const targetClass = escapeHtml(className || stats.className || 'Toàn trường');
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
@@ -746,14 +761,14 @@ const TeacherAnalytics = (() => {
       studentTrs += `
         <tr>
           <td class="text-center">${st.stt}</td>
-          <td class="text-center font-bold">${st.studentCode}</td>
-          <td>${st.name}</td>
-          <td class="text-center">${st.grade}</td>
-          <td class="text-center ${statusClass}">${st.statusText}</td>
-          <td class="text-center font-bold">${st.code}</td>
-          <td>${st.major}</td>
-          <td class="text-center">${scoreDisplay}</td>
-          <td>${st.stream}</td>
+          <td class="text-center font-bold">${escapeHtml(st.studentCode)}</td>
+          <td>${escapeHtml(st.name)}</td>
+          <td class="text-center">${escapeHtml(st.grade)}</td>
+          <td class="text-center ${statusClass}">${escapeHtml(st.statusText)}</td>
+          <td class="text-center font-bold">${escapeHtml(st.code)}</td>
+          <td>${escapeHtml(st.major)}</td>
+          <td class="text-center">${escapeHtml(scoreDisplay)}</td>
+          <td>${escapeHtml(st.stream)}</td>
         </tr>`;
     });
 
