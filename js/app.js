@@ -1419,10 +1419,10 @@ class TeenVocaApp {
           Để cây phát triển xanh tốt và đơm hoa kết trái bền vững:
         </p>
         <div class="pillars-grid" style="margin-top:0.4rem;">
-          <div class="pillar-item">🔵 <strong>Sở thích:</strong> Làm trắc nghiệm Holland (Tab 2) để khám phá nhóm nghề yêu thích.</div>
-          <div class="pillar-item">🟢 <strong>Khả năng:</strong> Tự đánh giá năng lực học tập và kỹ năng thực hành.</div>
-          <div class="pillar-item">🟠 <strong>Cá tính:</strong> Rèn luyện 5 phẩm chất kĩ thuật cốt lõi theo SGK.</div>
-          <div class="pillar-item">🟣 <strong>Giá trị:</strong> Xác định mục tiêu và điều kiện gia đình tại Dự án Bài 5 (Tab 4).</div>
+          <div class="pillar-item"><span class="color-dot" style="--dot:#2563eb" aria-hidden="true"></span> <strong>Sở thích:</strong> Làm trắc nghiệm Holland (Tab 2) để khám phá nhóm nghề yêu thích.</div>
+          <div class="pillar-item"><span class="color-dot" style="--dot:#10b981" aria-hidden="true"></span> <strong>Khả năng:</strong> Tự đánh giá năng lực học tập và kỹ năng thực hành.</div>
+          <div class="pillar-item"><span class="color-dot" style="--dot:#f59e0b" aria-hidden="true"></span> <strong>Cá tính:</strong> Rèn luyện 5 phẩm chất kĩ thuật cốt lõi theo SGK.</div>
+          <div class="pillar-item"><span class="color-dot" style="--dot:#a855f7" aria-hidden="true"></span> <strong>Giá trị:</strong> Xác định mục tiêu và điều kiện gia đình tại Dự án Bài 5 (Tab 4).</div>
         </div>
         <div class="challenge-callout" style="margin-top:0.6rem;">
           💡 <strong>Khám phá ngay:</strong> Em có thể trực tiếp kéo các thanh trượt bên trên để mô phỏng sự cân bằng sinh học giữa "Gốc rễ" và "Quả ngọt"!
@@ -3078,6 +3078,21 @@ class TeenVocaApp {
     if (targetMajorTitle) {
       targetMajorTitle.textContent = `${targetMajor.name} (Mã Holland: ${targetMajor.code})`;
     }
+    // Cột (2) "Đặc điểm và yêu cầu của nghề" thay đổi theo đúng ngành đang chọn
+    const requirements = ProjectAssessment.getMajorRequirements
+      ? ProjectAssessment.getMajorRequirements(targetMajor)
+      : ProjectAssessment.CRITERIA_DEFINITIONS.map(c => c.requirement);
+    const reqHeader = document.getElementById('assessment-requirement-major');
+    if (reqHeader) reqHeader.textContent = `— ngành ${targetMajor.name}`;
+    const profileEl = document.getElementById('assessment-major-profile');
+    if (profileEl) {
+      const careers = Array.isArray(targetMajor.careers) && targetMajor.careers.length > 0 ? targetMajor.careers.join(', ') : '';
+      profileEl.innerHTML = sanitize(`
+        ${targetMajor.description ? `<span>${this.escapeHtml(targetMajor.description)}</span>` : ''}
+        <span class="assessment-major-meta">🎓 Trình độ đào tạo: <strong>${this.escapeHtml(targetMajor.level || '---')}</strong></span>
+        ${careers ? `<span class="assessment-major-meta">💼 Nghề tiêu biểu: ${this.escapeHtml(careers)}</span>` : ''}
+      `);
+    }
 
     const majorSelect = document.getElementById('assessment-major-select');
     if (majorSelect && majorSelect.value !== targetMajor.id) {
@@ -3116,7 +3131,7 @@ class TeenVocaApp {
           <strong style="display:block; margin-bottom:0.25rem;">${c.title}</strong>
           <textarea class="criteria-self-trait-input" id="self-trait-input-${idx}" rows="2" placeholder="Ghi nhận đặc điểm bản thân...">${this.escapeHtml(currentTrait)}</textarea>
         </td>
-        <td style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45;">${c.requirement}</td>
+        <td class="assessment-requirement-cell" style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45;">${this.escapeHtml(requirements[idx])}</td>
         <td style="text-align:center;">
           <button type="button" class="match-toggle-btn ${isMatched ? 'matched' : ''}" onclick="window.app.toggleAssessmentMatch(${idx})">
             ${isMatched ? '✓' : ''}
@@ -4462,8 +4477,8 @@ class TeenVocaApp {
 
     const rowsHTML = studentRows.map(st => {
       const statusBadge = st.hasSurvey
-        ? `<span style="background:rgba(16,185,129,0.15); color:#059669; border:1px solid rgba(16,185,129,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-weight:700; font-size:0.75rem;">🟢 Hoàn thành</span>`
-        : `<span style="background:rgba(245,158,11,0.15); color:#d97706; border:1px solid rgba(245,158,11,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">🟡 Chưa làm</span>`;
+        ? `<span style="background:rgba(16,185,129,0.15); color:#059669; border:1px solid rgba(16,185,129,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-weight:700; font-size:0.75rem;"><span class="color-dot" aria-hidden="true"></span> Hoàn thành</span>`
+        : `<span style="background:rgba(245,158,11,0.15); color:#d97706; border:1px solid rgba(245,158,11,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;"><span class="color-dot" aria-hidden="true"></span> Chưa làm</span>`;
 
       const codeBadge = st.hasSurvey
         ? `<span style="font-weight:800; color:var(--brand);">${this.escapeHtml(st.code)}</span>`
@@ -4572,7 +4587,11 @@ class TeenVocaApp {
     const medals = ['🥇', '🥈', '🥉'];
     const badgeIcons = window.CareerGames.BADGES;
     const rows = players.slice(0, 10).map((x, i) => {
-      const icons = Object.keys(x.stats.badges).map(id => (badgeIcons[id] ? badgeIcons[id].icon : '')).join(' ');
+      // Xếp huy hiệu theo đúng thứ tự trong bộ sưu tập
+      const icons = Object.keys(badgeIcons)
+        .filter(id => x.stats.badges[id])
+        .map(id => `<span class="leaderboard-badge" title="${this.escapeHtml(badgeIcons[id].name)}">${window.CareerGames.badgeSvg(id, 22)}</span>`)
+        .join('');
       const plays = Object.values(x.stats.plays).reduce((a, b) => a + b, 0);
       return `
         <tr>

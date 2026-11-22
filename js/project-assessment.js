@@ -79,6 +79,134 @@ const ProjectAssessment = (() => {
   ];
 
   /**
+   * Yêu cầu của nghề cho 10 tiêu chí, viết theo NHÓM HOLLAND CHỦ ĐẠO của ngành (chữ cái đầu mã Holland).
+   * Nhóm R giữ đúng tinh thần SGK Bài 5 (nghề kĩ thuật, công nghệ); các nhóm khác điều chỉnh cho phù hợp.
+   * {name}: tên ngành · {careers}: nghề tiêu biểu của ngành
+   */
+  const GROUP_REQUIREMENTS = [
+    { // 1. Hiểu biết về nguyên lý kĩ thuật, công nghệ
+      R: 'Nắm vững nguyên lí cấu tạo, vận hành của máy móc, thiết bị, vật liệu và quy trình kĩ thuật dùng trong ngành {name}.',
+      I: 'Hiểu sâu cơ sở khoa học (Toán, Vật lí, Hóa học, Sinh học, Tin học) và phương pháp nghiên cứu, thí nghiệm của ngành {name}.',
+      A: 'Hiểu nguyên lí thẩm mĩ, bố cục, màu sắc và cách dùng các công cụ, phần mềm sáng tác của ngành {name}.',
+      S: 'Hiểu tâm lí con người và các nguyên tắc, quy trình chuyên môn (chăm sóc, giảng dạy, tư vấn...) của ngành {name}.',
+      E: 'Hiểu quy luật thị trường, kinh doanh, quản lí và cách ứng dụng công nghệ số trong ngành {name}.',
+      C: 'Nắm vững quy trình nghiệp vụ, quy định, chuẩn mực và phần mềm quản lí dữ liệu dùng trong ngành {name}.'
+    },
+    { // 2. Kĩ năng sử dụng phương tiện, thiết bị
+      R: 'Thao tác thành thạo, an toàn các dụng cụ, máy móc, thiết bị đo kiểm của ngành {name}.',
+      I: 'Sử dụng chính xác thiết bị thí nghiệm, dụng cụ đo lường và phần mềm phân tích dữ liệu.',
+      A: 'Sử dụng thành thạo công cụ sáng tác: máy ảnh, bảng vẽ, nhạc cụ, phần mềm đồ họa, dựng phim...',
+      S: 'Sử dụng được các phương tiện hỗ trợ làm việc với con người: thiết bị dạy học, y tế, trình chiếu, hồ sơ điện tử...',
+      E: 'Sử dụng tốt máy tính, phần mềm văn phòng, công cụ thuyết trình và các nền tảng kinh doanh số.',
+      C: 'Sử dụng thành thạo, chính xác máy tính, phần mềm bảng tính, kế toán, quản lí kho hoặc hồ sơ.'
+    },
+    { // 3. Khả năng làm việc độc lập & theo nhóm
+      R: 'Tự hoàn thành công đoạn kĩ thuật được giao và phối hợp an toàn với tổ, đội tại xưởng, công trường, trang trại.',
+      I: 'Kiên trì nghiên cứu độc lập trong thời gian dài, đồng thời biết chia sẻ, thảo luận kết quả với nhóm.',
+      A: 'Tự chủ ý tưởng sáng tạo cá nhân và biết phối hợp với ê-kíp, khách hàng để hoàn thiện sản phẩm.',
+      S: 'Làm việc nhóm tốt, phối hợp nhịp nhàng với đồng nghiệp để hỗ trợ con người hiệu quả.',
+      E: 'Dẫn dắt, điều phối nhóm, chủ động ra quyết định và chịu trách nhiệm với kết quả chung.',
+      C: 'Hoàn thành chính xác phần việc của mình theo quy trình và phối hợp chặt chẽ với các bộ phận liên quan.'
+    },
+    { // 4. Năng lực học Tin học, Ngoại ngữ, KHTN
+      R: 'Học khá trở lên các môn Toán, Vật lí, Công nghệ, Tin học; đọc được tài liệu kĩ thuật tiếng Anh cơ bản.',
+      I: 'Học tốt Toán, Khoa học tự nhiên (Lí, Hóa, Sinh) và Tin học; tiếng Anh đủ để đọc tài liệu khoa học.',
+      A: 'Có năng khiếu Mĩ thuật hoặc Âm nhạc; học tốt Ngữ văn, Tin học (đồ họa, đa phương tiện) và tiếng Anh.',
+      S: 'Học tốt Ngữ văn, Giáo dục công dân, Sinh học (với nghề y, sư phạm); diễn đạt tốt và có nền tảng tiếng Anh.',
+      E: 'Học tốt Toán, Ngữ văn, tiếng Anh và Tin học; tự tin thuyết trình, giao tiếp.',
+      C: 'Học tốt Toán, Tin học (bảng tính) và tiếng Anh; cẩn thận, ít sai sót khi tính toán.'
+    },
+    { // 5. Khả năng tự học, tự nghiên cứu
+      R: 'Tự cập nhật công nghệ, máy móc mới qua tài liệu, video kĩ thuật và tự mày mò khắc phục sự cố.',
+      I: 'Tự tìm đọc tài liệu, bài báo khoa học, tự đặt câu hỏi và kiểm chứng bằng thực nghiệm.',
+      A: 'Tự tìm cảm hứng, học kĩ thuật sáng tác mới và xây dựng bộ sưu tập sản phẩm (portfolio).',
+      S: 'Tự học về tâm lí, kĩ năng giao tiếp và cập nhật kiến thức chuyên môn để hỗ trợ con người tốt hơn.',
+      E: 'Tự cập nhật xu hướng thị trường, mô hình kinh doanh và kĩ năng quản lí mới.',
+      C: 'Tự cập nhật quy định, văn bản và phần mềm nghiệp vụ mới.'
+    },
+    { // 6. Loại công việc yêu thích
+      R: 'Thích vận hành, lắp ráp, bảo dưỡng, sửa chữa máy móc, thiết bị – công việc hằng ngày của {careers}.',
+      I: 'Thích quan sát, phân tích, thí nghiệm, giải quyết vấn đề phức tạp – công việc hằng ngày của {careers}.',
+      A: 'Thích sáng tạo, thiết kế, thể hiện ý tưởng bằng hình ảnh, âm thanh, câu chữ – công việc hằng ngày của {careers}.',
+      S: 'Thích giảng giải, chăm sóc, tư vấn, giúp đỡ người khác – công việc hằng ngày của {careers}.',
+      E: 'Thích thuyết phục, lãnh đạo, kinh doanh, tổ chức dự án – công việc hằng ngày của {careers}.',
+      C: 'Thích sắp xếp, ghi chép, tính toán, xử lí số liệu theo quy trình – công việc hằng ngày của {careers}.'
+    },
+    { // 7. Đối tượng lao động yêu thích
+      R: 'Làm việc trực tiếp với máy móc, vật liệu, cây trồng, vật nuôi hoặc công trình để tạo ra sản phẩm cụ thể.',
+      I: 'Làm việc với dữ liệu, mẫu vật, hiện tượng tự nhiên và các bài toán khoa học.',
+      A: 'Làm việc với ý tưởng, hình ảnh, âm thanh, chất liệu nghệ thuật để tạo ra sản phẩm sáng tạo.',
+      S: 'Làm việc trực tiếp với con người: học sinh, người bệnh, khách hàng, cộng đồng.',
+      E: 'Làm việc với con người, thị trường, nguồn vốn và các dự án kinh doanh.',
+      C: 'Làm việc với số liệu, hồ sơ, văn bản, hàng hóa cần được quản lí chính xác.'
+    },
+    { // 8. Môi trường làm việc mong muốn
+      R: 'Xưởng sản xuất, công trường, trang trại hoặc phòng kĩ thuật; cần sức khỏe tốt và tuân thủ an toàn lao động.',
+      I: 'Phòng thí nghiệm, viện nghiên cứu, phòng máy; môi trường yên tĩnh, đòi hỏi tập trung cao.',
+      A: 'Studio, xưởng sáng tác; môi trường tự do, linh hoạt nhưng chịu áp lực về ý tưởng và thời hạn.',
+      S: 'Trường học, bệnh viện, trung tâm xã hội; tiếp xúc nhiều người, cần kiên nhẫn và thấu cảm.',
+      E: 'Văn phòng, doanh nghiệp, thị trường; năng động, cạnh tranh, có áp lực chỉ tiêu.',
+      C: 'Văn phòng, ngân hàng, kho vận; ổn định, ngăn nắp, có quy định rõ ràng.'
+    },
+    { // 9. 5 nét cá tính tiêu biểu
+      R: 'Cần cù, chịu khó, thận trọng, kỉ luật cao và tuân thủ quy trình an toàn.',
+      I: 'Tò mò, kiên nhẫn, tư duy logic, trung thực và cẩn thận với số liệu.',
+      A: 'Giàu trí tưởng tượng, nhạy cảm thẩm mĩ, độc lập và dám thể hiện cái riêng.',
+      S: 'Thân thiện, kiên nhẫn, giàu lòng trắc ẩn, biết lắng nghe và có trách nhiệm.',
+      E: 'Tự tin, quyết đoán, năng động, dám chấp nhận rủi ro và có khả năng thuyết phục.',
+      C: 'Ngăn nắp, tỉ mỉ, chính xác, trung thực và tôn trọng quy định.'
+    }
+  ];
+
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  const GROUP_NAMES = { R: 'Kĩ thuật', I: 'Nghiên cứu', A: 'Nghệ thuật', S: 'Xã hội', E: 'Quản lí', C: 'Nghiệp vụ' };
+
+  /** Tiêu chí 10 (gia đình) phụ thuộc trình độ, thời gian đào tạo của ngành. */
+  function familyRequirement(level) {
+    const lv = String(level || '');
+    const vocational = /9\+|trung cấp/i.test(lv);
+    const university = /đại học|viện nghiên cứu/i.test(lv);
+    if (vocational && university) {
+      return 'Có nhiều lộ trình: học trung cấp ngay sau lớp 9 (mô hình 9+, 2–3 năm, vừa học văn hóa vừa học nghề) hoặc học THPT rồi cao đẳng, đại học. Gia đình cùng chọn lộ trình phù hợp với khả năng tài chính.';
+    }
+    if (vocational) {
+      return 'Học trung cấp ngay sau lớp 9 (mô hình 9+, khoảng 2–3 năm, vừa học văn hóa vừa học nghề), chi phí thấp hơn và sớm đi làm. Gia đình ủng hộ con theo con đường học nghề.';
+    }
+    if (/viện nghiên cứu/i.test(lv)) {
+      return 'Cần học THPT, đại học (khoảng 4–5 năm) và thường học tiếp sau đại học. Gia đình ủng hộ và chuẩn bị được kinh phí cho thời gian học dài.';
+    }
+    return 'Cần học THPT rồi cao đẳng (2–3 năm) hoặc đại học (khoảng 4–5 năm). Gia đình ủng hộ và chuẩn bị được kinh phí học tập, sinh hoạt trong thời gian đào tạo.';
+  }
+
+  /**
+   * Yêu cầu của NGÀNH ĐANG CHỌN cho 10 tiêu chí Bài 5 (cột 2 của ma trận đánh giá).
+   * Không có ngành -> dùng yêu cầu chung của nghề kĩ thuật, công nghệ theo SGK.
+   * @param {Object} major ngành (name, code, level, careers)
+   * @returns {string[]} 10 câu yêu cầu
+   */
+  function getMajorRequirements(major) {
+    if (!major || !major.name) return CRITERIA_DEFINITIONS.map(c => c.requirement);
+    const group = String(major.primaryType || major.code || 'R').trim().toUpperCase()[0];
+    const g = GROUP_NAMES[group] ? group : 'R';
+    const careers = Array.isArray(major.careers) && major.careers.length > 0
+      ? major.careers.slice(0, 2).join(', ')
+      : `người làm ngành ${major.name}`;
+    const fill = text => text.replace(/\{name\}/g, major.name).replace(/\{careers\}/g, careers);
+    const reqs = GROUP_REQUIREMENTS.map(row => fill(row[g]));
+    reqs.push(familyRequirement(major.level));
+    return reqs;
+  }
+
+  /**
    * Tính toán kết quả đánh giá theo thang điểm SGK Bài 5
    * @param {Array<boolean>} matches - Mảng 10 phần tử true (trùng khớp) hoặc false
    */
@@ -126,14 +254,16 @@ const ProjectAssessment = (() => {
     const dateStr = new Date().toLocaleDateString('vi-VN');
     const studentUser = (window.app && window.app.currentUser) || {};
     const rawSchool = studentData.school || studentUser.school || 'Trường THCS';
-    const schoolName = rawSchool.toUpperCase().startsWith('THCS') ? rawSchool.toUpperCase() : `THCS ${rawSchool.toUpperCase()}`;
-    const studentName = studentData.name || studentUser.name || 'Học sinh';
-    const gradeName = studentData.grade || studentUser.grade || '---';
-    const academicYear = studentData.academicYear || '2025 – 2026';
-    const hollandCode = (studentData.code && studentData.code.trim().length > 0) ? studentData.code : 'Chưa làm khảo sát';
-    const majorName = (targetMajor && targetMajor.name) ? targetMajor.name : 'Chưa lựa chọn ngành nghề';
+    const schoolName = escapeHtml(rawSchool.toUpperCase().startsWith('THCS') ? rawSchool.toUpperCase() : `THCS ${rawSchool.toUpperCase()}`);
+    const studentName = escapeHtml(studentData.name || studentUser.name || 'Học sinh');
+    const gradeName = escapeHtml(studentData.grade || studentUser.grade || '---');
+    const academicYear = escapeHtml(studentData.academicYear || '2025 – 2026');
+    const hollandCode = escapeHtml((studentData.code && studentData.code.trim().length > 0) ? studentData.code : 'Chưa làm khảo sát');
+    const majorName = escapeHtml((targetMajor && targetMajor.name) ? targetMajor.name : 'Chưa lựa chọn ngành nghề');
     const majorCode = (targetMajor && targetMajor.code) ? targetMajor.code : '---';
 
+    // Yêu cầu theo đúng ngành đã chọn (không dùng câu chung cho mọi ngành)
+    const requirements = getMajorRequirements(targetMajor);
     let rowsHTML = '';
     CRITERIA_DEFINITIONS.forEach((c, idx) => {
       const isMatched = matches[idx] === true;
@@ -146,9 +276,9 @@ const ProjectAssessment = (() => {
           <td style="border:1px solid #334155; padding:8px; text-align:center;">${idx + 1}</td>
           <td style="border:1px solid #334155; padding:8px;">
             <strong>[${c.category}]</strong> ${c.title}<br>
-            <span style="font-size:12px; color:#475569;">${selfTrait}</span>
+            <span style="font-size:12px; color:#475569;">${escapeHtml(selfTrait)}</span>
           </td>
-          <td style="border:1px solid #334155; padding:8px; font-size:12px;">${c.requirement}</td>
+          <td style="border:1px solid #334155; padding:8px; font-size:12px;">${escapeHtml(requirements[idx])}</td>
           <td style="border:1px solid #334155; padding:8px; text-align:center; font-weight:bold; color:#059669;">
             ${isMatched ? 'X' : ''}
           </td>
@@ -266,6 +396,7 @@ const ProjectAssessment = (() => {
 
   return {
     CRITERIA_DEFINITIONS,
+    getMajorRequirements,
     calculateProjectResult,
     generatePrintableHTML
   };

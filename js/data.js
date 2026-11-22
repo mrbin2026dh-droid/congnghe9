@@ -1779,6 +1779,33 @@ const AIDUCATION_MAJORS = [
   }
 ];
 
+/**
+ * Làm sạch tên nghề tiêu biểu: dữ liệu gốc bị dính TÊN NGHỀ với CÂU BÌNH LUẬN phía sau, vd:
+ *   "Kỹ sư nông nghiệp Nhu cầu vượt xa số người học, và công việc ở nơi có đất."  ->  "Kỹ sư nông nghiệp"
+ * Quy tắc: cắt tại từ viết hoa (Chữ hoa + chữ thường) ĐẦU TIÊN sau từ thứ nhất mà phía sau còn >= 3 từ,
+ * bỏ qua tên riêng hay nằm trong tên nghề (vd: "Giáo viên tiếng Anh").
+ */
+function cleanCareerTitle(raw) {
+  const text = String(raw || '').normalize('NFC').trim();
+  if (!text) return text;
+  if (!/[.!?]$/.test(text) && text.length <= 45) return text;
+  const UPPER_WORD = /^[A-ZĐÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴ][a-zđàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]*$/;
+  const NAME_WORDS = new Set(['Anh', 'Việt', 'Nhật', 'Hàn', 'Trung', 'Pháp', 'Đức', 'Nga']);
+  const words = text.split(/\s+/);
+  for (let i = 1; i < words.length; i++) {
+    if (UPPER_WORD.test(words[i]) && words.length - i >= 3 && !NAME_WORDS.has(words[i])) {
+      return words.slice(0, i).join(' ');
+    }
+  }
+  return text;
+}
+
+[AIDUCATION_MAJORS, MAJORS_DATABASE].forEach(list => list.forEach(m => {
+  if (Array.isArray(m.careers)) {
+    m.careers = Array.from(new Set(m.careers.map(cleanCareerTitle).filter(Boolean)));
+  }
+}));
+
 // Danh mục Toàn diện 70+ Ngành học & Nghề nghiệp Phù hợp Holland RIASEC
 // Kết hợp SGK Công nghệ 9 & 59 Ngành Aiducation, đảm bảo đầy đủ 6 nhóm (R, I, A, S, E, C)
 const COMPREHENSIVE_MAJORS = [

@@ -95,6 +95,8 @@ def run():
         check('Sảnh có đủ 4 trò chơi', page.locator('#games-root .game-card').count() == 4)
         check('Điểm thành tích ban đầu = 0', hub_points(page) == 0)
         check('Có 8 huy hiệu, tất cả đang khóa', page.locator('#games-root .game-badge.locked').count() == 8)
+        check('Biểu tượng huy hiệu vẽ bằng SVG (không phụ thuộc phông emoji của máy)',
+              page.locator('#games-root .game-badge svg.badge-svg').count() == 8)
 
         # ---------- 2. Thám tử nghề nghiệp
         print('\n[2] Thám tử nghề nghiệp')

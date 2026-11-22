@@ -314,16 +314,59 @@ const CareerGames = (() => {
   const MAX_ACHIEVEMENT = GAME_IDS.reduce((sum, id) => sum + GAMES[id].max, 0);
   const QUIZ_SECONDS = 20;
 
+  // Biểu tượng huy hiệu vẽ bằng SVG (không dùng emoji): hiển thị giống nhau trên mọi máy,
+  // kể cả Windows/Android đời cũ thiếu phông emoji mới (vd: 🪞 hiện thành ô vuông trống).
+  // glyph: hình vẽ màu trắng trong khung 24x24, đặt trên nền tròn màu `color`.
+  const W = 'fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
   const BADGES = {
-    first_game: { icon: '🌱', name: 'Khởi động', desc: 'Hoàn thành lượt chơi đầu tiên' },
-    explorer: { icon: '🗺️', name: 'Nhà thám hiểm nghề', desc: 'Chơi đủ cả 4 trò chơi' },
-    detective_master: { icon: '🕵️', name: 'Thám tử tài ba', desc: 'Đạt từ 400 điểm trò Thám tử nghề nghiệp' },
-    riasec_expert: { icon: '🧭', name: 'Chuyên gia RIASEC', desc: 'Phân loại đúng cả 12 nghề' },
-    sgk_scholar: { icon: '📚', name: 'Học giả SGK', desc: 'Trả lời đúng từ 8/10 câu Đố vui SGK' },
-    self_reflect: { icon: '🪞', name: 'Soi chiếu bản thân', desc: 'Chơi "Một ngày làm nghề" sau khi đã có mã Holland để đối chiếu' },
-    star_500: { icon: '⭐', name: 'Ngôi sao nghề nghiệp', desc: 'Đạt 500 điểm thành tích' },
-    legend_800: { icon: '🏆', name: 'Huyền thoại hướng nghiệp', desc: 'Đạt 800 điểm thành tích' }
+    first_game: {
+      icon: '🌱', color: '#10b981', name: 'Khởi động', desc: 'Hoàn thành lượt chơi đầu tiên',
+      glyph: `<path d="M12 19.5V11.5" ${W}/><path d="M12 13.2C12 9.6 9.6 7.6 6.2 7.6C6.2 11 8.6 13.2 12 13.2Z" fill="#fff"/><path d="M12 11.2C12 7.8 14.4 5.6 17.8 5.6C17.8 9 15.4 11.2 12 11.2Z" fill="#fff"/><path d="M8.5 19.5H15.5" ${W}/>`
+    },
+    explorer: {
+      icon: '🧭', color: '#2563eb', name: 'Nhà thám hiểm nghề', desc: 'Chơi đủ cả 4 trò chơi',
+      glyph: `<circle cx="12" cy="12" r="7" ${W}/><path d="M12 6.6L14.1 12H9.9Z" fill="#fff"/><path d="M12 17.4L9.9 12H14.1Z" fill="#fff" fill-opacity="0.55"/>`
+    },
+    detective_master: {
+      icon: '🔍', color: '#4f46e5', name: 'Thám tử tài ba', desc: 'Đạt từ 400 điểm trò Thám tử nghề nghiệp',
+      glyph: `<circle cx="10.6" cy="10.6" r="5" ${W} stroke-width="2"/><path d="M14.3 14.3L18.6 18.6" ${W} stroke-width="2.6"/>`
+    },
+    riasec_expert: {
+      icon: '⬡', color: '#0891b2', name: 'Chuyên gia RIASEC', desc: 'Phân loại đúng cả 12 nghề',
+      glyph: `<path d="M12 4.6L18.4 8.3V15.7L12 19.4L5.6 15.7V8.3Z" ${W}/><circle cx="12" cy="12" r="2" fill="#fff"/>`
+    },
+    sgk_scholar: {
+      icon: '📚', color: '#f59e0b', name: 'Học giả SGK', desc: 'Trả lời đúng từ 8/10 câu Đố vui SGK',
+      glyph: `<path d="M12 7.6C10 6.1 7.6 5.8 5.4 6.2V17.3C7.6 16.9 10 17.2 12 18.6C14 17.2 16.4 16.9 18.6 17.3V6.2C16.4 5.8 14 6.1 12 7.6Z" ${W}/><path d="M12 7.6V18.6" ${W}/>`
+    },
+    self_reflect: {
+      icon: '👁️', color: '#a855f7', name: 'Soi chiếu bản thân', desc: 'Chơi "Một ngày làm nghề" sau khi đã có mã Holland để đối chiếu',
+      glyph: `<path d="M4.4 12C6.4 8.5 9 6.9 12 6.9C15 6.9 17.6 8.5 19.6 12C17.6 15.5 15 17.1 12 17.1C9 17.1 6.4 15.5 4.4 12Z" ${W}/><circle cx="12" cy="12" r="2.6" fill="#fff"/>`
+    },
+    star_500: {
+      icon: '⭐', color: '#eab308', name: 'Ngôi sao nghề nghiệp', desc: 'Đạt 500 điểm thành tích',
+      glyph: `<path d="M12 4.6L14.2 9.3L19.3 9.9L15.5 13.4L16.5 18.5L12 15.9L7.5 18.5L8.5 13.4L4.7 9.9L9.8 9.3Z" fill="#fff"/>`
+    },
+    legend_800: {
+      icon: '🏆', color: '#e11d48', name: 'Huyền thoại hướng nghiệp', desc: 'Đạt 800 điểm thành tích',
+      glyph: `<path d="M8 5.5H16V9.6C16 11.9 14.2 13.7 12 13.7C9.8 13.7 8 11.9 8 9.6Z" fill="#fff"/><path d="M8 7.2H5.9C5.9 9.6 6.9 10.9 8.4 11.1M16 7.2H18.1C18.1 9.6 17.1 10.9 15.6 11.1" ${W} stroke-width="1.5"/><rect x="11" y="13.6" width="2" height="2.8" fill="#fff"/><rect x="8.4" y="16.3" width="7.2" height="2.2" rx="0.7" fill="#fff"/>`
+    }
   };
+  const LOCK_GLYPH = `<path d="M9.2 11V8.9C9.2 7.3 10.5 6.1 12 6.1C13.5 6.1 14.8 7.3 14.8 8.9V11" ${W}/><rect x="7.6" y="11" width="8.8" height="7.4" rx="1.5" fill="#fff"/>`;
+
+  /**
+   * Biểu tượng huy hiệu dạng SVG (nền tròn màu + hình trắng).
+   * @param {string} id mã huy hiệu
+   * @param {number} size kích thước (px)
+   * @param {boolean} locked hiện ổ khóa xám (chưa đạt)
+   */
+  function badgeSvg(id, size = 40, locked = false) {
+    const b = BADGES[id];
+    if (!b) return '';
+    const color = locked ? '#94a3b8' : b.color;
+    const glyph = locked ? LOCK_GLYPH : b.glyph;
+    return `<svg class="badge-svg" width="${size}" height="${size}" viewBox="0 0 24 24" role="img" aria-label="${esc(locked ? `${b.name} (chưa đạt)` : b.name)}" focusable="false"><circle cx="12" cy="12" r="12" fill="${color}"/>${glyph}</svg>`;
+  }
 
   // ------------------------------------------------------------------ TIỆN ÍCH
   let app = null;
@@ -484,7 +527,7 @@ const CareerGames = (() => {
       const owned = Boolean(stats.badges[id]);
       return `
         <div class="game-badge ${owned ? 'owned' : 'locked'}" title="${esc(b.desc)}">
-          <span class="game-badge-icon" aria-hidden="true">${owned ? b.icon : '🔒'}</span>
+          <span class="game-badge-icon">${badgeSvg(id, 40, !owned)}</span>
           <span class="game-badge-name">${esc(b.name)}</span>
           <span class="game-badge-desc">${esc(b.desc)}</span>
         </div>`;
@@ -524,7 +567,7 @@ const CareerGames = (() => {
     stopTimer();
     const g = GAMES[gameId];
     const badgeHtml = earned.length > 0
-      ? `<div class="game-new-badges">🎉 Huy hiệu mới: ${earned.map(id => `<span class="game-badge-pill">${BADGES[id].icon} ${esc(BADGES[id].name)}</span>`).join(' ')}</div>`
+      ? `<div class="game-new-badges">🎉 Huy hiệu mới: ${earned.map(id => `<span class="game-badge-pill">${badgeSvg(id, 22)} ${esc(BADGES[id].name)}</span>`).join(' ')}</div>`
       : '';
     setHtml(`
       ${gameHeader(gameId, 'Hoàn thành', points)}
@@ -932,6 +975,7 @@ const CareerGames = (() => {
   return {
     GAMES,
     BADGES,
+    badgeSvg,
     MAX_ACHIEVEMENT,
     DETECTIVE_CASES,
     RIASEC_CARDS,
