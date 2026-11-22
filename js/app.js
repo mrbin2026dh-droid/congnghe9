@@ -762,11 +762,11 @@ class TeenVocaApp {
       showLoginError(`Mã học sinh "${code}" không tồn tại trên hệ thống. Vui lòng liên hệ giáo viên để được cấp tài khoản.`);
       return;
     } else {
-      // 2. Không có mạng: dùng tài khoản đã lưu trên máy (đã từng đăng nhập, hoặc GV đã tải danh sách lớp)
+      // 2. Không hỏi được máy chủ: dùng tài khoản đã lưu trên máy (đã từng đăng nhập, hoặc GV đã tải danh sách lớp)
       matched = offlineStore ? offlineStore.get(cleanCode) : null;
       loggedInOffline = Boolean(matched);
       if (!matched) {
-        showLoginError(`Máy đang mất mạng và chưa có dữ liệu của mã "${code}". Lần đầu đăng nhập trên máy này cần có mạng; ở máy tính của trường, thầy cô có thể bấm "Tải danh sách lớp về máy" trước giờ học.`);
+        showLoginError(this.describeServerProblem(lookup, `mã "${code}"`));
         return;
       }
     }
@@ -882,9 +882,34 @@ class TeenVocaApp {
     this.renderAssessmentView();
     this.playBeep(660, 'sine', 0.15);
     if (loggedInOffline) {
-      this.showToastNotification('📴 Đã đăng nhập không cần mạng bằng dữ liệu lưu trên máy. Tiến độ sẽ tự đồng bộ khi có mạng.');
+      if (lookup.status === 'denied') {
+        this.showToastNotification('⚠️ Máy chủ dữ liệu đang từ chối truy cập. Em vẫn học tiếp bằng dữ liệu lưu trên máy; tiến độ sẽ đồng bộ khi thầy cô khắc phục.', 'error');
+      } else if (lookup.reason === 'timeout' || lookup.reason === 'error') {
+        this.showToastNotification('⚠️ Chưa kết nối được máy chủ dữ liệu. Em vẫn học tiếp bằng dữ liệu lưu trên máy; tiến độ sẽ tự đồng bộ sau.', 'error');
+      } else {
+        this.showToastNotification('📴 Đã đăng nhập không cần mạng bằng dữ liệu lưu trên máy. Tiến độ sẽ tự đồng bộ khi có mạng.');
+      }
     }
     if (window.TeenVocaPWA && window.TeenVocaPWA.requestPersistentStorage) window.TeenVocaPWA.requestPersistentStorage();
+  }
+
+  /**
+   * Câu báo lỗi ĐÚNG nguyên nhân khi không hỏi được máy chủ dữ liệu (Firebase).
+   * @param {{status: string, reason?: string}} lookup kết quả lookupStudent/lookupTeacherPin
+   * @param {string} subject vd: 'mã "9C-01"' hoặc 'tài khoản giáo viên'
+   */
+  describeServerProblem(lookup, subject) {
+    if (lookup && lookup.status === 'denied') {
+      return `Máy chủ dữ liệu đang TỪ CHỐI truy cập nên chưa kiểm tra được ${subject}. Đây không phải lỗi mạng hay lỗi mã của em – thầy cô cần vào Firebase Console › Realtime Database › Rules để mở lại quyền truy cập.`;
+    }
+    const reason = lookup && lookup.reason;
+    if (reason === 'timeout' || reason === 'error') {
+      return `Không kết nối được tới máy chủ dữ liệu (mạng chập chờn, Wi-Fi trường chặn Firebase hoặc máy chủ đang lỗi) nên chưa kiểm tra được ${subject}. Vui lòng thử lại sau ít phút.`;
+    }
+    if (reason === 'not_configured') {
+      return `Ứng dụng chưa kết nối được máy chủ dữ liệu (Firebase chưa khởi tạo) nên chưa kiểm tra được ${subject}. Vui lòng tải lại trang.`;
+    }
+    return `Máy đang mất mạng và chưa có dữ liệu của ${subject}. Lần đầu đăng nhập trên máy này cần có mạng; ở máy tính của trường, thầy cô có thể bấm "Tải danh sách lớp về máy" trước giờ học.`;
   }
 
   async handleTeacherLogin(pin) {
@@ -924,7 +949,11 @@ class TeenVocaApp {
       // tuyệt đối không dùng PIN mặc định -> người lạ không thể vào chế độ giáo viên khi ngắt mạng.
       const verified = store ? await store.verifyTeacherPinOffline(enteredPin) : null;
       if (verified === null) {
-        showTeacherError('Máy đang mất mạng. Lần đầu đăng nhập giáo viên trên máy này cần có mạng để xác minh mã bảo mật.');
+        if (pinLookup.status === 'denied' || pinLookup.reason !== 'offline') {
+          showTeacherError(this.describeServerProblem(pinLookup, 'mã bảo mật giáo viên'));
+        } else {
+          showTeacherError('Máy đang mất mạng. Lần đầu đăng nhập giáo viên trên máy này cần có mạng để xác minh mã bảo mật.');
+        }
         return;
       }
       pinOk = verified;
@@ -957,7 +986,11 @@ class TeenVocaApp {
     this.switchTab('teacher');
     this.playBeep(880, 'sine', 0.15);
     if (teacherOffline) {
-      this.showToastNotification('📴 Đăng nhập giáo viên không cần mạng. Đang xem dữ liệu lớp lưu trên máy; thêm/sửa/xóa học sinh cần có mạng.');
+      if (pinLookup.status === 'denied') {
+        this.showToastNotification('⚠️ Máy chủ dữ liệu đang từ chối truy cập (kiểm tra Firebase › Realtime Database › Rules). Đang xem dữ liệu lớp lưu trên máy.', 'error');
+      } else {
+        this.showToastNotification('📴 Đăng nhập giáo viên không cần mạng. Đang xem dữ liệu lớp lưu trên máy; thêm/sửa/xóa học sinh cần có mạng.');
+      }
     }
   }
 
@@ -1003,6 +1036,17 @@ class TeenVocaApp {
       if (this.currentTab === 'teacher') {
         this.syncTeacherClassFilterDropdown(TeacherAnalytics.currentClassData);
         this.renderTeacherHeatmap();
+      }
+    }, (problem) => {
+      // Máy chủ từ chối quyền đọc danh sách: báo rõ thay vì để bảng trống im lặng
+      this.teacherLiveConnected = false;
+      const banner = document.getElementById('teacher-offline-banner');
+      if (banner) {
+        const stored = cached && cached.students.length > 0 ? ' Đang hiển thị dữ liệu lớp đã lưu trên máy.' : '';
+        banner.textContent = problem && problem.status === 'denied'
+          ? `⚠️ Máy chủ dữ liệu đang TỪ CHỐI truy cập (kiểm tra Firebase Console › Realtime Database › Rules).${stored}`
+          : `⚠️ Chưa tải được danh sách học sinh từ máy chủ dữ liệu.${stored}`;
+        banner.hidden = false;
       }
     });
     this.updateOfflineRosterInfo();

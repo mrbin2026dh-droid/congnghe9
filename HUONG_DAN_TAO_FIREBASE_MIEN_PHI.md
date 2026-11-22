@@ -31,8 +31,33 @@
 2. Bấm nút **Create Database** (Tạo cơ sở dữ liệu).
 3. **Database location**: Chọn máy máy chủ gần Việt Nam nhất (ví dụ: `Singapore (asia-southeast1)`) $\rightarrow$ bấm **Next**.
 4. **Security rules**:
-   - Chọn **Start in test mode** (Bắt đầu ở chế độ thử nghiệm).  
-     *(Quy tắc này cho phép đọc/ghi dữ liệu học sinh trong suốt quá trình dạy học và kiểm thử).*
+   - Có thể chọn **Start in test mode** để tạo nhanh, NHƯNG quy tắc này **tự hết hạn sau 30 ngày**: khi hết hạn,
+     Firebase từ chối mọi truy cập (lỗi 401 *Permission denied*) và toàn bộ học sinh, giáo viên không đăng nhập được.
+   - Vì vậy, ngay sau khi tạo xong, vào tab **Rules** của Realtime Database, thay toàn bộ nội dung bằng quy tắc
+     **không có ngày hết hạn** dưới đây rồi bấm **Publish**:
+
+     ```json
+     {
+       "rules": {
+         "students": {
+           ".read": true,
+           "$code": {
+             ".write": true,
+             ".validate": "!newData.exists() || newData.hasChild('studentCode')"
+           }
+         },
+         "settings": {
+           ".read": true,
+           ".write": true
+         },
+         "$other": {
+           ".read": false,
+           ".write": false
+         }
+       }
+     }
+     ```
+   - Nếu ứng dụng báo *"Máy chủ dữ liệu đang TỪ CHỐI truy cập"*, hãy kiểm tra lại tab **Rules** này.
 5. Bấm **Enable** (Bật).  
    Sau khi hoàn tất, Thầy/Cô sẽ nhìn thấy đường dẫn Database có dạng:  
    `https://edupath-ai-xxxx-default-rtdb.asia-southeast1.firebasedatabase.app/`

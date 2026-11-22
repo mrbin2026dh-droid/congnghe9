@@ -160,24 +160,47 @@ window.EduPathFirebase = (() => {
     });
   }
 
+  /**
+   * Phân loại lỗi khi hỏi Firebase để báo ĐÚNG nguyên nhân cho người dùng:
+   *  - 'denied'      máy chủ TỪ CHỐI quyền truy cập (Rules hết hạn / bị khóa) – KHÔNG phải lỗi mạng
+   *  - 'unreachable' + reason 'offline' | 'timeout' | 'not_configured'
+   */
+  function classifyFirebaseError(err) {
+    const code = String((err && err.code) || '').toUpperCase();
+    const msg = String((err && err.message) || '').toLowerCase();
+    if (code.includes('PERMISSION_DENIED') || msg.includes('permission_denied') || msg.includes('permission denied')) {
+      return { status: 'denied', reason: 'permission_denied' };
+    }
+    if (msg === 'timeout') return { status: 'unreachable', reason: 'timeout' };
+    return { status: 'unreachable', reason: 'error' };
+  }
+
+  function precheck() {
+    if (!isFirebaseReady || !dbInstance) return { status: 'unreachable', reason: 'not_configured' };
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'unreachable', reason: 'offline' };
+    return null;
+  }
+
   // Public API
   return {
     init: initFirebase,
 
     matchesClass,
+    classifyFirebaseError,
 
     /**
      * Tra cứu học sinh trên Firebase với trạng thái RÕ RÀNG (dùng cho đăng nhập):
      *  - { status: 'found', data }   Firebase trả lời, có học sinh
      *  - { status: 'not_found' }     Firebase trả lời, KHÔNG có (mã sai hoặc đã bị xóa)
-     *  - { status: 'unreachable' }   Không hỏi được Firebase (mất mạng / quá 8 giây / chưa cấu hình)
+     *  - { status: 'denied' }        Máy chủ TỪ CHỐI quyền truy cập (Rules hết hạn/bị khóa)
+     *  - { status: 'unreachable', reason }  Không hỏi được Firebase: 'offline' | 'timeout' (quá 8 giây) | 'not_configured' | 'error'
      * Máy báo đang offline thì trả 'unreachable' ngay, không bắt người dùng chờ.
      */
     lookupStudent: async (studentCode) => {
       if (!studentCode) return { status: 'not_found' };
       const cleanCode = String(studentCode).toUpperCase().trim();
-      if (!isFirebaseReady || !dbInstance) return { status: 'unreachable' };
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'unreachable' };
+      const pre = precheck();
+      if (pre) return pre;
       try {
         const snapshot = await Promise.race([
           dbInstance.ref(`students/${cleanCode}`).once('value'),
@@ -186,17 +209,18 @@ window.EduPathFirebase = (() => {
         return snapshot.exists() ? { status: 'found', data: snapshot.val() } : { status: 'not_found' };
       } catch (err) {
         console.warn('Không tra cứu được Firebase:', err);
-        return { status: 'unreachable' };
+        return classifyFirebaseError(err);
       }
     },
 
     /**
      * Đọc mã PIN giáo viên với trạng thái rõ ràng:
-     *  - { status: 'found', pin } | { status: 'not_set' } (chưa đặt PIN trên Firebase) | { status: 'unreachable' }
+     *  - { status: 'found', pin } | { status: 'not_set' } (chưa đặt PIN trên Firebase)
+     *  - { status: 'denied' } | { status: 'unreachable', reason }
      */
     lookupTeacherPin: async () => {
-      if (!isFirebaseReady || !dbInstance) return { status: 'unreachable' };
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'unreachable' };
+      const pre = precheck();
+      if (pre) return pre;
       try {
         const snapshot = await Promise.race([
           dbInstance.ref('settings/teacherPin').once('value'),
@@ -205,7 +229,7 @@ window.EduPathFirebase = (() => {
         return snapshot.exists() ? { status: 'found', pin: String(snapshot.val()) } : { status: 'not_set' };
       } catch (err) {
         console.warn('Không đọc được PIN giáo viên từ Firebase:', err);
-        return { status: 'unreachable' };
+        return classifyFirebaseError(err);
       }
     },
 
@@ -432,7 +456,7 @@ window.EduPathFirebase = (() => {
       return true;
     },
 
-    onClassStudentsChange: (classId, callback) => {
+    onClassStudentsChange: (classId, callback, onError) => {
       if (typeof callback !== 'function') return () => {};
 
       const normClass = normalizeClassId(classId);
@@ -448,7 +472,11 @@ window.EduPathFirebase = (() => {
             callback([]);
           }
         };
-        ref.on('value', listener);
+        // Máy chủ từ chối quyền đọc: báo cho giao diện thay vì im lặng
+        ref.on('value', listener, (err) => {
+          console.warn('Listener danh sách học sinh bị lỗi:', err);
+          if (typeof onError === 'function') onError(classifyFirebaseError(err));
+        });
         return () => ref.off('value', listener);
       }
 
